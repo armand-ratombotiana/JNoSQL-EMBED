@@ -1,5 +1,7 @@
 package org.jnosql.embed.kv;
 
+import org.jnosql.embed.event.EventBus;
+import org.jnosql.embed.metrics.DatabaseMetrics;
 import org.jnosql.embed.storage.StorageEngine;
 
 import java.time.Duration;
@@ -11,11 +13,15 @@ public class KeyValueBucket {
 
     private final String name;
     private final StorageEngine engine;
+    private final EventBus eventBus;
+    private final DatabaseMetrics metrics;
     private final Map<String, Instant> expirations;
 
-    public KeyValueBucket(String name, StorageEngine engine) {
+    public KeyValueBucket(String name, StorageEngine engine, EventBus eventBus, DatabaseMetrics metrics) {
         this.name = name;
         this.engine = engine;
+        this.eventBus = eventBus;
+        this.metrics = metrics;
         this.expirations = new ConcurrentHashMap<>();
     }
 
@@ -25,6 +31,7 @@ public class KeyValueBucket {
 
     public void put(String key, String value) {
         engine.put(name, key, value);
+        metrics.recordInsert();
     }
 
     public void put(String key, String value, Duration ttl) {
@@ -33,6 +40,7 @@ public class KeyValueBucket {
     }
 
     public String get(String key) {
+        metrics.recordRead();
         if (isExpired(key)) {
             engine.delete(name, key);
             expirations.remove(key);
@@ -45,6 +53,7 @@ public class KeyValueBucket {
         expirations.remove(key);
         if (engine.exists(name, key)) {
             engine.delete(name, key);
+            metrics.recordDelete();
             return true;
         }
         return false;

@@ -1,8 +1,9 @@
 package org.jnosql.embed.document;
 
+import org.jnosql.embed.event.EventBus;
+import org.jnosql.embed.metrics.DatabaseMetrics;
 import org.jnosql.embed.storage.StorageEngine;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -13,10 +14,14 @@ public class DocumentCollection {
 
     private final String name;
     private final StorageEngine engine;
+    private final EventBus eventBus;
+    private final DatabaseMetrics metrics;
 
-    public DocumentCollection(String name, StorageEngine engine) {
+    public DocumentCollection(String name, StorageEngine engine, EventBus eventBus, DatabaseMetrics metrics) {
         this.name = name;
         this.engine = engine;
+        this.eventBus = eventBus;
+        this.metrics = metrics;
     }
 
     public String name() {
@@ -24,10 +29,14 @@ public class DocumentCollection {
     }
 
     public Document insert(Document doc) {
+        eventBus.emit(EventBus.EventType.BEFORE_INSERT, name, doc);
         if (doc.id() == null) {
             doc.id(UUID.randomUUID().toString());
         }
         engine.put(name, doc.id(), doc.toJson());
+        metrics.recordInsert();
+        metrics.updateCollectionSize(name, count());
+        eventBus.emit(EventBus.EventType.AFTER_INSERT, name, doc);
         return doc;
     }
 
@@ -36,6 +45,7 @@ public class DocumentCollection {
     }
 
     public Document findById(String id) {
+        metrics.recordRead();
         var json = engine.get(name, id);
         return json != null ? Document.fromJson(json) : null;
     }
@@ -47,6 +57,7 @@ public class DocumentCollection {
     }
 
     public List<Document> find(Query query) {
+        metrics.recordQuery();
         var results = engine.scan(name).stream()
                 .map(Document::fromJson)
                 .filter(query.docPredicate())
@@ -85,6 +96,7 @@ public class DocumentCollection {
     }
 
     public Document update(Document doc) {
+        eventBus.emit(EventBus.EventType.BEFORE_UPDATE, name, doc);
         if (doc.id() == null) {
             throw new IllegalArgumentException("Document must have an id to update");
         }
@@ -92,6 +104,8 @@ public class DocumentCollection {
             throw new IllegalArgumentException("Document not found: " + doc.id());
         }
         engine.put(name, doc.id(), doc.toJson());
+        metrics.recordUpdate();
+        eventBus.emit(EventBus.EventType.AFTER_UPDATE, name, doc);
         return doc;
     }
 
@@ -104,7 +118,11 @@ public class DocumentCollection {
 
     public boolean deleteById(String id) {
         if (engine.exists(name, id)) {
+            eventBus.emit(EventBus.EventType.BEFORE_DELETE, name, id);
             engine.delete(name, id);
+            metrics.recordDelete();
+            metrics.updateCollectionSize(name, count());
+            eventBus.emit(EventBus.EventType.AFTER_DELETE, name, id);
             return true;
         }
         return false;
@@ -114,7 +132,9 @@ public class DocumentCollection {
         var docs = find(query.limit(Integer.MAX_VALUE));
         for (var d : docs) {
             engine.delete(name, d.id());
+            metrics.recordDelete();
         }
+        metrics.updateCollectionSize(name, count());
         return docs.size();
     }
 
