@@ -14,6 +14,8 @@ public interface StorageEngine {
 
     java.util.List<String> scan(String collection, java.util.function.Predicate<String> filter);
 
+    java.util.Set<String> keys(String collection);
+
     void flush();
 
     void close();

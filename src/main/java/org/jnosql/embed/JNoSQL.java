@@ -1,5 +1,6 @@
 package org.jnosql.embed;
 
+import org.jnosql.embed.column.ColumnFamily;
 import org.jnosql.embed.config.JNoSQLConfig;
 import org.jnosql.embed.document.DocumentCollection;
 import org.jnosql.embed.kv.KeyValueBucket;
@@ -16,6 +17,7 @@ public class JNoSQL implements Closeable {
     private final StorageEngine engine;
     private final ConcurrentMap<String, DocumentCollection> collections;
     private final ConcurrentMap<String, KeyValueBucket> buckets;
+    private final ConcurrentMap<String, ColumnFamily> columnFamilies;
     private volatile boolean closed;
 
     private JNoSQL(JNoSQLConfig config) {
@@ -23,6 +25,7 @@ public class JNoSQL implements Closeable {
         this.engine = config.storageEngine().create(config.dataDir());
         this.collections = new ConcurrentHashMap<>();
         this.buckets = new ConcurrentHashMap<>();
+        this.columnFamilies = new ConcurrentHashMap<>();
         this.closed = false;
     }
 
@@ -42,6 +45,11 @@ public class JNoSQL implements Closeable {
     public KeyValueBucket keyValueBucket(String name) {
         checkOpen();
         return buckets.computeIfAbsent(name, n -> new KeyValueBucket(n, engine));
+    }
+
+    public ColumnFamily columnFamily(String name) {
+        checkOpen();
+        return columnFamilies.computeIfAbsent(name, n -> new ColumnFamily(n, engine));
     }
 
     public Transaction beginTransaction() {

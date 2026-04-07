@@ -62,6 +62,12 @@ public class FileEngine implements StorageEngine {
     }
 
     @Override
+    public java.util.Set<String> keys(String collection) {
+        var col = store.get(collection);
+        return col != null ? java.util.Set.copyOf(col.keySet()) : java.util.Set.of();
+    }
+
+    @Override
     public synchronized void flush() {
         for (var entry : store.entrySet()) {
             try {

@@ -1,6 +1,7 @@
 package org.jnosql.embed.storage;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Predicate;
@@ -48,6 +49,12 @@ public class InMemoryEngine implements StorageEngine {
     @Override
     public List<String> scan(String collection, Predicate<String> filter) {
         return scan(collection).stream().filter(filter).collect(Collectors.toList());
+    }
+
+    @Override
+    public java.util.Set<String> keys(String collection) {
+        var col = store.get(collection);
+        return col != null ? Set.copyOf(col.keySet()) : Set.of();
     }
 
     @Override
