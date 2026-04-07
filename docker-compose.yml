@@ -1,0 +1,14 @@
+services:
+  jnosql:
+    build: .
+    container_name: jnosql-embed
+    ports:
+      - "8080:8080"
+    volumes:
+      - jnosql-data:/data
+    environment:
+      - JAVA_OPTS=-Xmx64m -Xms16m
+    restart: unless-stopped
+
+volumes:
+  jnosql-data:
