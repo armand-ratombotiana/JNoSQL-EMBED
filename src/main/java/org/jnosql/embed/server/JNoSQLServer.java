@@ -143,16 +143,7 @@ public class JNoSQLServer {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if ("GET".equals(exchange.getRequestMethod())) {
-                var metrics = db.metrics();
-                sendJson(exchange, 200, Map.of(
-                        "inserts", metrics.getInserts(),
-                        "reads", metrics.getReads(),
-                        "updates", metrics.getUpdates(),
-                        "deletes", metrics.getDeletes(),
-                        "queries", metrics.getQueries(),
-                        "transactionsCommitted", metrics.getTransactionsCommitted(),
-                        "transactionsRolledBack", metrics.getTransactionsRolledBack()
-                ));
+                sendJson(exchange, 200, db.metrics().snapshot());
             }
         }
     }
