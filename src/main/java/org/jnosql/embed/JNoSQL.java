@@ -169,10 +169,15 @@ public class JNoSQL implements Closeable {
             System.out.println("Server started successfully!");
             System.out.println("API available at http://localhost:" + port + "/api");
             System.out.println("Health check at http://localhost:" + port + "/api/health");
+            
+            Thread.currentThread().join();
         } catch (IOException e) {
             System.err.println("Failed to start server: " + e.getMessage());
             db.close();
             System.exit(1);
+        } catch (InterruptedException e) {
+            System.out.println("Server interrupted, shutting down...");
+            db.close();
         }
     }
 }
