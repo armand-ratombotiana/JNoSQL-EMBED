@@ -1,6 +1,8 @@
 package org.jnosql.embed.storage;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -21,9 +23,27 @@ public class InMemoryEngine implements StorageEngine {
     }
 
     @Override
+    public void putAll(String collection, Map<String, String> entries) {
+        var col = store.computeIfAbsent(collection, k -> new ConcurrentHashMap<>());
+        col.putAll(entries);
+    }
+
+    @Override
     public String get(String collection, String key) {
         var col = store.get(collection);
         return col != null ? col.get(key) : null;
+    }
+
+    @Override
+    public List<String> getAll(String collection, List<String> keys) {
+        var col = store.get(collection);
+        if (col == null) return List.of();
+        
+        var results = new ArrayList<String>();
+        for (var key : keys) {
+            results.add(col.get(key));
+        }
+        return results;
     }
 
     @Override
@@ -31,6 +51,16 @@ public class InMemoryEngine implements StorageEngine {
         var col = store.get(collection);
         if (col != null) {
             col.remove(key);
+        }
+    }
+
+    @Override
+    public void deleteAll(String collection, List<String> keys) {
+        var col = store.get(collection);
+        if (col != null) {
+            for (var key : keys) {
+                col.remove(key);
+            }
         }
     }
 
@@ -52,7 +82,7 @@ public class InMemoryEngine implements StorageEngine {
     }
 
     @Override
-    public java.util.Set<String> keys(String collection) {
+    public Set<String> keys(String collection) {
         var col = store.get(collection);
         return col != null ? Set.copyOf(col.keySet()) : Set.of();
     }

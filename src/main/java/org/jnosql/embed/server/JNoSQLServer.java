@@ -55,7 +55,6 @@ public class JNoSQLServer {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if ("GET".equals(exchange.getRequestMethod())) {
-                var collections = db.config().storageEngine().create(db.config().dataDir());
                 sendJson(exchange, 200, Map.of("collections", "use /api/collections/{name}"));
             }
         }

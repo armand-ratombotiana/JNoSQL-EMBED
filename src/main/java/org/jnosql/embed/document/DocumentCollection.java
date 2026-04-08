@@ -1,13 +1,13 @@
 package org.jnosql.embed.document;
 
+import org.jnosql.embed.cache.QueryResultCache;
 import org.jnosql.embed.event.EventBus;
+import org.jnosql.embed.index.SecondaryIndex;
 import org.jnosql.embed.metrics.DatabaseMetrics;
 import org.jnosql.embed.storage.StorageEngine;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class DocumentCollection {
@@ -16,16 +16,45 @@ public class DocumentCollection {
     private final StorageEngine engine;
     private final EventBus eventBus;
     private final DatabaseMetrics metrics;
+    private final Map<String, SecondaryIndex> indexes;
+    private final QueryResultCache cache;
 
     public DocumentCollection(String name, StorageEngine engine, EventBus eventBus, DatabaseMetrics metrics) {
+        this(name, engine, eventBus, metrics, null);
+    }
+
+    public DocumentCollection(String name, StorageEngine engine, EventBus eventBus, DatabaseMetrics metrics, QueryResultCache cache) {
         this.name = name;
         this.engine = engine;
         this.eventBus = eventBus;
         this.metrics = metrics;
+        this.indexes = new ConcurrentHashMap<>();
+        this.cache = cache;
     }
 
     public String name() {
         return name;
+    }
+
+    public QueryResultCache cache() {
+        return cache;
+    }
+
+    public SecondaryIndex createIndex(String field) {
+        var idx = new SecondaryIndex(name, field);
+        indexes.put(field, idx);
+        for (var doc : findAll()) {
+            idx.add(doc);
+        }
+        return idx;
+    }
+
+    public SecondaryIndex getIndex(String field) {
+        return indexes.get(field);
+    }
+
+    public Map<String, SecondaryIndex> getIndexes() {
+        return Map.copyOf(indexes);
     }
 
     public Document insert(Document doc) {
@@ -34,6 +63,12 @@ public class DocumentCollection {
             doc.id(UUID.randomUUID().toString());
         }
         engine.put(name, doc.id(), doc.toJson());
+        for (var idx : indexes.values()) {
+            idx.add(doc);
+        }
+        if (cache != null) {
+            cache.invalidatePattern(name);
+        }
         metrics.recordInsert();
         metrics.updateCollectionSize(name, count());
         eventBus.emit(EventBus.EventType.AFTER_INSERT, name, doc);
@@ -51,17 +86,42 @@ public class DocumentCollection {
     }
 
     public List<Document> findAll() {
-        return engine.scan(name).stream()
+        if (cache != null) {
+            var cached = cache.get(name + ":findAll");
+            if (cached != null) {
+                return cached;
+            }
+        }
+        var results = engine.scan(name).stream()
                 .map(Document::fromJson)
                 .collect(Collectors.toList());
+        if (cache != null) {
+            cache.put(name + ":findAll", results);
+        }
+        return results;
     }
 
     public List<Document> find(Query query) {
         metrics.recordQuery();
-        var results = engine.scan(name).stream()
-                .map(Document::fromJson)
-                .filter(query.docPredicate())
-                .collect(Collectors.toList());
+        
+        String cacheKey = cache != null ? QueryResultCache.cacheKey(name, query.toString()) : null;
+        if (cacheKey != null) {
+            var cached = cache.get(cacheKey);
+            if (cached != null) {
+                return cached;
+            }
+        }
+        
+        List<Document> results;
+
+        if (shouldUseIndex(query)) {
+            results = findWithIndex(query);
+        } else {
+            results = engine.scan(name).stream()
+                    .map(Document::fromJson)
+                    .filter(query.docPredicate())
+                    .collect(Collectors.toList());
+        }
 
         if (query.sortOrder() != Query.SortOrder.NONE && query.sortField() != null) {
             var sf = query.sortField();
@@ -84,10 +144,40 @@ public class DocumentCollection {
         if (offset > 0 || limit < Integer.MAX_VALUE) {
             int from = Math.min(offset, results.size());
             int to = (limit == Integer.MAX_VALUE) ? results.size() : Math.min(from + limit, results.size());
-            return results.subList(from, to);
+            var paged = results.subList(from, to);
+            if (cacheKey != null) {
+                cache.put(cacheKey, paged);
+            }
+            return paged;
         }
 
+        if (cacheKey != null) {
+            cache.put(cacheKey, results);
+        }
         return results;
+    }
+
+    private boolean shouldUseIndex(Query query) {
+        var pred = query.docPredicate();
+        if (indexes.isEmpty()) return false;
+        return true;
+    }
+
+    private List<Document> findWithIndex(Query query) {
+        var pred = query.docPredicate();
+        for (var entry : indexes.entrySet()) {
+            var idx = entry.getValue();
+            var results = new ArrayList<Document>();
+            var ids = idx.allValues();
+            for (var id : ids) {
+                var doc = findById(id);
+                if (doc != null && pred.test(doc)) {
+                    results.add(doc);
+                }
+            }
+            return results;
+        }
+        return findAll().stream().filter(pred).collect(Collectors.toList());
     }
 
     public Document findOne(Query query) {
@@ -100,10 +190,17 @@ public class DocumentCollection {
         if (doc.id() == null) {
             throw new IllegalArgumentException("Document must have an id to update");
         }
-        if (!engine.exists(name, doc.id())) {
+        var oldDoc = findById(doc.id());
+        if (oldDoc == null) {
             throw new IllegalArgumentException("Document not found: " + doc.id());
         }
         engine.put(name, doc.id(), doc.toJson());
+        for (var idx : indexes.values()) {
+            idx.update(oldDoc, doc);
+        }
+        if (cache != null) {
+            cache.invalidatePattern(name);
+        }
         metrics.recordUpdate();
         eventBus.emit(EventBus.EventType.AFTER_UPDATE, name, doc);
         return doc;
@@ -118,8 +215,17 @@ public class DocumentCollection {
 
     public boolean deleteById(String id) {
         if (engine.exists(name, id)) {
+            var oldDoc = findById(id);
             eventBus.emit(EventBus.EventType.BEFORE_DELETE, name, id);
             engine.delete(name, id);
+            if (oldDoc != null) {
+                for (var idx : indexes.values()) {
+                    idx.remove(oldDoc);
+                }
+            }
+            if (cache != null) {
+                cache.invalidatePattern(name);
+            }
             metrics.recordDelete();
             metrics.updateCollectionSize(name, count());
             eventBus.emit(EventBus.EventType.AFTER_DELETE, name, id);
@@ -132,6 +238,9 @@ public class DocumentCollection {
         var docs = find(query.limit(Integer.MAX_VALUE));
         for (var d : docs) {
             engine.delete(name, d.id());
+            for (var idx : indexes.values()) {
+                idx.remove(d);
+            }
             metrics.recordDelete();
         }
         metrics.updateCollectionSize(name, count());
@@ -139,14 +248,11 @@ public class DocumentCollection {
     }
 
     public long count() {
-        return engine.scan(name).size();
+        return engine.keys(name).size();
     }
 
     public long count(Query query) {
-        return engine.scan(name).stream()
-                .map(Document::fromJson)
-                .filter(query.docPredicate())
-                .count();
+        return find(query).size();
     }
 
     public boolean exists(String id) {
@@ -157,12 +263,14 @@ public class DocumentCollection {
         for (var doc : findAll()) {
             engine.delete(name, doc.id());
         }
+        indexes.clear();
     }
 
     public Map<String, Object> stats() {
         return Map.of(
                 "collection", name,
                 "count", count(),
+                "indexCount", indexes.size(),
                 "storageEngine", engine.getClass().getSimpleName()
         );
     }

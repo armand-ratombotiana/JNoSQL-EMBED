@@ -161,7 +161,7 @@ public class Query {
         return this;
     }
 
-    Predicate<Document> docPredicate() {
+    public Predicate<Document> docPredicate() {
         return docPredicate;
     }
 
@@ -177,8 +177,18 @@ public class Query {
         return limit;
     }
 
+    public List<Document> apply(List<Document> documents) {
+        return documents.stream().filter(docPredicate).collect(java.util.stream.Collectors.toList());
+    }
+
     int offset() {
         return offset;
+    }
+
+    @Override
+    public String toString() {
+        return "Query{pred=" + docPredicate + ", sort=" + sortOrder + " " + sortField + 
+               ", limit=" + limit + ", offset=" + offset + "}";
     }
 
     public enum SortOrder { ASC, DESC, NONE }

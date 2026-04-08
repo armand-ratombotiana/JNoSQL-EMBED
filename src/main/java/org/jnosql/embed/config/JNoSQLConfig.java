@@ -17,10 +17,10 @@ public record JNoSQLConfig(
         IN_MEMORY,
         FILE;
 
-        public StorageEngine create(Path dataDir) {
+        public StorageEngine create(Path dataDir, boolean autoFlush, int flushIntervalMs) {
             return switch (this) {
                 case IN_MEMORY -> new org.jnosql.embed.storage.InMemoryEngine();
-                case FILE -> new org.jnosql.embed.storage.FileEngine(dataDir);
+                case FILE -> new org.jnosql.embed.storage.FileEngine(dataDir, flushIntervalMs, autoFlush);
             };
         }
     }

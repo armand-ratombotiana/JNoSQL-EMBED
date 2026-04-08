@@ -29,7 +29,7 @@ public class JNoSQL implements Closeable {
 
     private JNoSQL(JNoSQLConfig config) {
         this.config = config;
-        this.engine = config.storageEngine().create(config.dataDir());
+        this.engine = config.storageEngine().create(config.dataDir(), config.autoFlush(), config.flushIntervalMs());
         this.collections = new ConcurrentHashMap<>();
         this.buckets = new ConcurrentHashMap<>();
         this.columnFamilies = new ConcurrentHashMap<>();

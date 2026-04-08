@@ -43,6 +43,40 @@ public class HealthCheck {
                 );
             }
         });
+
+        registerIndicator(new HealthIndicator() {
+            @Override public String name() { return "memory"; }
+            @Override public CompletableFuture<HealthStatus> check() {
+                var runtime = Runtime.getRuntime();
+                var freeMem = runtime.freeMemory();
+                var totalMem = runtime.totalMemory();
+                var usedMem = totalMem - freeMem;
+                var details = Map.<String, Object>of(
+                    "freeMemory", freeMem / 1024 / 1024 + "MB",
+                    "totalMemory", totalMem / 1024 / 1024 + "MB",
+                    "usedMemory", usedMem / 1024 / 1024 + "MB",
+                    "availableProcessors", runtime.availableProcessors()
+                );
+                return CompletableFuture.completedFuture(
+                    HealthStatus.healthy().withDetails(details)
+                );
+            }
+        });
+
+        registerIndicator(new HealthIndicator() {
+            @Override public String name() { return "thread_count"; }
+            @Override public CompletableFuture<HealthStatus> check() {
+                var tc = Thread.activeCount();
+                var pt = Thread.getAllStackTraces().keySet().size();
+                var details = Map.<String, Object>of(
+                    "activeThreads", tc,
+                    "peakThreadCount", pt
+                );
+                return CompletableFuture.completedFuture(
+                    HealthStatus.healthy().withDetails(details)
+                );
+            }
+        });
     }
 
     public void registerIndicator(HealthIndicator indicator) {
@@ -130,6 +164,12 @@ public class HealthCheck {
         public HealthStatus withDetail(String key, Object value) {
             var newDetails = new HashMap<>(details);
             newDetails.put(key, value);
+            return new HealthStatus(state, message, newDetails);
+        }
+
+        public HealthStatus withDetails(Map<String, Object> additionalDetails) {
+            var newDetails = new HashMap<>(details);
+            newDetails.putAll(additionalDetails);
             return new HealthStatus(state, message, newDetails);
         }
 

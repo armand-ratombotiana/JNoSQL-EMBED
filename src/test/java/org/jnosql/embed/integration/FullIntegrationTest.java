@@ -9,6 +9,7 @@ import org.jnosql.embed.document.DocumentCollection;
 import org.jnosql.embed.document.Query;
 import org.jnosql.embed.kv.KeyValueBucket;
 import org.jnosql.embed.metrics.DatabaseMetrics;
+import org.jnosql.embed.storage.FileEngine;
 import org.jnosql.embed.transaction.Transaction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -150,7 +151,7 @@ class FullIntegrationTest {
         ));
 
         var backupDir = Files.createTempDirectory("jnosql-backup");
-        var backupManager = new BackupManager(db.config().storageEngine().create(db.config().dataDir()));
+        var backupManager = new BackupManager(new FileEngine(db.config().dataDir(), 1000, false));
         var backupFile = backupManager.backup(backupDir);
 
         assertTrue(Files.exists(backupFile));
@@ -162,7 +163,7 @@ class FullIntegrationTest {
                 .persistTo(tempDir.toString())
                 .build();
 
-        var restoreManager = new BackupManager(db.config().storageEngine().create(db.config().dataDir()));
+        var restoreManager = new BackupManager(new FileEngine(db.config().dataDir(), 1000, false));
         restoreManager.restore(backupFile);
 
         var restored = db.documentCollection("users");
