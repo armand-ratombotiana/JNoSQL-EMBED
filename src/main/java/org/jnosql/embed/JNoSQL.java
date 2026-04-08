@@ -50,7 +50,9 @@ public class JNoSQL implements Closeable {
         checkOpen();
         var col = collections.computeIfAbsent(name, n -> {
             eventBus.emit(EventBus.EventType.COLLECTION_CREATED, n);
-            return new DocumentCollection(n, engine, eventBus, metrics);
+            var collection = new DocumentCollection(n, engine, eventBus, metrics, null, config.dataDir());
+            collection.loadIndexes();
+            return collection;
         });
         metrics.updateCollectionSize(name, col.count());
         return col;

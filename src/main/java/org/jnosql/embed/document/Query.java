@@ -2,6 +2,7 @@ package org.jnosql.embed.document;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Predicate;
 
 public class Query {
@@ -11,6 +12,8 @@ public class Query {
     private String sortField;
     private int limit = Integer.MAX_VALUE;
     private int offset = 0;
+    private Set<QueryHint> hints = new java.util.HashSet<>();
+    private String forceIndexName;
 
     private Query(Predicate<Document> docPredicate) {
         this.docPredicate = docPredicate;
@@ -161,6 +164,39 @@ public class Query {
         return this;
     }
 
+    public Query withHint(QueryHint hint) {
+        this.hints.add(hint);
+        return this;
+    }
+
+    public Query withHint(String indexName) {
+        this.hints.add(QueryHint.FORCE_INDEX);
+        this.forceIndexName = indexName;
+        return this;
+    }
+
+    public Query noIndex() {
+        this.hints.add(QueryHint.NO_INDEX);
+        return this;
+    }
+
+    public Query parallel() {
+        this.hints.add(QueryHint.PARALLEL);
+        return this;
+    }
+
+    public boolean hasHint(QueryHint hint) {
+        return hints.contains(hint);
+    }
+
+    public String getForceIndexName() {
+        return forceIndexName;
+    }
+
+    public Set<QueryHint> getHints() {
+        return Set.copyOf(hints);
+    }
+
     public Predicate<Document> docPredicate() {
         return docPredicate;
     }
@@ -188,8 +224,16 @@ public class Query {
     @Override
     public String toString() {
         return "Query{pred=" + docPredicate + ", sort=" + sortOrder + " " + sortField + 
-               ", limit=" + limit + ", offset=" + offset + "}";
+               ", limit=" + limit + ", offset=" + offset + ", hints=" + hints + "}";
     }
 
     public enum SortOrder { ASC, DESC, NONE }
+
+    public enum QueryHint {
+        FORCE_INDEX,
+        NO_INDEX,
+        PARALLEL,
+        CACHE_RESULT,
+        NO_CACHE
+    }
 }

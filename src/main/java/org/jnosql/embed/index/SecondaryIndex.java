@@ -17,6 +17,12 @@ public class SecondaryIndex {
         this.index = new ConcurrentHashMap<>();
     }
 
+    public SecondaryIndex(String collection, String field, Map<Object, Set<String>> index) {
+        this.collection = collection;
+        this.field = field;
+        this.index = new ConcurrentHashMap<>(index);
+    }
+
     public void add(Document doc) {
         if (!doc.has(field)) return;
         var value = doc.getRaw(field);
@@ -64,5 +70,51 @@ public class SecondaryIndex {
 
     public String collection() {
         return collection;
+    }
+
+    public Map<Object, Set<String>> toMap() {
+        return Map.copyOf(index);
+    }
+
+    public String toJson() {
+        var sb = new StringBuilder();
+        sb.append("{\"collection\":\"").append(collection).append("\",");
+        sb.append("\"field\":\"").append(field).append("\",");
+        sb.append("\"index\":{");
+        var first = true;
+        for (var entry : index.entrySet()) {
+            if (!first) sb.append(",");
+            first = false;
+            sb.append("\"").append(entry.getKey()).append("\":[");
+            var firstId = true;
+            for (var id : entry.getValue()) {
+                if (!firstId) sb.append(",");
+                firstId = false;
+                sb.append("\"").append(id).append("\"");
+            }
+            sb.append("]");
+        }
+        sb.append("}}");
+        return sb.toString();
+    }
+
+    public static SecondaryIndex fromJson(String json) {
+        var map = org.jnosql.embed.util.JsonSerde.fromJson(json, Map.class);
+        var coll = (String) map.get("collection");
+        var fld = (String) map.get("field");
+        var idxMap = (Map<?, ?>) map.get("index");
+        
+        Map<Object, Set<String>> index = new ConcurrentHashMap<>();
+        for (var entry : idxMap.entrySet()) {
+            var key = entry.getKey();
+            var ids = (List<?>) entry.getValue();
+            Set<String> idSet = ConcurrentHashMap.newKeySet();
+            for (var id : ids) {
+                idSet.add((String) id);
+            }
+            index.put(key, idSet);
+        }
+        
+        return new SecondaryIndex(coll, fld, index);
     }
 }

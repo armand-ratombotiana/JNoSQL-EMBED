@@ -5,7 +5,11 @@ import org.jnosql.embed.event.EventBus;
 import org.jnosql.embed.index.SecondaryIndex;
 import org.jnosql.embed.metrics.DatabaseMetrics;
 import org.jnosql.embed.storage.StorageEngine;
+import org.jnosql.embed.util.JsonSerde;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -18,18 +22,24 @@ public class DocumentCollection {
     private final DatabaseMetrics metrics;
     private final Map<String, SecondaryIndex> indexes;
     private final QueryResultCache cache;
+    private final Path dataDir;
 
     public DocumentCollection(String name, StorageEngine engine, EventBus eventBus, DatabaseMetrics metrics) {
-        this(name, engine, eventBus, metrics, null);
+        this(name, engine, eventBus, metrics, null, null);
     }
 
     public DocumentCollection(String name, StorageEngine engine, EventBus eventBus, DatabaseMetrics metrics, QueryResultCache cache) {
+        this(name, engine, eventBus, metrics, cache, null);
+    }
+
+    public DocumentCollection(String name, StorageEngine engine, EventBus eventBus, DatabaseMetrics metrics, QueryResultCache cache, Path dataDir) {
         this.name = name;
         this.engine = engine;
         this.eventBus = eventBus;
         this.metrics = metrics;
         this.indexes = new ConcurrentHashMap<>();
         this.cache = cache;
+        this.dataDir = dataDir;
     }
 
     public String name() {
@@ -46,7 +56,52 @@ public class DocumentCollection {
         for (var doc : findAll()) {
             idx.add(doc);
         }
+        saveIndexes();
         return idx;
+    }
+
+    public void loadIndexes() {
+        if (dataDir == null) return;
+        
+        var indexFile = dataDir.resolve(".indexes");
+        if (!Files.exists(indexFile)) return;
+        
+        try {
+            var content = Files.readString(indexFile);
+            var map = JsonSerde.fromJson(content, Map.class);
+            var collectionIndexes = (Map<?, ?>) map.get(name);
+            if (collectionIndexes == null) return;
+            
+            for (var entry : collectionIndexes.entrySet()) {
+                var field = (String) entry.getKey();
+                var idxJson = (String) entry.getValue();
+                var idx = SecondaryIndex.fromJson(idxJson);
+                indexes.put(field, idx);
+            }
+        } catch (IOException e) {
+            System.err.println("Failed to load indexes: " + e.getMessage());
+        }
+    }
+
+    public void saveIndexes() {
+        if (dataDir == null) return;
+        
+        var indexFile = dataDir.resolve(".indexes");
+        Map<String, String> collectionIndexes = new HashMap<>();
+        
+        for (var entry : indexes.entrySet()) {
+            collectionIndexes.put(entry.getKey(), entry.getValue().toJson());
+        }
+        
+        Map<String, Map<String, String>> allIndexes = new HashMap<>();
+        allIndexes.put(name, collectionIndexes);
+        
+        try {
+            var json = JsonSerde.toJson(allIndexes);
+            Files.writeString(indexFile, json);
+        } catch (IOException e) {
+            System.err.println("Failed to save indexes: " + e.getMessage());
+        }
     }
 
     public SecondaryIndex getIndex(String field) {
