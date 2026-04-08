@@ -113,9 +113,16 @@ public class DocumentCollection {
     }
 
     public Document insert(Document doc) {
+        return insert(doc, -1);
+    }
+
+    public Document insert(Document doc, long ttlSeconds) {
         eventBus.emit(EventBus.EventType.BEFORE_INSERT, name, doc);
         if (doc.id() == null) {
             doc.id(UUID.randomUUID().toString());
+        }
+        if (ttlSeconds > 0) {
+            doc.expiresAt(System.currentTimeMillis() + (ttlSeconds * 1000));
         }
         engine.put(name, doc.id(), doc.toJson());
         for (var idx : indexes.values()) {
@@ -308,6 +315,17 @@ public class DocumentCollection {
 
     public long count(Query query) {
         return find(query).size();
+    }
+
+    public long cleanupExpired() {
+        long cleaned = 0;
+        for (var doc : findAll()) {
+            if (doc.isExpired()) {
+                deleteById(doc.id());
+                cleaned++;
+            }
+        }
+        return cleaned;
     }
 
     public boolean exists(String id) {

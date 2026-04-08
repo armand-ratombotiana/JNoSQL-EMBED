@@ -1,5 +1,6 @@
 package org.jnosql.embed.document;
 
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -8,6 +9,7 @@ public class Document {
 
     private String id;
     private Map<String, Object> fields;
+    private Long expiresAt;
 
     public Document() {
         this.fields = new LinkedHashMap<>();
@@ -45,6 +47,35 @@ public class Document {
 
     public void setFields(Map<String, Object> fields) {
         this.fields = fields;
+    }
+
+    public Long getExpiresAt() {
+        return expiresAt;
+    }
+
+    public void setExpiresAt(Long expiresAt) {
+        this.expiresAt = expiresAt;
+    }
+
+    public Document expiresAt(long epochMilli) {
+        this.expiresAt = epochMilli;
+        return this;
+    }
+
+    public Document expiresAt(Instant instant) {
+        this.expiresAt = instant.toEpochMilli();
+        return this;
+    }
+
+    public boolean isExpired() {
+        if (expiresAt == null) return false;
+        return Instant.now().toEpochMilli() > expiresAt;
+    }
+
+    public long ttlSeconds() {
+        if (expiresAt == null) return -1;
+        long remaining = (expiresAt - Instant.now().toEpochMilli()) / 1000;
+        return Math.max(0, remaining);
     }
 
     @SuppressWarnings("unchecked")
@@ -96,6 +127,6 @@ public class Document {
 
     @Override
     public String toString() {
-        return "Document{id='%s', fields=%s}".formatted(id, fields);
+        return "Document{id='" + id + "', fields=" + fields + "}";
     }
 }
