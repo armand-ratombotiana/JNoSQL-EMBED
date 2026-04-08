@@ -31,6 +31,7 @@ public class JNoSQLServer {
         server.createContext("/api/collections", new CollectionsHandler());
         server.createContext("/api/collections/", new CollectionHandler());
         server.createContext("/api/kv/", new KeyValueHandler());
+        server.createContext("/api/columns/", new ColumnHandler());
         server.createContext("/api/health", new HealthHandler());
         server.createContext("/api/metrics", new MetricsHandler());
         server.createContext("/api/stats", new StatsHandler());
@@ -161,6 +162,42 @@ public class JNoSQLServer {
                 }
             } else {
                 sendJson(exchange, 400, Map.of("error", "Usage: /api/kv/{bucket}/{key}"));
+            }
+        }
+    }
+
+    private class ColumnHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            var path = exchange.getRequestURI().getPath();
+            var parts = path.split("/");
+            if (parts.length < 4) {
+                sendJson(exchange, 400, Map.of("error", "Usage: /api/columns/{name}/{key}"));
+                return;
+            }
+            var name = parts[3];
+            var cf = db.columnFamily(name);
+
+            if (parts.length >= 5) {
+                var key = parts[4];
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    var row = cf.getRow(key);
+                    if (row != null && !row.isEmpty()) sendJson(exchange, 200, Map.of("key", key, "columns", row));
+                    else sendJson(exchange, 404, Map.of("error", "Not found"));
+                } else if ("PUT".equals(exchange.getRequestMethod()) || "POST".equals(exchange.getRequestMethod())) {
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    for (Object o : data.entrySet()) {
+                        var entry = (java.util.Map.Entry<?, ?>) o;
+                        cf.put(key, entry.getKey().toString(), entry.getValue());
+                    }
+                    sendJson(exchange, 201, Map.of("key", key, "status", "created"));
+                } else if ("DELETE".equals(exchange.getRequestMethod())) {
+                    cf.deleteRow(key);
+                    sendJson(exchange, 204, null);
+                }
+            } else {
+                sendJson(exchange, 400, Map.of("error", "Usage: /api/columns/{name}/{key}"));
             }
         }
     }

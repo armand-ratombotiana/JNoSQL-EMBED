@@ -5,67 +5,120 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JNoSQL-EMBED Dashboard</title>
     <style>
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --accent: #00d9ff;
+            --accent-hover: #00b8d4;
+            --text-primary: #eee;
+            --text-secondary: #888;
+            --success: #00ff00;
+            --error: #ff4444;
+            --warning: #ffaa00;
+        }
+        .light-theme {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e0e0e0;
+            --text-primary: #333;
+            --text-secondary: #666;
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        header { background: #16213e; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-        h1 { color: #00d9ff; font-size: 1.5rem; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; transition: background 0.3s, color 0.3s; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        header { background: var(--bg-secondary); padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        h1 { color: var(--accent); font-size: 1.5rem; }
+        .header-actions { display: flex; gap: 10px; align-items: center; }
         .status { display: flex; align-items: center; gap: 10px; font-weight: bold; }
-        .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #00ff00; }
-        .status-dot.offline { background: #ff4444; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-        .card { background: #16213e; border-radius: 10px; padding: 20px; }
-        .card h2 { color: #00d9ff; margin-bottom: 15px; font-size: 1rem; border-bottom: 1px solid #0f3460; padding-bottom: 10px; }
-        .metric { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #0f3460; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--success); transition: background 0.3s; }
+        .status-dot.offline { background: var(--error); }
+        .theme-toggle { background: var(--bg-tertiary); border: none; color: var(--text-primary); padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 1.2rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: var(--bg-secondary); border-radius: 10px; padding: 20px; transition: background 0.3s; }
+        .card h2 { color: var(--accent); margin-bottom: 15px; font-size: 1rem; border-bottom: 1px solid var(--bg-tertiary); padding-bottom: 10px; }
+        .metric { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--bg-tertiary); }
         .metric:last-child { border-bottom: none; }
-        .metric-value { color: #00d9ff; font-weight: bold; }
-        .btn { background: #00d9ff; color: #1a1a2e; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
-        .btn:hover { background: #00b8d4; transform: translateY(-1px); }
+        .metric-value { color: var(--accent); font-weight: bold; }
+        .btn { background: var(--accent); color: var(--bg-primary); border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+        .btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-danger { background: #ff4444; }
+        .btn-danger { background: var(--error); }
         .btn-danger:hover { background: #cc0000; }
         .btn-small { padding: 5px 10px; font-size: 0.85rem; }
-        input, select, textarea { width: 100%; background: #0f3460; border: 1px solid #16213e; color: #fff; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-family: inherit; }
-        input:focus, select:focus, textarea:focus { outline: 2px solid #00d9ff; border-color: transparent; }
+        .btn-icon { padding: 8px; min-width: 36px; }
+        input, select, textarea { width: 100%; background: var(--bg-tertiary); border: 1px solid var(--bg-secondary); color: var(--text-primary); padding: 10px; border-radius: 5px; margin-bottom: 10px; font-family: inherit; transition: background 0.3s, color 0.3s; }
+        input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
         textarea { min-height: 80px; resize: vertical; }
-        .log { background: #0f3460; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; }
-        .log-entry { padding: 5px 0; border-bottom: 1px solid #16213e; word-break: break-all; }
+        .log { background: var(--bg-tertiary); padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; }
+        .log-entry { padding: 5px 0; border-bottom: 1px solid var(--bg-secondary); word-break: break-all; }
         .log-entry:last-child { border-bottom: none; }
-        .log-entry.error { color: #ff4444; }
-        .log-entry.success { color: #00ff00; }
-        .log-entry.info { color: #00d9ff; }
+        .log-entry.error { color: var(--error); }
+        .log-entry.success { color: var(--success); }
+        .log-entry.info { color: var(--accent); }
+        .log-entry.warn { color: var(--warning); }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #0f3460; }
-        th { color: #00d9ff; background: #0f3460; }
-        tr:hover { background: #0f3460; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--bg-tertiary); }
+        th { color: var(--accent); background: var(--bg-tertiary); position: sticky; top: 0; }
+        tr:hover { background: var(--bg-tertiary); }
         .actions { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
         .tab { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; }
-        .tab button { background: #0f3460; color: #fff; border: none; padding: 10px 20px; border-radius: 5px 5px 0 0; cursor: pointer; }
-        .tab button.active { background: #16213e; color: #00d9ff; }
+        .tab button { background: var(--bg-tertiary); color: var(--text-primary); border: none; padding: 10px 20px; border-radius: 5px 5px 0 0; cursor: pointer; transition: all 0.2s; }
+        .tab button.active { background: var(--bg-secondary); color: var(--accent); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .refresh-info { font-size: 0.8rem; color: #888; margin-top: 10px; }
-        .doc-item { background: #0f3460; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
-        .doc-item .doc-id { color: #00d9ff; font-size: 0.85rem; margin-bottom: 5px; }
+        .refresh-info { font-size: 0.8rem; color: var(--text-secondary); margin-top: 10px; }
+        .doc-item { background: var(--bg-tertiary); padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+        .doc-item .doc-id { color: var(--accent); font-size: 0.85rem; margin-bottom: 5px; }
         .doc-item .doc-fields { font-size: 0.9rem; }
-        .error-msg { color: #ff4444; padding: 10px; background: #3d1515; border-radius: 5px; margin-bottom: 10px; }
-        .success-msg { color: #00ff00; padding: 10px; background: #153d15; border-radius: 5px; margin-bottom: 10px; }
+        .error-msg { color: var(--error); padding: 10px; background: rgba(255,68,68,0.1); border-radius: 5px; margin-bottom: 10px; border-left: 3px solid var(--error); }
+        .success-msg { color: var(--success); padding: 10px; background: rgba(0,255,0,0.1); border-radius: 5px; margin-bottom: 10px; border-left: 3px solid var(--success); }
+        .warning-msg { color: var(--warning); padding: 10px; background: rgba(255,170,0,0.1); border-radius: 5px; margin-bottom: 10px; border-left: 3px solid var(--warning); }
+        .pagination { display: flex; gap: 5px; align-items: center; margin-top: 15px; }
+        .pagination button { padding: 5px 10px; }
+        .pagination span { padding: 5px 10px; color: var(--text-secondary); }
+        .query-builder { background: var(--bg-tertiary); padding: 15px; border-radius: 5px; margin-bottom: 15px; }
+        .query-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+        .query-row select, .query-row input { width: auto; flex: 1; min-width: 120px; margin-bottom: 0; }
+        .query-row label { color: var(--text-secondary); font-size: 0.85rem; }
+        .view-toggle { display: flex; gap: 5px; margin-bottom: 10px; }
+        .view-toggle button { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--bg-secondary); }
+        .view-toggle button.active { background: var(--accent); color: var(--bg-primary); }
+        .collection-stats { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .stat-item { background: var(--bg-tertiary); padding: 10px 15px; border-radius: 5px; text-align: center; }
+        .stat-item .value { font-size: 1.5rem; color: var(--accent); font-weight: bold; }
+        .stat-item .label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; }
+        .perf-bar { height: 8px; background: var(--bg-tertiary); border-radius: 4px; margin-top: 5px; overflow: hidden; }
+        .perf-bar-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
+        .tooltip { position: relative; }
+        .tooltip::after { content: attr(data-tip); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: var(--bg-secondary); color: var(--text-primary); padding: 5px 10px; border-radius: 5px; font-size: 0.75rem; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .tooltip:hover::after { opacity: 1; }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            .query-row { flex-direction: column; }
+            .query-row select, .query-row input { width: 100%; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>JNoSQL-EMBED Dashboard</h1>
-            <div class="status">
-                <span class="status-dot" id="statusDot"></span>
-                <span id="statusText">Connecting...</span>
+            <div class="header-actions">
+                <div class="status">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">Connecting...</span>
+                </div>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">&#9788;</button>
             </div>
         </header>
 
         <div class="tab">
             <button class="active" onclick="showTab('overview')">Overview</button>
             <button onclick="showTab('collections')">Collections</button>
+            <button onclick="showTab('query')">Query Builder</button>
             <button onclick="showTab('kv')">Key-Value</button>
+            <button onclick="showTab('columns')">Columns</button>
             <button onclick="showTab('logs')">Logs</button>
         </div>
 
@@ -73,45 +126,100 @@
             <div class="grid">
                 <div class="card">
                     <h2>Database Metrics</h2>
+                    <div class="metric"><span>Total Operations</span><span class="metric-value" id="metricTotalOps">-</span></div>
                     <div class="metric"><span>Inserts</span><span class="metric-value" id="metricInserts">-</span></div>
                     <div class="metric"><span>Reads</span><span class="metric-value" id="metricReads">-</span></div>
                     <div class="metric"><span>Updates</span><span class="metric-value" id="metricUpdates">-</span></div>
                     <div class="metric"><span>Deletes</span><span class="metric-value" id="metricDeletes">-</span></div>
                     <div class="metric"><span>Queries</span><span class="metric-value" id="metricQueries">-</span></div>
-                    <div class="metric"><span>Transactions</span><span class="metric-value" id="metricTransactions">-</span></div>
-                    <div class="metric"><span>Commits</span><span class="metric-value" id="metricCommits">-</span></div>
-                    <div class="metric"><span>Rollbacks</span><span class="metric-value" id="metricRollbacks">-</span></div>
+                    <div class="metric"><span>Ops/Second</span><span class="metric-value" id="metricOpsSec">-</span></div>
                     <div class="refresh-info">Auto-refreshes every 5 seconds</div>
                 </div>
                 <div class="card">
-                    <h2>System Info</h2>
+                    <h2>System Resources</h2>
                     <div class="metric"><span>Engine</span><span class="metric-value" id="dbEngine">-</span></div>
                     <div class="metric"><span>Status</span><span class="metric-value" id="dbStatus">-</span></div>
                     <div class="metric"><span>Threads</span><span class="metric-value" id="dbThreads">-</span></div>
-                    <div class="metric"><span>Total Memory</span><span class="metric-value" id="memTotal">-</span></div>
-                    <div class="metric"><span>Used Memory</span><span class="metric-value" id="memUsed">-</span></div>
-                    <div class="metric"><span>Free Memory</span><span class="metric-value" id="memFree">-</span></div>
-                    <div class="metric"><span>Max Memory</span><span class="metric-value" id="memMax">-</span></div>
+                    <div class="metric"><span>Memory Usage</span><span class="metric-value" id="memUsage">-</span></div>
+                    <div class="perf-bar"><div class="perf-bar-fill" id="memBar" style="width: 0%"></div></div>
                     <div class="metric"><span>Processors</span><span class="metric-value" id="memProcs">-</span></div>
                 </div>
                 <div class="card">
-                    <h2>Collections</h2>
+                    <h2>Collections Overview</h2>
                     <div id="collectionsList">Loading...</div>
+                </div>
+                <div class="card">
+                    <h2>Transaction Stats</h2>
+                    <div class="metric"><span>Transactions</span><span class="metric-value" id="metricTransactions">-</span></div>
+                    <div class="metric"><span>Commits</span><span class="metric-value" id="metricCommits">-</span></div>
+                    <div class="metric"><span>Rollbacks</span><span class="metric-value" id="metricRollbacks">-</span></div>
                 </div>
             </div>
         </div>
 
         <div id="collections" class="tab-content">
             <div class="card">
-                <h2>Create Document</h2>
+                <h2>Document Collection</h2>
                 <input type="text" id="colName" placeholder="Collection name (e.g., users)">
                 <textarea id="docJson" placeholder='{"name":"Alice","age":30,"city":"NYC"}'></textarea>
                 <div class="actions">
                     <button class="btn" onclick="createDocument()">Create Document</button>
-                    <button class="btn btn-small" onclick="loadDocuments()">Load All</button>
+                    <button class="btn" onclick="loadDocuments()">Load All</button>
+                    <button class="btn btn-danger" onclick="deleteAllDocs()">Delete All</button>
+                </div>
+                <div class="view-toggle">
+                    <button class="active" onclick="setDocView('grid')" id="gridViewBtn">Grid</button>
+                    <button onclick="setDocView('table')" id="tableViewBtn">Table</button>
                 </div>
                 <div id="docMessage"></div>
+                <div class="collection-stats">
+                    <div class="stat-item"><div class="value" id="colDocCount">0</div><div class="label">Documents</div></div>
+                </div>
                 <div id="docsList"></div>
+                <div class="pagination" id="docPagination"></div>
+            </div>
+        </div>
+
+        <div id="query" class="tab-content">
+            <div class="card">
+                <h2>Visual Query Builder</h2>
+                <div class="query-builder">
+                    <div class="query-row">
+                        <label>Collection:</label>
+                        <select id="queryCol"><option value="">Select collection...</option></select>
+                    </div>
+                    <div class="query-row">
+                        <label>Field:</label>
+                        <input type="text" id="queryField" placeholder="field name">
+                        <select id="queryOp">
+                            <option value="eq">Equals (=)</option>
+                            <option value="gt">Greater Than (&gt;)</option>
+                            <option value="lt">Less Than (&lt;)</option>
+                            <option value="gte">Greater or Equal (&gt;=)</option>
+                            <option value="lte">Less or Equal (&lt;=)</option>
+                            <option value="like">Contains</option>
+                        </select>
+                        <input type="text" id="queryValue" placeholder="value">
+                    </div>
+                    <div class="query-row">
+                        <label>Sort:</label>
+                        <select id="querySort">
+                            <option value="">No sort</option>
+                            <option value="asc">Ascending</option>
+                            <option value="desc">Descending</option>
+                        </select>
+                        <label>Limit:</label>
+                        <input type="number" id="queryLimit" value="100" min="1" max="1000" style="width:80px">
+                        <label>Skip:</label>
+                        <input type="number" id="querySkip" value="0" min="0" style="width:80px">
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn" onclick="executeQuery()">Execute Query</button>
+                    <button class="btn btn-small" onclick="clearQuery()">Clear</button>
+                </div>
+                <div id="queryMessage"></div>
+                <div id="queryResults"></div>
             </div>
         </div>
 
@@ -124,10 +232,26 @@
                 <div class="actions">
                     <button class="btn" onclick="kvPut()">Put</button>
                     <button class="btn" onclick="kvGet()">Get</button>
-                    <button class="btn" onclick="kvDelete()">Delete</button>
+                    <button class="btn btn-danger" onclick="kvDelete()">Delete</button>
                 </div>
                 <div id="kvMessage"></div>
                 <div id="kvResult"></div>
+            </div>
+        </div>
+
+        <div id="columns" class="tab-content">
+            <div class="card">
+                <h2>Column Family Operations</h2>
+                <input type="text" id="cfName" placeholder="Column family name (e.g., users_cf)">
+                <input type="text" id="cfKey" placeholder="Row key">
+                <textarea id="cfColumns" placeholder='{"username":"alice","email":"alice@example.com","age":30}'></textarea>
+                <div class="actions">
+                    <button class="btn" onclick="cfPut()">Put Row</button>
+                    <button class="btn" onclick="cfGet()">Get Row</button>
+                    <button class="btn btn-danger" onclick="cfDelete()">Delete Row</button>
+                </div>
+                <div id="cfMessage"></div>
+                <div id="cfResult"></div>
             </div>
         </div>
 
@@ -136,6 +260,12 @@
                 <div class="actions">
                     <h2 style="border:none;margin:0;padding:0">Activity Log</h2>
                     <button class="btn btn-small" onclick="clearLogs()">Clear</button>
+                    <select id="logFilter" onchange="renderLogs()">
+                        <option value="">All</option>
+                        <option value="error">Errors</option>
+                        <option value="success">Success</option>
+                        <option value="info">Info</option>
+                    </select>
                 </div>
                 <div id="activityLog" class="log"></div>
             </div>
@@ -145,6 +275,16 @@
     <script>
         const API = 'http://localhost:8080/api';
         let logs = [];
+        let currentDocs = [];
+        let docView = 'grid';
+        let currentPage = 0;
+        const PAGE_SIZE = 20;
+        let isLightTheme = false;
+
+        function toggleTheme() {
+            isLightTheme = !isLightTheme;
+            document.body.classList.toggle('light-theme', isLightTheme);
+        }
 
         function showTab(name) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -152,6 +292,7 @@
             document.getElementById(name).classList.add('active');
             if (event && event.target) event.target.classList.add('active');
             if (name === 'overview') { loadMetrics(); loadStats(); loadCollections(); }
+            if (name === 'query') { loadCollectionList(); }
         }
 
         async function fetchJSON(url, options = {}) {
@@ -169,21 +310,23 @@
         function log(msg, type = 'info') {
             const time = new Date().toLocaleTimeString();
             logs.unshift({ time, msg, type });
-            if (logs.length > 50) logs.pop();
+            if (logs.length > 100) logs.pop();
             renderLogs();
         }
 
         function renderLogs() {
-            document.getElementById('activityLog').innerHTML = logs.map(l =>
-                `<div class="log-entry ${l.type}">[${l.time}] ${l.msg}</div>`
-            ).join('') || '<div class="log-entry">No activity yet</div>';
+            const filter = document.getElementById('logFilter')?.value || '';
+            const filtered = filter ? logs.filter(l => l.type === filter) : logs;
+            document.getElementById('activityLog').innerHTML = filtered.length 
+                ? filtered.map(l => `<div class="log-entry ${l.type}">[${l.time}] ${l.msg}</div>`).join('')
+                : '<div class="log-entry">No activity yet</div>';
         }
 
         function showMessage(id, msg, type = 'error') {
             const el = document.getElementById(id);
             el.className = type + '-msg';
             el.textContent = msg;
-            setTimeout(() => el.textContent = '', 3000);
+            setTimeout(() => el.textContent = '', 5000);
         }
 
         async function checkHealth() {
@@ -200,11 +343,13 @@
         async function loadMetrics() {
             const m = await fetchJSON(`${API}/metrics`);
             if (m) {
+                document.getElementById('metricTotalOps').textContent = m.totalOperations ?? 0;
                 document.getElementById('metricInserts').textContent = m.inserts ?? 0;
                 document.getElementById('metricReads').textContent = m.reads ?? 0;
                 document.getElementById('metricUpdates').textContent = m.updates ?? 0;
                 document.getElementById('metricDeletes').textContent = m.deletes ?? 0;
                 document.getElementById('metricQueries').textContent = m.queries ?? 0;
+                document.getElementById('metricOpsSec').textContent = (m.opsPerSecond ?? 0).toFixed(2);
                 document.getElementById('metricTransactions').textContent = m.transactions ?? 0;
                 document.getElementById('metricCommits').textContent = m.transactionCommits ?? 0;
                 document.getElementById('metricRollbacks').textContent = m.transactionRollbacks ?? 0;
@@ -218,10 +363,12 @@
                 document.getElementById('dbStatus').textContent = s.database?.open ? 'Open' : 'Closed';
                 document.getElementById('dbThreads').textContent = s.threads?.activeCount || '-';
                 const fmt = n => n ? (n / 1024 / 1024).toFixed(1) + ' MB' : '-';
-                document.getElementById('memTotal').textContent = fmt(s.memory?.totalMemory);
-                document.getElementById('memUsed').textContent = fmt(s.memory?.usedMemory);
-                document.getElementById('memFree').textContent = fmt(s.memory?.freeMemory);
-                document.getElementById('memMax').textContent = fmt(s.memory?.maxMemory);
+                const total = s.memory?.totalMemory ?? 0;
+                const used = s.memory?.usedMemory ?? 0;
+                const max = s.memory?.maxMemory ?? 0;
+                const usage = max > 0 ? ((used / max) * 100).toFixed(1) + '%' : '-';
+                document.getElementById('memUsage').textContent = fmt(used) + ' / ' + fmt(max) + ' (' + usage + ')';
+                document.getElementById('memBar').style.width = usage;
                 document.getElementById('memProcs').textContent = s.memory?.availableProcessors || '-';
             }
         }
@@ -234,9 +381,23 @@
                     document.getElementById('collectionsList').innerHTML = '<p>No collections yet</p>';
                 } else {
                     document.getElementById('collectionsList').innerHTML = cols.map(([name, count]) =>
-                        `<div class="metric"><span>${name}</span><span class="metric-value">${count} docs</span></div>`
+                        `<div class="metric tooltip" data-tip="Click to load"><span style="cursor:pointer" onclick="document.getElementById('colName').value='${name}';showTab('collections');loadDocuments();">${name}</span><span class="metric-value">${count} docs</span></div>`
                     ).join('');
                 }
+            }
+        }
+
+        async function loadCollectionList() {
+            const m = await fetchJSON(`${API}/metrics`);
+            const select = document.getElementById('queryCol');
+            select.innerHTML = '<option value="">Select collection...</option>';
+            if (m && m.collections) {
+                Object.keys(m.collections).forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    select.appendChild(opt);
+                });
             }
         }
 
@@ -257,8 +418,8 @@
             });
             
             if (result) {
-                showMessage('docMessage', `Created document with ID: ${result.id}`, 'success');
-                log(`Created document in ${col}: ${result.id}`, 'success');
+                showMessage('docMessage', `Created document: ${result.id}`, 'success');
+                log(`Created doc in ${col}: ${result.id}`, 'success');
                 document.getElementById('docJson').value = '';
                 loadMetrics();
                 loadCollections();
@@ -273,24 +434,151 @@
             const docs = await fetchJSON(`${API}/collections/${col}`);
             const listEl = document.getElementById('docsList');
             
-            if (!docs) {
+            currentDocs = docs ? (Array.isArray(docs) ? docs : [docs]) : [];
+            currentDocs = currentDocs.filter(d => d && d.id);
+            document.getElementById('colDocCount').textContent = currentDocs.length;
+            currentPage = 0;
+            renderDocs();
+            log(`Loaded ${currentDocs.length} documents from ${col}`, 'success');
+        }
+
+        function renderDocs() {
+            const listEl = document.getElementById('docsList');
+            const start = currentPage * PAGE_SIZE;
+            const pageDocs = currentDocs.slice(start, start + PAGE_SIZE);
+            
+            if (pageDocs.length === 0) {
                 listEl.innerHTML = '<p>No documents found</p>';
+                renderPagination();
                 return;
             }
             
-            const arr = Array.isArray(docs) ? docs : [docs];
-            if (arr.length === 0 || (arr.length === 1 && !arr[0])) {
-                listEl.innerHTML = '<p>No documents found</p>';
+            if (docView === 'table') {
+                const headers = [...new Set(pageDocs.flatMap(d => Object.keys(d.fields || d)))];
+                listEl.innerHTML = `<table><thead><tr><th>ID</th>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>
+                    ${pageDocs.map(d => {
+                        const fields = d.fields || d;
+                        return `<tr><td style="color:var(--accent)">${d.id || 'N/A'}</td>${headers.map(h => `<td>${fields[h] ?? ''}</td>`).join('')}</tr>`;
+                    }).join('')}
+                </tbody></table>`;
+            } else {
+                listEl.innerHTML = pageDocs.map(d => {
+                    const fields = d.fields || d;
+                    const fieldsHtml = Object.entries(fields).map(([k,v]) => `<span style="margin-right:10px"><strong>${k}:</strong> ${v}</span>`).join('');
+                    return `<div class="doc-item"><div class="doc-id">ID: ${d.id || 'N/A'}</div><div class="doc-fields">${fieldsHtml}</div></div>`;
+                }).join('');
+            }
+            renderPagination();
+        }
+
+        function renderPagination() {
+            const totalPages = Math.ceil(currentDocs.length / PAGE_SIZE);
+            const pagEl = document.getElementById('docPagination');
+            if (totalPages <= 1) { pagEl.innerHTML = ''; return; }
+            pagEl.innerHTML = `
+                <button class="btn btn-small" onclick="prevPage()" ${currentPage === 0 ? 'disabled' : ''}>&laquo; Prev</button>
+                <span>Page ${currentPage + 1} of ${totalPages}</span>
+                <button class="btn btn-small" onclick="nextPage()" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>Next &raquo;</button>
+            `;
+        }
+
+        function prevPage() { if (currentPage > 0) { currentPage--; renderDocs(); } }
+        function nextPage() { currentPage++; renderDocs(); }
+
+        function setDocView(view) {
+            docView = view;
+            document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
+            document.getElementById('tableViewBtn').classList.toggle('active', view === 'table');
+            renderDocs();
+        }
+
+        async function deleteAllDocs() {
+            const col = document.getElementById('colName').value.trim();
+            if (!col) { showMessage('docMessage', 'Enter collection name first', 'error'); return; }
+            if (!confirm(`Delete ALL documents in "${col}"? This cannot be undone.`)) return;
+            
+            const docs = await fetchJSON(`${API}/collections/${col}`);
+            if (docs && Array.isArray(docs)) {
+                for (const d of docs) {
+                    if (d.id) await fetch(`${API}/collections/${col}/${d.id}`, { method: 'DELETE' });
+                }
+            }
+            showMessage('docMessage', 'All documents deleted', 'success');
+            log(`Deleted all docs from ${col}`, 'warn');
+            loadMetrics();
+            loadCollections();
+            loadDocuments();
+        }
+
+        async function executeQuery() {
+            const col = document.getElementById('queryCol').value;
+            if (!col) { showMessage('queryMessage', 'Select a collection first', 'error'); return; }
+            
+            const docs = await fetchJSON(`${API}/collections/${col}`);
+            if (!docs) { showMessage('queryMessage', 'Query failed', 'error'); return; }
+            
+            let results = Array.isArray(docs) ? docs : [docs];
+            results = results.filter(d => d && d.id);
+            
+            const field = document.getElementById('queryField').value.trim();
+            const op = document.getElementById('queryOp').value;
+            const value = document.getElementById('queryValue').value.trim();
+            
+            if (field && value) {
+                results = results.filter(d => {
+                    const fields = d.fields || d;
+                    const fieldValue = fields[field];
+                    if (fieldValue === undefined) return false;
+                    switch (op) {
+                        case 'eq': return String(fieldValue).toLowerCase() === value.toLowerCase();
+                        case 'gt': return Number(fieldValue) > Number(value);
+                        case 'lt': return Number(fieldValue) < Number(value);
+                        case 'gte': return Number(fieldValue) >= Number(value);
+                        case 'lte': return Number(fieldValue) <= Number(value);
+                        case 'like': return String(fieldValue).toLowerCase().includes(value.toLowerCase());
+                        default: return true;
+                    }
+                });
+            }
+            
+            const sort = document.getElementById('querySort').value;
+            if (sort && field) {
+                results.sort((a, b) => {
+                    const fields = a.fields || a;
+                    const aVal = fields[field] ?? '';
+                    const bVal = fields[field] ?? '';
+                    const cmp = String(aVal).localeCompare(String(bVal), undefined, {numeric: true});
+                    return sort === 'desc' ? -cmp : cmp;
+                });
+            }
+            
+            const skip = parseInt(document.getElementById('querySkip').value) || 0;
+            const limit = parseInt(document.getElementById('queryLimit').value) || 100;
+            results = results.slice(skip, skip + limit);
+            
+            const resEl = document.getElementById('queryResults');
+            if (results.length === 0) {
+                resEl.innerHTML = '<p>No results found</p>';
                 return;
             }
             
-            listEl.innerHTML = arr.map(d => {
-                const fields = d.fields || d;
-                const fieldsHtml = Object.entries(fields).map(([k,v]) => `<span>${k}: ${v}</span>`).join(', ');
-                return `<div class="doc-item"><div class="doc-id">ID: ${d.id || 'N/A'}</div><div class="doc-fields">${fieldsHtml}</div></div>`;
-            }).join('');
+            resEl.innerHTML = `<p style="margin-bottom:10px;color:var(--text-secondary)">${results.length} result(s)</p>
+                ${results.map(d => {
+                    const fields = d.fields || d;
+                    const fieldsHtml = Object.entries(fields).map(([k,v]) => `<span style="margin-right:10px"><strong>${k}:</strong> ${v}</span>`).join('');
+                    return `<div class="doc-item"><div class="doc-id">ID: ${d.id || 'N/A'}</div><div class="doc-fields">${fieldsHtml}</div></div>`;
+                }).join('')}`;
             
-            log(`Loaded ${arr.length} documents from ${col}`, 'success');
+            log(`Query on ${col}: ${results.length} results`, 'success');
+        }
+
+        function clearQuery() {
+            document.getElementById('queryField').value = '';
+            document.getElementById('queryValue').value = '';
+            document.getElementById('querySort').value = '';
+            document.getElementById('queryLimit').value = '100';
+            document.getElementById('querySkip').value = '0';
+            document.getElementById('queryResults').innerHTML = '';
         }
 
         async function kvPut() {
@@ -323,8 +611,8 @@
             const resultEl = document.getElementById('kvResult');
             
             if (result) {
-                resultEl.innerHTML = `<div class="success-msg">${key} = ${result.value}</div>`;
-                log(`KV Get: ${bucket}/${key} = ${result.value}`, 'success');
+                resultEl.innerHTML = `<div class="success-msg" style="word-break:break-all"><strong>${key}</strong> = ${result.value}</div>`;
+                log(`KV Get: ${bucket}/${key}`, 'success');
             } else {
                 resultEl.innerHTML = `<div class="error-msg">Key not found: ${key}</div>`;
             }
@@ -342,9 +630,63 @@
             log(`KV Delete: ${bucket}/${key}`, 'success');
         }
 
+        async function cfPut() {
+            const cf = document.getElementById('cfName').value.trim();
+            const key = document.getElementById('cfKey').value.trim();
+            const json = document.getElementById('cfColumns').value.trim();
+            if (!cf) { showMessage('cfMessage', 'Column family name required', 'error'); return; }
+            if (!key) { showMessage('cfMessage', 'Row key required', 'error'); return; }
+            
+            let data;
+            try { data = JSON.parse(json || '{}'); }
+            catch (e) { showMessage('cfMessage', 'Invalid JSON: ' + e.message, 'error'); return; }
+            
+            const body = JSON.stringify(data);
+            const result = await fetchJSON(`${API}/columns/${cf}/${key}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body
+            });
+            
+            if (result) {
+                showMessage('cfMessage', `Row stored: ${key}`, 'success');
+                log(`CF Put: ${cf}/${key}`, 'success');
+            }
+        }
+
+        async function cfGet() {
+            const cf = document.getElementById('cfName').value.trim();
+            const key = document.getElementById('cfKey').value.trim();
+            if (!cf) { showMessage('cfMessage', 'Column family name required', 'error'); return; }
+            if (!key) { showMessage('cfMessage', 'Row key required', 'error'); return; }
+            
+            const result = await fetchJSON(`${API}/columns/${cf}/${key}`);
+            const resultEl = document.getElementById('cfResult');
+            
+            if (result) {
+                const cols = result.columns || result;
+                const colsHtml = Object.entries(cols).map(([k,v]) => `<span style="margin-right:10px"><strong>${k}:</strong> ${v}</span>`).join('');
+                resultEl.innerHTML = `<div class="success-msg"><strong>Key:</strong> ${key}<br>${colsHtml}</div>`;
+                log(`CF Get: ${cf}/${key}`, 'success');
+            } else {
+                resultEl.innerHTML = `<div class="error-msg">Row not found: ${key}</div>`;
+            }
+        }
+
+        async function cfDelete() {
+            const cf = document.getElementById('cfName').value.trim();
+            const key = document.getElementById('cfKey').value.trim();
+            if (!cf) { showMessage('cfMessage', 'Column family name required', 'error'); return; }
+            if (!key) { showMessage('cfMessage', 'Row key required', 'error'); return; }
+            
+            await fetch(`${API}/columns/${cf}/${key}`, { method: 'DELETE' });
+            showMessage('cfMessage', `Deleted: ${key}`, 'success');
+            document.getElementById('cfResult').innerHTML = '';
+            log(`CF Delete: ${cf}/${key}`, 'success');
+        }
+
         function clearLogs() { logs = []; renderLogs(); }
 
-        // Initialize
         log('Dashboard initialized', 'info');
         checkHealth();
         loadMetrics();
