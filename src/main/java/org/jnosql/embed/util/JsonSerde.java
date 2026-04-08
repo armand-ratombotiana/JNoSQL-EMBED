@@ -39,6 +39,17 @@ public final class JsonSerde {
                     var fieldsNode = node.get("fields");
                     var fields = convertNode(fieldsNode);
                     doc.setFields(fields);
+                } else {
+                    var fields = new java.util.LinkedHashMap<String, Object>();
+                    var it = node.fields();
+                    while (it.hasNext()) {
+                        var entry = it.next();
+                        String key = entry.getKey();
+                        if (!"id".equals(key) && !"expiresAt".equals(key)) {
+                            fields.put(key, toJavaObject(entry.getValue()));
+                        }
+                    }
+                    doc.setFields(fields);
                 }
                 return (T) doc;
             }

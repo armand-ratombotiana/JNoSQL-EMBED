@@ -67,14 +67,14 @@ public class JNoSQLServer {
         public void handle(HttpExchange exchange) throws IOException {
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
-            if (parts.length < 5) {
+            if (parts.length < 4) {
                 sendJson(exchange, 400, Map.of("error", "Usage: /api/collections/{name}[/id]"));
                 return;
             }
-            var name = parts[4];
+            var name = parts[3];
             var collection = db.documentCollection(name);
 
-            if (parts.length == 5) {
+            if (parts.length == 4) {
                 if ("GET".equals(exchange.getRequestMethod())) {
                     sendJson(exchange, 200, collection.findAll());
                 } else if ("POST".equals(exchange.getRequestMethod())) {
@@ -84,7 +84,7 @@ public class JNoSQLServer {
                     sendJson(exchange, 201, saved);
                 }
             } else {
-                var id = parts[5];
+                var id = parts[4];
                 if ("GET".equals(exchange.getRequestMethod())) {
                     var doc = collection.findById(id);
                     if (doc != null) sendJson(exchange, 200, doc);
@@ -102,15 +102,15 @@ public class JNoSQLServer {
         public void handle(HttpExchange exchange) throws IOException {
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
-            if (parts.length < 5) {
-                sendJson(exchange, 400, Map.of("error", "Usage: /api/kv/{bucket}/{key}"));
+            if (parts.length < 4) {
+                sendJson(exchange, 400, Map.of("error", "Usage: /api/kv/{bucket}[/{key}]"));
                 return;
             }
-            var bucketName = parts[4];
+            var bucketName = parts[3];
             var bucket = db.keyValueBucket(bucketName);
 
-            if (parts.length >= 6) {
-                var key = parts[5];
+            if (parts.length >= 5) {
+                var key = parts[4];
                 if ("GET".equals(exchange.getRequestMethod())) {
                     var value = bucket.get(key);
                     if (value != null) sendJson(exchange, 200, Map.of("key", key, "value", value));
@@ -124,6 +124,8 @@ public class JNoSQLServer {
                     bucket.delete(key);
                     sendJson(exchange, 204, null);
                 }
+            } else {
+                sendJson(exchange, 400, Map.of("error", "Usage: /api/kv/{bucket}/{key}"));
             }
         }
     }
