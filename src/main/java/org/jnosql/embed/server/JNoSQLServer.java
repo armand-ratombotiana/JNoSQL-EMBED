@@ -30,6 +30,8 @@ public class JNoSQLServer {
         server.createContext("/api/collections/", new CollectionHandler());
         server.createContext("/api/kv/", new KeyValueHandler());
         server.createContext("/api/health", new HealthHandler());
+        server.createContext("/api/metrics", new MetricsHandler());
+        server.createContext("/api/stats", new StatsHandler());
         server.setExecutor(null);
         server.start();
     }
@@ -128,11 +130,51 @@ public class JNoSQLServer {
 
     private void sendJson(HttpExchange exchange, int status, Object body) throws IOException {
         exchange.getResponseHeaders().set("Content-Type", "application/json");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
         var json = body != null ? JsonSerde.toJson(body) : "";
         var bytes = json.getBytes(StandardCharsets.UTF_8);
         exchange.sendResponseHeaders(status, bytes.length);
         try (var os = exchange.getResponseBody()) {
             os.write(bytes);
+        }
+    }
+
+    private class MetricsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if ("GET".equals(exchange.getRequestMethod())) {
+                var metrics = db.metrics();
+                sendJson(exchange, 200, Map.of(
+                        "inserts", metrics.getInserts(),
+                        "reads", metrics.getReads(),
+                        "updates", metrics.getUpdates(),
+                        "deletes", metrics.getDeletes(),
+                        "queries", metrics.getQueries(),
+                        "transactionsCommitted", metrics.getTransactionsCommitted(),
+                        "transactionsRolledBack", metrics.getTransactionsRolledBack()
+                ));
+            }
+        }
+    }
+
+    private class StatsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if ("GET".equals(exchange.getRequestMethod())) {
+                var runtime = Runtime.getRuntime();
+                var memory = Map.of(
+                        "totalMemory", runtime.totalMemory(),
+                        "freeMemory", runtime.freeMemory(),
+                        "usedMemory", runtime.totalMemory() - runtime.freeMemory(),
+                        "maxMemory", runtime.maxMemory(),
+                        "availableProcessors", runtime.availableProcessors()
+                );
+                sendJson(exchange, 200, Map.of(
+                        "database", Map.of("open", db.isOpen(), "engine", db.config().storageEngine().name()),
+                        "memory", memory,
+                        "threads", Map.of("activeCount", Thread.activeCount())
+                ));
+            }
         }
     }
 

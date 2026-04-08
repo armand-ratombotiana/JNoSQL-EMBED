@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   jnosql:
     build: .
@@ -6,9 +8,66 @@ services:
       - "8080:8080"
     volumes:
       - jnosql-data:/data
+      - ./logs:/logs
     environment:
-      - JAVA_OPTS=-Xmx64m -Xms16m
+      - DATA_DIR=/data
+      - PORT=8080
+      - ENGINE=FILE
+      - FLUSH_MODE=sync
+      - FLUSH_INTERVAL=1000
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
+
+  jnosql-async:
+    build: .
+    container_name: jnosql-embed-async
+    ports:
+      - "8081:8080"
+    volumes:
+      - jnosql-async-data:/data
+    environment:
+      - DATA_DIR=/data
+      - PORT=8080
+      - ENGINE=FILE
+      - FLUSH_MODE=async
+      - FLUSH_INTERVAL=500
+    profiles:
+      - async
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    profiles:
+      - monitoring
 
 volumes:
   jnosql-data:
+  jnosql-async-data:
+  prometheus-data:
+  grafana-data:

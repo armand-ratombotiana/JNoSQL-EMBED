@@ -114,4 +114,65 @@ public class JNoSQL implements Closeable {
             throw new IllegalStateException("JNoSQL database is closed");
         }
     }
+
+    public static void main(String[] args) {
+        int port = 8080;
+        String dataDir = "data";
+        String engineType = "FILE";
+        boolean autoFlush = true;
+        int flushInterval = 1000;
+
+        for (int i = 0; i < args.length; i++) {
+            switch (args[i]) {
+                case "--port" -> port = Integer.parseInt(args[++i]);
+                case "--data-dir" -> dataDir = args[++i];
+                case "--engine" -> engineType = args[++i];
+                case "--sync" -> autoFlush = true;
+                case "--async" -> autoFlush = false;
+                case "--flush-interval" -> flushInterval = Integer.parseInt(args[++i]);
+                case "--help" -> {
+                    System.out.println("Usage: java -jar jnosql-embed.jar [options]");
+                    System.out.println("Options:");
+                    System.out.println("  --port <port>          Server port (default: 8080)");
+                    System.out.println("  --data-dir <dir>       Data directory (default: data)");
+                    System.out.println("  --engine <type>         Storage engine: FILE, IN_MEMORY (default: FILE)");
+                    System.out.println("  --sync                 Enable synchronous flush (default)");
+                    System.out.println("  --async                Enable asynchronous flush");
+                    System.out.println("  --flush-interval <ms>  Flush interval in ms (default: 1000)");
+                    System.out.println("  --help                 Show this help");
+                    return;
+                }
+            }
+        }
+
+        var config = JNoSQL.embed()
+                .storageEngine("FILE".equalsIgnoreCase(engineType) ? 
+                        JNoSQLConfig.StorageEngineType.FILE : JNoSQLConfig.StorageEngineType.IN_MEMORY)
+                .persistTo(dataDir)
+                .autoFlush(autoFlush)
+                .flushIntervalMs(flushInterval)
+                .buildConfig();
+
+        var db = JNoSQL.create(config);
+        
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Shutting down...");
+            db.close();
+        }));
+
+        try {
+            System.out.println("Starting JNoSQL-EMBED server on port " + port + "...");
+            System.out.println("Data directory: " + dataDir);
+            System.out.println("Storage engine: " + engineType);
+            System.out.println("Flush mode: " + (autoFlush ? "sync" : "async"));
+            db.startServer(port);
+            System.out.println("Server started successfully!");
+            System.out.println("API available at http://localhost:" + port + "/api");
+            System.out.println("Health check at http://localhost:" + port + "/api/health");
+        } catch (IOException e) {
+            System.err.println("Failed to start server: " + e.getMessage());
+            db.close();
+            System.exit(1);
+        }
+    }
 }
