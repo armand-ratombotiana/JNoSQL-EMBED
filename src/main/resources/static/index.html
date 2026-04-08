@@ -8,36 +8,48 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        header { background: #16213e; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-        h1 { color: #00d9ff; }
-        .status { display: flex; align-items: center; gap: 10px; }
+        header { background: #16213e; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        h1 { color: #00d9ff; font-size: 1.5rem; }
+        .status { display: flex; align-items: center; gap: 10px; font-weight: bold; }
         .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #00ff00; }
         .status-dot.offline { background: #ff4444; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
         .card { background: #16213e; border-radius: 10px; padding: 20px; }
-        .card h2 { color: #00d9ff; margin-bottom: 15px; font-size: 1.1rem; }
+        .card h2 { color: #00d9ff; margin-bottom: 15px; font-size: 1rem; border-bottom: 1px solid #0f3460; padding-bottom: 10px; }
         .metric { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #0f3460; }
         .metric:last-child { border-bottom: none; }
         .metric-value { color: #00d9ff; font-weight: bold; }
-        .btn { background: #00d9ff; color: #1a1a2e; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn:hover { background: #00b8d4; }
+        .btn { background: #00d9ff; color: #1a1a2e; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+        .btn:hover { background: #00b8d4; transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-danger { background: #ff4444; }
         .btn-danger:hover { background: #cc0000; }
-        input, select, textarea { width: 100%; background: #0f3460; border: 1px solid #16213e; color: #fff; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
-        textarea { min-height: 100px; resize: vertical; }
-        .log { background: #0f3460; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; }
-        .log-entry { padding: 5px 0; border-bottom: 1px solid #16213e; }
+        .btn-small { padding: 5px 10px; font-size: 0.85rem; }
+        input, select, textarea { width: 100%; background: #0f3460; border: 1px solid #16213e; color: #fff; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-family: inherit; }
+        input:focus, select:focus, textarea:focus { outline: 2px solid #00d9ff; border-color: transparent; }
+        textarea { min-height: 80px; resize: vertical; }
+        .log { background: #0f3460; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; }
+        .log-entry { padding: 5px 0; border-bottom: 1px solid #16213e; word-break: break-all; }
+        .log-entry:last-child { border-bottom: none; }
         .log-entry.error { color: #ff4444; }
         .log-entry.success { color: #00ff00; }
-        table { width: 100%; border-collapse: collapse; }
+        .log-entry.info { color: #00d9ff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid #0f3460; }
-        th { color: #00d9ff; }
-        .actions { display: flex; gap: 10px; margin-bottom: 15px; }
-        .tab { display: flex; gap: 5px; margin-bottom: 15px; }
+        th { color: #00d9ff; background: #0f3460; }
+        tr:hover { background: #0f3460; }
+        .actions { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .tab { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; }
         .tab button { background: #0f3460; color: #fff; border: none; padding: 10px 20px; border-radius: 5px 5px 0 0; cursor: pointer; }
         .tab button.active { background: #16213e; color: #00d9ff; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        .refresh-info { font-size: 0.8rem; color: #888; margin-top: 10px; }
+        .doc-item { background: #0f3460; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+        .doc-item .doc-id { color: #00d9ff; font-size: 0.85rem; margin-bottom: 5px; }
+        .doc-item .doc-fields { font-size: 0.9rem; }
+        .error-msg { color: #ff4444; padding: 10px; background: #3d1515; border-radius: 5px; margin-bottom: 10px; }
+        .success-msg { color: #00ff00; padding: 10px; background: #153d15; border-radius: 5px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -54,37 +66,37 @@
             <button class="active" onclick="showTab('overview')">Overview</button>
             <button onclick="showTab('collections')">Collections</button>
             <button onclick="showTab('kv')">Key-Value</button>
-            <button onclick="showTab('query')">Query</button>
             <button onclick="showTab('logs')">Logs</button>
         </div>
 
         <div id="overview" class="tab-content active">
             <div class="grid">
                 <div class="card">
-                    <h2>System Metrics</h2>
+                    <h2>Database Metrics</h2>
                     <div class="metric"><span>Inserts</span><span class="metric-value" id="metricInserts">-</span></div>
                     <div class="metric"><span>Reads</span><span class="metric-value" id="metricReads">-</span></div>
                     <div class="metric"><span>Updates</span><span class="metric-value" id="metricUpdates">-</span></div>
                     <div class="metric"><span>Deletes</span><span class="metric-value" id="metricDeletes">-</span></div>
                     <div class="metric"><span>Queries</span><span class="metric-value" id="metricQueries">-</span></div>
+                    <div class="metric"><span>Transactions</span><span class="metric-value" id="metricTransactions">-</span></div>
+                    <div class="metric"><span>Commits</span><span class="metric-value" id="metricCommits">-</span></div>
+                    <div class="metric"><span>Rollbacks</span><span class="metric-value" id="metricRollbacks">-</span></div>
+                    <div class="refresh-info">Auto-refreshes every 5 seconds</div>
                 </div>
                 <div class="card">
-                    <h2>Transactions</h2>
-                    <div class="metric"><span>Committed</span><span class="metric-value" id="metricCommitted">-</span></div>
-                    <div class="metric"><span>Rolled Back</span><span class="metric-value" id="metricRolledBack">-</span></div>
-                </div>
-                <div class="card">
-                    <h2>Memory</h2>
-                    <div class="metric"><span>Total</span><span class="metric-value" id="memTotal">-</span></div>
-                    <div class="metric"><span>Used</span><span class="metric-value" id="memUsed">-</span></div>
-                    <div class="metric"><span>Free</span><span class="metric-value" id="memFree">-</span></div>
-                    <div class="metric"><span>Max</span><span class="metric-value" id="memMax">-</span></div>
-                </div>
-                <div class="card">
-                    <h2>Database</h2>
+                    <h2>System Info</h2>
                     <div class="metric"><span>Engine</span><span class="metric-value" id="dbEngine">-</span></div>
                     <div class="metric"><span>Status</span><span class="metric-value" id="dbStatus">-</span></div>
                     <div class="metric"><span>Threads</span><span class="metric-value" id="dbThreads">-</span></div>
+                    <div class="metric"><span>Total Memory</span><span class="metric-value" id="memTotal">-</span></div>
+                    <div class="metric"><span>Used Memory</span><span class="metric-value" id="memUsed">-</span></div>
+                    <div class="metric"><span>Free Memory</span><span class="metric-value" id="memFree">-</span></div>
+                    <div class="metric"><span>Max Memory</span><span class="metric-value" id="memMax">-</span></div>
+                    <div class="metric"><span>Processors</span><span class="metric-value" id="memProcs">-</span></div>
+                </div>
+                <div class="card">
+                    <h2>Collections</h2>
+                    <div id="collectionsList">Loading...</div>
                 </div>
             </div>
         </div>
@@ -92,57 +104,40 @@
         <div id="collections" class="tab-content">
             <div class="card">
                 <h2>Create Document</h2>
-                <input type="text" id="colName" placeholder="Collection name">
-                <textarea id="docJson" placeholder='{"name":"Alice","age":30}'></textarea>
-                <button class="btn" onclick="createDocument()">Create</button>
-            </div>
-            <div class="card" style="margin-top: 20px;">
-                <h2>Query Documents</h2>
-                <input type="text" id="queryColName" placeholder="Collection name">
-                <button class="btn" onclick="loadDocuments()">Load All</button>
-                <div id="docsTable" style="margin-top: 15px;"></div>
+                <input type="text" id="colName" placeholder="Collection name (e.g., users)">
+                <textarea id="docJson" placeholder='{"name":"Alice","age":30,"city":"NYC"}'></textarea>
+                <div class="actions">
+                    <button class="btn" onclick="createDocument()">Create Document</button>
+                    <button class="btn btn-small" onclick="loadDocuments()">Load All</button>
+                </div>
+                <div id="docMessage"></div>
+                <div id="docsList"></div>
             </div>
         </div>
 
         <div id="kv" class="tab-content">
             <div class="card">
                 <h2>Key-Value Operations</h2>
-                <input type="text" id="bucketName" placeholder="Bucket name">
+                <input type="text" id="bucketName" placeholder="Bucket name (e.g., sessions)">
                 <input type="text" id="kvKey" placeholder="Key">
-                <input type="text" id="kvValue" placeholder="Value">
+                <textarea id="kvValue" placeholder="Value"></textarea>
                 <div class="actions">
                     <button class="btn" onclick="kvPut()">Put</button>
                     <button class="btn" onclick="kvGet()">Get</button>
-                    <button class="btn btn-danger" onclick="kvDelete()">Delete</button>
+                    <button class="btn" onclick="kvDelete()">Delete</button>
                 </div>
-                <div id="kvResult" class="log" style="margin-top: 15px;"></div>
-            </div>
-        </div>
-
-        <div id="query" class="tab-content">
-            <div class="card">
-                <h2>Query Builder</h2>
-                <input type="text" id="queryCol" placeholder="Collection name">
-                <select id="queryOp">
-                    <option value="eq">Equals (=)</option>
-                    <option value="gt">Greater Than (>)</option>
-                    <option value="gte">Greater or Equal (>=)</option>
-                    <option value="lt">Less Than (<)</option>
-                    <option value="lte">Less or Equal (<=)</option>
-                    <option value="ne">Not Equals (!=)</option>
-                </select>
-                <input type="text" id="queryField" placeholder="Field name">
-                <input type="text" id="queryValue" placeholder="Value">
-                <button class="btn" onclick="executeQuery()">Execute Query</button>
-                <div id="queryResult" style="margin-top: 15px;"></div>
+                <div id="kvMessage"></div>
+                <div id="kvResult"></div>
             </div>
         </div>
 
         <div id="logs" class="tab-content">
             <div class="card">
-                <h2>Activity Log</h2>
-                <button class="btn" onclick="clearLogs()">Clear</button>
-                <div id="activityLog" class="log" style="margin-top: 15px;"></div>
+                <div class="actions">
+                    <h2 style="border:none;margin:0;padding:0">Activity Log</h2>
+                    <button class="btn btn-small" onclick="clearLogs()">Clear</button>
+                </div>
+                <div id="activityLog" class="log"></div>
             </div>
         </div>
     </div>
@@ -155,14 +150,16 @@
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab button').forEach(el => el.classList.remove('active'));
             document.getElementById(name).classList.add('active');
-            event.target.classList.add('active');
+            if (event && event.target) event.target.classList.add('active');
+            if (name === 'overview') { loadMetrics(); loadStats(); loadCollections(); }
         }
 
         async function fetchJSON(url, options = {}) {
             try {
                 const res = await fetch(url, options);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                return await res.json();
+                const text = await res.text();
+                if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
+                return text ? JSON.parse(text) : null;
             } catch (e) {
                 log(e.message, 'error');
                 return null;
@@ -170,15 +167,23 @@
         }
 
         function log(msg, type = 'info') {
-            logs.unshift({ time: new Date().toLocaleTimeString(), msg, type });
-            if (logs.length > 100) logs.pop();
+            const time = new Date().toLocaleTimeString();
+            logs.unshift({ time, msg, type });
+            if (logs.length > 50) logs.pop();
             renderLogs();
         }
 
         function renderLogs() {
             document.getElementById('activityLog').innerHTML = logs.map(l =>
                 `<div class="log-entry ${l.type}">[${l.time}] ${l.msg}</div>`
-            ).join('');
+            ).join('') || '<div class="log-entry">No activity yet</div>';
+        }
+
+        function showMessage(id, msg, type = 'error') {
+            const el = document.getElementById(id);
+            el.className = type + '-msg';
+            el.textContent = msg;
+            setTimeout(() => el.textContent = '', 3000);
         }
 
         async function checkHealth() {
@@ -186,7 +191,6 @@
             if (health && health.open) {
                 document.getElementById('statusDot').classList.remove('offline');
                 document.getElementById('statusText').textContent = 'Online';
-                log('Connected to database', 'success');
             } else {
                 document.getElementById('statusDot').classList.add('offline');
                 document.getElementById('statusText').textContent = 'Offline';
@@ -196,13 +200,14 @@
         async function loadMetrics() {
             const m = await fetchJSON(`${API}/metrics`);
             if (m) {
-                document.getElementById('metricInserts').textContent = m.inserts || 0;
-                document.getElementById('metricReads').textContent = m.reads || 0;
-                document.getElementById('metricUpdates').textContent = m.updates || 0;
-                document.getElementById('metricDeletes').textContent = m.deletes || 0;
-                document.getElementById('metricQueries').textContent = m.queries || 0;
-                document.getElementById('metricCommitted').textContent = m.transactionsCommitted || 0;
-                document.getElementById('metricRolledBack').textContent = m.transactionsRolledBack || 0;
+                document.getElementById('metricInserts').textContent = m.inserts ?? 0;
+                document.getElementById('metricReads').textContent = m.reads ?? 0;
+                document.getElementById('metricUpdates').textContent = m.updates ?? 0;
+                document.getElementById('metricDeletes').textContent = m.deletes ?? 0;
+                document.getElementById('metricQueries').textContent = m.queries ?? 0;
+                document.getElementById('metricTransactions').textContent = m.transactions ?? 0;
+                document.getElementById('metricCommits').textContent = m.transactionCommits ?? 0;
+                document.getElementById('metricRollbacks').textContent = m.transactionRollbacks ?? 0;
             }
         }
 
@@ -217,80 +222,134 @@
                 document.getElementById('memUsed').textContent = fmt(s.memory?.usedMemory);
                 document.getElementById('memFree').textContent = fmt(s.memory?.freeMemory);
                 document.getElementById('memMax').textContent = fmt(s.memory?.maxMemory);
+                document.getElementById('memProcs').textContent = s.memory?.availableProcessors || '-';
             }
         }
 
-        async function createDocument() {
-            const col = document.getElementById('colName').value;
-            const json = document.getElementById('docJson').value;
-            if (!col || !json) { log('Collection and document JSON required', 'error'); return; }
-            try {
-                const doc = JSON.parse(json);
-                const result = await fetchJSON(`${API}/collections/${col}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: json
-                });
-                if (result) { log(`Created document in ${col}`, 'success'); loadMetrics(); }
-            } catch (e) { log('Invalid JSON: ' + e.message, 'error'); }
-        }
-
-        async function loadDocuments() {
-            const col = document.getElementById('queryColName').value;
-            if (!col) { log('Collection name required', 'error'); return; }
-            const docs = await fetchJSON(`${API}/collections/${col}`);
-            if (docs) {
-                if (Array.isArray(docs) && docs.length > 0) {
-                    document.getElementById('docsTable').innerHTML = `
-                        <table><tr><th>ID</th><th>Data</th></tr>
-                        ${docs.map(d => `<tr><td>${d.id || '-'}</td><td>${JSON.stringify(d.fields || d)}</td></tr>`).join('')}
-                        </table>`;
-                    log(`Loaded ${docs.length} documents from ${col}`, 'success');
+        async function loadCollections() {
+            const m = await fetchJSON(`${API}/metrics`);
+            if (m && m.collections) {
+                const cols = Object.entries(m.collections);
+                if (cols.length === 0) {
+                    document.getElementById('collectionsList').innerHTML = '<p>No collections yet</p>';
                 } else {
-                    document.getElementById('docsTable').innerHTML = '<p>No documents found</p>';
+                    document.getElementById('collectionsList').innerHTML = cols.map(([name, count]) =>
+                        `<div class="metric"><span>${name}</span><span class="metric-value">${count} docs</span></div>`
+                    ).join('');
                 }
             }
         }
 
+        async function createDocument() {
+            const col = document.getElementById('colName').value.trim();
+            const json = document.getElementById('docJson').value.trim();
+            if (!col) { showMessage('docMessage', 'Collection name required', 'error'); return; }
+            if (!json) { showMessage('docMessage', 'Document JSON required', 'error'); return; }
+            
+            let doc;
+            try { doc = JSON.parse(json); }
+            catch (e) { showMessage('docMessage', 'Invalid JSON: ' + e.message, 'error'); return; }
+            
+            const result = await fetchJSON(`${API}/collections/${col}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: json
+            });
+            
+            if (result) {
+                showMessage('docMessage', `Created document with ID: ${result.id}`, 'success');
+                log(`Created document in ${col}: ${result.id}`, 'success');
+                document.getElementById('docJson').value = '';
+                loadMetrics();
+                loadCollections();
+                loadDocuments();
+            }
+        }
+
+        async function loadDocuments() {
+            const col = document.getElementById('colName').value.trim();
+            if (!col) { showMessage('docMessage', 'Enter collection name first', 'error'); return; }
+            
+            const docs = await fetchJSON(`${API}/collections/${col}`);
+            const listEl = document.getElementById('docsList');
+            
+            if (!docs) {
+                listEl.innerHTML = '<p>No documents found</p>';
+                return;
+            }
+            
+            const arr = Array.isArray(docs) ? docs : [docs];
+            if (arr.length === 0 || (arr.length === 1 && !arr[0])) {
+                listEl.innerHTML = '<p>No documents found</p>';
+                return;
+            }
+            
+            listEl.innerHTML = arr.map(d => {
+                const fields = d.fields || d;
+                const fieldsHtml = Object.entries(fields).map(([k,v]) => `<span>${k}: ${v}</span>`).join(', ');
+                return `<div class="doc-item"><div class="doc-id">ID: ${d.id || 'N/A'}</div><div class="doc-fields">${fieldsHtml}</div></div>`;
+            }).join('');
+            
+            log(`Loaded ${arr.length} documents from ${col}`, 'success');
+        }
+
         async function kvPut() {
-            const bucket = document.getElementById('bucketName').value;
-            const key = document.getElementById('kvKey').value;
+            const bucket = document.getElementById('bucketName').value.trim();
+            const key = document.getElementById('kvKey').value.trim();
             const value = document.getElementById('kvValue').value;
-            if (!bucket || !key) { log('Bucket and key required', 'error'); return; }
+            if (!bucket) { showMessage('kvMessage', 'Bucket name required', 'error'); return; }
+            if (!key) { showMessage('kvMessage', 'Key required', 'error'); return; }
+            
+            const body = JSON.stringify({ value: value || '' });
             const result = await fetchJSON(`${API}/kv/${bucket}/${key}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ value })
+                body
             });
-            if (result) { log(`Put: ${key} = ${value}`, 'success'); }
+            
+            if (result) {
+                showMessage('kvMessage', `Stored: ${key}`, 'success');
+                log(`KV Put: ${bucket}/${key}`, 'success');
+            }
         }
 
         async function kvGet() {
-            const bucket = document.getElementById('bucketName').value;
-            const key = document.getElementById('kvKey').value;
-            if (!bucket || !key) { log('Bucket and key required', 'error'); return; }
+            const bucket = document.getElementById('bucketName').value.trim();
+            const key = document.getElementById('kvKey').value.trim();
+            if (!bucket) { showMessage('kvMessage', 'Bucket name required', 'error'); return; }
+            if (!key) { showMessage('kvMessage', 'Key required', 'error'); return; }
+            
             const result = await fetchJSON(`${API}/kv/${bucket}/${key}`);
-            if (result) { log(`Get: ${key} = ${result.value}`, 'success'); }
+            const resultEl = document.getElementById('kvResult');
+            
+            if (result) {
+                resultEl.innerHTML = `<div class="success-msg">${key} = ${result.value}</div>`;
+                log(`KV Get: ${bucket}/${key} = ${result.value}`, 'success');
+            } else {
+                resultEl.innerHTML = `<div class="error-msg">Key not found: ${key}</div>`;
+            }
         }
 
         async function kvDelete() {
-            const bucket = document.getElementById('bucketName').value;
-            const key = document.getElementById('kvKey').value;
-            if (!bucket || !key) { log('Bucket and key required', 'error'); return; }
+            const bucket = document.getElementById('bucketName').value.trim();
+            const key = document.getElementById('kvKey').value.trim();
+            if (!bucket) { showMessage('kvMessage', 'Bucket name required', 'error'); return; }
+            if (!key) { showMessage('kvMessage', 'Key required', 'error'); return; }
+            
             await fetch(`${API}/kv/${bucket}/${key}`, { method: 'DELETE' });
-            log(`Deleted: ${key}`, 'success');
-        }
-
-        function executeQuery() {
-            log('Query functionality requires query parameters - use REST API directly', 'info');
+            showMessage('kvMessage', `Deleted: ${key}`, 'success');
+            document.getElementById('kvResult').innerHTML = '';
+            log(`KV Delete: ${bucket}/${key}`, 'success');
         }
 
         function clearLogs() { logs = []; renderLogs(); }
 
         // Initialize
+        log('Dashboard initialized', 'info');
         checkHealth();
         loadMetrics();
         loadStats();
+        loadCollections();
         setInterval(() => { checkHealth(); loadMetrics(); loadStats(); }, 5000);
     </script>
 </body>

@@ -11,6 +11,7 @@ import org.jnosql.embed.util.JsonSerde;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -26,6 +27,7 @@ public class JNoSQLServer {
 
     public void start(int port) throws IOException {
         server = HttpServer.create(new InetSocketAddress(port), 0);
+        server.createContext("/", new StaticHandler());
         server.createContext("/api/collections", new CollectionsHandler());
         server.createContext("/api/collections/", new CollectionHandler());
         server.createContext("/api/kv/", new KeyValueHandler());
@@ -44,6 +46,39 @@ public class JNoSQLServer {
 
     public int port() {
         return server.getAddress().getPort();
+    }
+
+    private class StaticHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            var path = exchange.getRequestURI().getPath();
+            if (path.equals("/")) {
+                path = "/index.html";
+            }
+            var resourcePath = "/static" + path;
+            try (var is = JNoSQLServer.class.getResourceAsStream(resourcePath)) {
+                if (is == null) {
+                    exchange.sendResponseHeaders(404, -1);
+                    return;
+                }
+                var bytes = is.readAllBytes();
+                exchange.getResponseHeaders().set("Content-Type", getContentType(path));
+                exchange.sendResponseHeaders(200, bytes.length);
+                try (var os = exchange.getResponseBody()) {
+                    os.write(bytes);
+                }
+            }
+        }
+
+        private String getContentType(String path) {
+            if (path.endsWith(".html")) return "text/html";
+            if (path.endsWith(".css")) return "text/css";
+            if (path.endsWith(".js")) return "application/javascript";
+            if (path.endsWith(".json")) return "application/json";
+            if (path.endsWith(".png")) return "image/png";
+            if (path.endsWith(".ico")) return "image/x-icon";
+            return "text/plain";
+        }
     }
 
     private class HealthHandler implements HttpHandler {
