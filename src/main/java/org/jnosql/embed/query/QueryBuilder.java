@@ -87,6 +87,24 @@ public class QueryBuilder {
             return this;
         }
 
+        public SelectQueryBuilder regex(String pattern) {
+            this.whereValue = pattern;
+            this.condition = WhereCondition.REGEX;
+            return this;
+        }
+
+        public SelectQueryBuilder like(String pattern) {
+            this.whereValue = pattern;
+            this.condition = WhereCondition.LIKE;
+            return this;
+        }
+
+        public SelectQueryBuilder between(Number lower, Number upper) {
+            this.whereValue = new Object[]{lower, upper};
+            this.condition = WhereCondition.BETWEEN;
+            return this;
+        }
+
         public SelectQueryBuilder orderBy(String field) {
             this.sortField = field;
             return this;
@@ -134,6 +152,12 @@ public class QueryBuilder {
                     case CONTAINS -> Query.contains(whereField, (String) whereValue);
                     case IN -> Query.in(whereField, (java.util.List<?>) whereValue);
                     case EXISTS -> Query.exists(whereField);
+                    case REGEX -> Query.regex(whereField, (String) whereValue);
+                    case LIKE -> Query.regex(whereField, ((String) whereValue).replace("%", ".*"));
+                    case BETWEEN -> {
+                        var range = (Object[]) whereValue;
+                        yield Query.between(whereField, (Number) range[0], (Number) range[1]);
+                    }
                     default -> Query.all();
                 };
             }
@@ -163,7 +187,10 @@ public class QueryBuilder {
         LESS_THAN_OR_EQUALS,
         CONTAINS,
         IN,
-        EXISTS
+        EXISTS,
+        REGEX,
+        LIKE,
+        BETWEEN
     }
 
     @FunctionalInterface

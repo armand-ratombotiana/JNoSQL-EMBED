@@ -7,6 +7,7 @@ import org.jnosql.embed.event.EventBus;
 import org.jnosql.embed.kv.KeyValueBucket;
 import org.jnosql.embed.metrics.DatabaseMetrics;
 import org.jnosql.embed.server.JNoSQLServer;
+import org.jnosql.embed.storage.H2StorageEngine;
 import org.jnosql.embed.storage.StorageEngine;
 import org.jnosql.embed.transaction.Transaction;
 
@@ -85,6 +86,17 @@ public class JNoSQL implements Closeable {
         return metrics;
     }
 
+    public H2StorageEngine h2Engine() {
+        if (engine instanceof H2StorageEngine h2) {
+            return h2;
+        }
+        throw new UnsupportedOperationException("SQL execution is only available with H2 storage engine");
+    }
+
+    public boolean isH2Engine() {
+        return engine instanceof H2StorageEngine;
+    }
+
     public JNoSQLServer startServer(int port) throws IOException {
         checkOpen();
         server = new JNoSQLServer(this);
@@ -107,6 +119,10 @@ public class JNoSQL implements Closeable {
             engine.flush();
             closed = true;
         }
+    }
+
+    public void flush() {
+        engine.flush();
     }
 
     private void checkOpen() {
@@ -135,7 +151,7 @@ public class JNoSQL implements Closeable {
                     System.out.println("Options:");
                     System.out.println("  --port <port>          Server port (default: 8080)");
                     System.out.println("  --data-dir <dir>       Data directory (default: data)");
-                    System.out.println("  --engine <type>         Storage engine: FILE, IN_MEMORY (default: FILE)");
+                    System.out.println("  --engine <type>         Storage engine: FILE, IN_MEMORY, LSM_TREE, B_TREE, H2 (default: FILE)");
                     System.out.println("  --sync                 Enable synchronous flush (default)");
                     System.out.println("  --async                Enable asynchronous flush");
                     System.out.println("  --flush-interval <ms>  Flush interval in ms (default: 1000)");
@@ -146,8 +162,13 @@ public class JNoSQL implements Closeable {
         }
 
         var config = JNoSQL.embed()
-                .storageEngine("FILE".equalsIgnoreCase(engineType) ? 
-                        JNoSQLConfig.StorageEngineType.FILE : JNoSQLConfig.StorageEngineType.IN_MEMORY)
+                .storageEngine(switch (engineType.toUpperCase()) {
+                    case "FILE" -> JNoSQLConfig.StorageEngineType.FILE;
+                    case "LSM_TREE" -> JNoSQLConfig.StorageEngineType.LSM_TREE;
+                    case "B_TREE" -> JNoSQLConfig.StorageEngineType.B_TREE;
+                    case "H2" -> JNoSQLConfig.StorageEngineType.H2;
+                    default -> JNoSQLConfig.StorageEngineType.IN_MEMORY;
+                })
                 .persistTo(dataDir)
                 .autoFlush(autoFlush)
                 .flushIntervalMs(flushInterval)

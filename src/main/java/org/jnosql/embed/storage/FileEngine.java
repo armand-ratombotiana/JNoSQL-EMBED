@@ -66,6 +66,11 @@ public class FileEngine implements StorageEngine {
     }
 
     @Override
+    public String name() {
+        return "FILE";
+    }
+
+    @Override
     public void put(String collection, String key, String value) {
         store.computeIfAbsent(collection, k -> new ConcurrentHashMap<>()).put(key, value);
         
@@ -241,6 +246,23 @@ public class FileEngine implements StorageEngine {
         }
         
         store.clear();
+    }
+
+    @Override
+    public int size() {
+        return store.values().stream().mapToInt(ConcurrentMap::size).sum();
+    }
+
+    @Override
+    public Map<String, Object> stats() {
+        return Map.of(
+            "engine", name(),
+            "collections", store.size(),
+            "totalEntries", size(),
+            "dataDir", dataDir.toString(),
+            "asyncEnabled", asyncEnabled,
+            "type", "file-persistent"
+        );
     }
 
     @SuppressWarnings("unchecked")

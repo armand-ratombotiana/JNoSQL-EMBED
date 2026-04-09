@@ -7,6 +7,8 @@ import java.util.function.Predicate;
 
 public interface StorageEngine {
 
+    String name();
+
     void put(String collection, String key, String value);
 
     void putAll(String collection, Map<String, String> entries);
@@ -26,6 +28,10 @@ public interface StorageEngine {
     List<String> scan(String collection, Predicate<String> filter);
 
     Set<String> keys(String collection);
+
+    int size();
+
+    Map<String, Object> stats();
 
     void flush();
 

@@ -19,6 +19,19 @@ public class Document {
         return new Document().add(key, value);
     }
 
+    public static Document of(Map<String, Object> fields) {
+        var doc = new Document();
+        doc.fields = new LinkedHashMap<>(fields);
+        return doc;
+    }
+
+    public static Document fromMap(String id, Map<String, Object> fields) {
+        var doc = new Document();
+        doc.id = id;
+        doc.fields = new LinkedHashMap<>(fields);
+        return doc;
+    }
+
     public Document add(String key, Object value) {
         this.fields.put(key, value);
         return this;

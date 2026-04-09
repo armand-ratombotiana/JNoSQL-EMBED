@@ -50,6 +50,47 @@ public class SecondaryIndex {
         return index.getOrDefault(value, Collections.emptySet());
     }
 
+    @SuppressWarnings("unchecked")
+    public Set<String> range(Object lower, Object upper, boolean inclusive) {
+        Set<String> result = new HashSet<>();
+        for (var entry : index.entrySet()) {
+            var key = (Comparable<Object>) entry.getKey();
+            var keyValue = key;
+            boolean aboveLower = inclusive ? keyValue.compareTo(lower) >= 0 : keyValue.compareTo(lower) > 0;
+            boolean belowUpper = inclusive ? keyValue.compareTo(upper) <= 0 : keyValue.compareTo(upper) < 0;
+            if (aboveLower && belowUpper) {
+                result.addAll(entry.getValue());
+            }
+        }
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    public Set<String> greaterThan(Object value, boolean inclusive) {
+        Set<String> result = new HashSet<>();
+        for (var entry : index.entrySet()) {
+            var key = (Comparable<Object>) entry.getKey();
+            boolean above = inclusive ? key.compareTo(value) >= 0 : key.compareTo(value) > 0;
+            if (above) {
+                result.addAll(entry.getValue());
+            }
+        }
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    public Set<String> lessThan(Object value, boolean inclusive) {
+        Set<String> result = new HashSet<>();
+        for (var entry : index.entrySet()) {
+            var key = (Comparable<Object>) entry.getKey();
+            boolean below = inclusive ? key.compareTo(value) <= 0 : key.compareTo(value) < 0;
+            if (below) {
+                result.addAll(entry.getValue());
+            }
+        }
+        return result;
+    }
+
     public Set<String> allValues() {
         return index.keySet().stream()
                 .flatMap(v -> index.get(v).stream())
@@ -74,6 +115,16 @@ public class SecondaryIndex {
 
     public Map<Object, Set<String>> toMap() {
         return Map.copyOf(index);
+    }
+
+    public Map<String, Object> stats() {
+        return Map.of(
+            "collection", collection,
+            "field", field,
+            "uniqueValues", index.size(),
+            "totalIndexed", size(),
+            "type", "secondary-btree"
+        );
     }
 
     public String toJson() {

@@ -163,6 +163,18 @@ public class DocumentCollection {
         return results;
     }
 
+    public List<Document> findByIds(List<String> ids) {
+        metrics.recordRead();
+        var results = new ArrayList<Document>();
+        for (var id : ids) {
+            var json = engine.get(name, id);
+            if (json != null) {
+                results.add(Document.fromJson(json));
+            }
+        }
+        return results;
+    }
+
     public List<Document> find(Query query) {
         metrics.recordQuery();
         
@@ -300,13 +312,23 @@ public class DocumentCollection {
         var docs = find(query.limit(Integer.MAX_VALUE));
         for (var d : docs) {
             engine.delete(name, d.id());
-            for (var idx : indexes.values()) {
+            for ( var idx : indexes.values()) {
                 idx.remove(d);
             }
             metrics.recordDelete();
         }
         metrics.updateCollectionSize(name, count());
         return docs.size();
+    }
+
+    public long bulkDelete(List<String> ids) {
+        long deleted = 0;
+        for (var id : ids) {
+            if (deleteById(id)) {
+                deleted++;
+            }
+        }
+        return deleted;
     }
 
     public long count() {
@@ -344,7 +366,8 @@ public class DocumentCollection {
                 "collection", name,
                 "count", count(),
                 "indexCount", indexes.size(),
-                "storageEngine", engine.getClass().getSimpleName()
+                "storageEngine", engine.name(),
+                "engineStats", engine.stats()
         );
     }
 

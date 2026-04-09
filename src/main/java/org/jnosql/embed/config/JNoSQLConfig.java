@@ -15,12 +15,18 @@ public record JNoSQLConfig(
 
     public enum StorageEngineType {
         IN_MEMORY,
-        FILE;
+        FILE,
+        LSM_TREE,
+        B_TREE,
+        H2;
 
         public StorageEngine create(Path dataDir, boolean autoFlush, int flushIntervalMs) {
             return switch (this) {
                 case IN_MEMORY -> new org.jnosql.embed.storage.InMemoryEngine();
                 case FILE -> new org.jnosql.embed.storage.FileEngine(dataDir, flushIntervalMs, autoFlush);
+                case LSM_TREE -> new org.jnosql.embed.storage.LSMTreeEngine(dataDir, 1024 * 1024, 64 * 1024 * 1024);
+                case B_TREE -> new org.jnosql.embed.storage.BTreeEngine(dataDir);
+                case H2 -> new org.jnosql.embed.storage.H2StorageEngine(dataDir);
             };
         }
     }

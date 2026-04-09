@@ -34,6 +34,23 @@ public class Query {
         });
     }
 
+    public static Query fromQuery(String queryString) {
+        if (queryString == null || queryString.isBlank()) {
+            return all();
+        }
+        String trimmed = queryString.trim();
+        if (trimmed.contains("=")) {
+            int eqIndex = trimmed.indexOf('=');
+            String field = trimmed.substring(0, eqIndex).trim();
+            String value = trimmed.substring(eqIndex + 1).trim();
+            if (value.startsWith("\"") && value.endsWith("\"")) {
+                value = value.substring(1, value.length() - 1);
+            }
+            return eq(field, value);
+        }
+        return all();
+    }
+
     public static Query contains(String field, String substring) {
         return new Query(doc -> {
             if (!doc.has(field)) return false;
@@ -105,6 +122,17 @@ public class Query {
 
     public static Query exists(String field) {
         return new Query(doc -> doc.has(field));
+    }
+
+    public static Query between(String field, Number lower, Number upper) {
+        return new Query(doc -> {
+            if (!doc.has(field)) return false;
+            var v = doc.getRaw(field);
+            if (v instanceof Number n) {
+                return n.doubleValue() >= lower.doubleValue() && n.doubleValue() <= upper.doubleValue();
+            }
+            return false;
+        });
     }
 
     public static Query regex(String field, String pattern) {

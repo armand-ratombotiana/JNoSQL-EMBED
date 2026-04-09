@@ -35,6 +35,12 @@ public class JNoSQLServer {
         server.createContext("/api/health", new HealthHandler());
         server.createContext("/api/metrics", new MetricsHandler());
         server.createContext("/api/stats", new StatsHandler());
+        server.createContext("/api/backup", new BackupHandler());
+        server.createContext("/api/indexes/", new IndexHandler());
+        server.createContext("/api/transactions", new TransactionHandler());
+        server.createContext("/api/schema/", new SchemaHandler());
+        server.createContext("/api/vectors/", new VectorHandler());
+        server.createContext("/api/sql", new SqlHandler());
         server.setExecutor(null);
         server.start();
     }
@@ -125,6 +131,17 @@ public class JNoSQLServer {
                     var doc = collection.findById(id);
                     if (doc != null) sendJson(exchange, 200, doc);
                     else sendJson(exchange, 404, Map.of("error", "Not found"));
+                } else if ("PUT".equals(exchange.getRequestMethod()) || "POST".equals(exchange.getRequestMethod())) {
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    var doc = Document.of("name", "temp");
+                    doc.id(id);
+                    for (var entry : data.entrySet()) {
+                        var e = (java.util.Map.Entry<?, ?>) entry;
+                        doc.add(e.getKey().toString(), e.getValue());
+                    }
+                    var saved = collection.insert(doc);
+                    sendJson(exchange, 201, saved);
                 } else if ("DELETE".equals(exchange.getRequestMethod())) {
                     collection.deleteById(id);
                     sendJson(exchange, 204, null);
@@ -202,13 +219,238 @@ public class JNoSQLServer {
         }
     }
 
+    private class BackupHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            var path = exchange.getRequestURI().getPath();
+            var parts = path.split("/");
+            
+            if ("GET".equals(exchange.getRequestMethod()) && parts.length == 3) {
+                var metrics = db.metrics().snapshot();
+                var collections = metrics.containsKey("collections") ? metrics.get("collections") : Map.of();
+                sendJson(exchange, 200, Map.of(
+                    "backup", Map.of(
+                        "description", "Use POST /api/backup to create backup",
+                        "restore", "Use POST /api/backup/restore with JSON body containing 'backupFile' path"
+                    ),
+                    "diskUsage", getDiskUsage(),
+                    "collections", collections
+                ));
+                return;
+            }
+            
+            if ("POST".equals(exchange.getRequestMethod()) && parts.length == 3) {
+                var body = readBody(exchange);
+                var data = JsonSerde.fromJson(body, Map.class);
+                
+                if (data.containsKey("backupFile")) {
+                    var backupManager = new org.jnosql.embed.backup.BackupManager(db.config().storageEngine().create(
+                        db.config().dataDir(), true, 1000));
+                    var backupFile = java.nio.file.Paths.get(data.get("backupFile").toString());
+                    backupManager.restore(backupFile);
+                    sendJson(exchange, 200, Map.of("status", "restored", "file", backupFile.toString()));
+                } else {
+                    var backupDir = java.nio.file.Files.createTempDirectory("jnosql-backup");
+                    var backupManager = new org.jnosql.embed.backup.BackupManager(
+                        new org.jnosql.embed.storage.FileEngine(backupDir, 1000, false));
+                    var backupFile = backupManager.backup(backupDir);
+                    sendJson(exchange, 200, Map.of(
+                        "status", "backup created",
+                        "file", backupFile.toString(),
+                        "size", java.nio.file.Files.size(backupFile)
+                    ));
+                }
+                return;
+            }
+            
+            sendJson(exchange, 400, Map.of("error", "Usage: GET /api/backup or POST /api/backup"));
+        }
+        
+        private Map<String, Object> getDiskUsage() {
+            try {
+                var dataDir = db.config().dataDir();
+                long totalSize = 0;
+                int fileCount = 0;
+                
+                if (java.nio.file.Files.exists(dataDir)) {
+                    try (var stream = java.nio.file.Files.list(dataDir)) {
+                        var files = stream.filter(p -> p.toString().endsWith(".json")).toList();
+                        for (var file : files) {
+                            totalSize += java.nio.file.Files.size(file);
+                            fileCount++;
+                        }
+                    }
+                }
+                
+                return Map.of(
+                    "dataDir", dataDir.toString(),
+                    "totalBytes", totalSize,
+                    "fileCount", fileCount,
+                    "totalMB", String.format("%.2f MB", totalSize / 1024.0 / 1024.0)
+                );
+            } catch (IOException e) {
+                return Map.of("error", e.getMessage());
+            }
+        }
+    }
+
+    private class IndexHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            var path = exchange.getRequestURI().getPath();
+            var parts = path.split("/");
+            if (parts.length < 4) {
+                sendJson(exchange, 400, Map.of("error", "Usage: /api/indexes/{collection}"));
+                return;
+            }
+            var collectionName = parts[3];
+            var collection = db.documentCollection(collectionName);
+            
+            if ("GET".equals(exchange.getRequestMethod())) {
+                var indexes = collection.getIndexes();
+                var result = new java.util.HashMap<String, Object>();
+                result.put("collection", collectionName);
+                result.put("indexes", indexes);
+                sendJson(exchange, 200, result);
+            } else if ("POST".equals(exchange.getRequestMethod())) {
+                var body = readBody(exchange);
+                var data = JsonSerde.fromJson(body, Map.class);
+                var field = data.get("field").toString();
+                var index = collection.createIndex(field);
+                sendJson(exchange, 201, Map.of(
+                    "status", "created",
+                    "collection", collectionName,
+                    "field", field
+                ));
+            } else if ("DELETE".equals(exchange.getRequestMethod())) {
+                collection.clear();
+                sendJson(exchange, 200, Map.of("status", "indexes cleared"));
+            }
+        }
+    }
+
+    private class TransactionHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if ("POST".equals(exchange.getRequestMethod())) {
+                var tx = db.beginTransaction();
+                var txId = tx.hashCode();
+                activeTransactions.put(txId, tx);
+                sendJson(exchange, 200, Map.of(
+                    "transactionId", txId,
+                    "status", "started"
+                ));
+            } else {
+                sendJson(exchange, 400, Map.of("error", "POST /api/transactions to begin"));
+            }
+        }
+    }
+
+    private class SchemaHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            var path = exchange.getRequestURI().getPath();
+            var parts = path.split("/");
+            if (parts.length < 4) {
+                sendJson(exchange, 400, Map.of("error", "Usage: /api/schema/{collection}"));
+                return;
+            }
+            var collectionName = parts[3];
+            
+            if ("GET".equals(exchange.getRequestMethod())) {
+                var schema = schemaValidator.getSchema(collectionName);
+                sendJson(exchange, 200, Map.of(
+                    "collection", collectionName,
+                    "hasSchema", schema != null,
+                    "schema", schema != null ? schema.getFields() : java.util.List.of()
+                ));
+            } else if ("POST".equals(exchange.getRequestMethod())) {
+                var body = readBody(exchange);
+                var data = JsonSerde.fromJson(body, Map.class);
+                var schema = org.jnosql.embed.schema.SchemaValidator.builder(collectionName);
+                
+                if (data.containsKey("strict")) {
+                    var constructor = schema.getClass().getDeclaredConstructors()[0];
+                    constructor.setAccessible(true);
+                }
+                
+                schemaValidator.registerSchema(collectionName, schema);
+                sendJson(exchange, 201, Map.of(
+                    "status", "schema registered",
+                    "collection", collectionName
+                ));
+            }
+        }
+    }
+
+    private java.util.Map<Integer, org.jnosql.embed.transaction.Transaction> activeTransactions = new java.util.concurrent.ConcurrentHashMap<>();
+    private org.jnosql.embed.schema.SchemaValidator schemaValidator = new org.jnosql.embed.schema.SchemaValidator();
+    private java.util.Map<String, org.jnosql.embed.vector.HNSWIndex> vectorIndexes = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private class VectorHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            var path = exchange.getRequestURI().getPath();
+            var parts = path.split("/");
+            if (parts.length < 5) {
+                sendJson(exchange, 400, Map.of("error", "Usage: /api/vectors/{index}[/id]"));
+                return;
+            }
+            var indexName = parts[3];
+            var hnsw = vectorIndexes.computeIfAbsent(indexName, k -> new org.jnosql.embed.vector.HNSWIndex(128));
+            
+            if (parts.length == 5) {
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    sendJson(exchange, 200, Map.of(
+                        "index", indexName,
+                        "dimensions", hnsw.dimensions(),
+                        "size", hnsw.size()
+                    ));
+                    return;
+                }
+            }
+            
+            var id = parts[4];
+            
+            if ("GET".equals(exchange.getRequestMethod())) {
+                var body = readBody(exchange);
+                var data = JsonSerde.fromJson(body, Map.class);
+                var vector = parseVector((java.util.List<?>) data.get("vector"));
+                var k = data.containsKey("k") ? ((Number) data.get("k")).intValue() : 5;
+                
+                var results = hnsw.search(vector, k);
+                sendJson(exchange, 200, Map.of(
+                    "query", id,
+                    "results", results
+                ));
+            } else if ("POST".equals(exchange.getRequestMethod())) {
+                var body = readBody(exchange);
+                var data = JsonSerde.fromJson(body, Map.class);
+                var vector = parseVector((java.util.List<?>) data.get("vector"));
+                hnsw.add(id, vector);
+                sendJson(exchange, 201, Map.of("id", id, "status", "added"));
+            } else if ("DELETE".equals(exchange.getRequestMethod())) {
+                hnsw.remove(id);
+                sendJson(exchange, 204, null);
+            }
+        }
+        
+        private float[] parseVector(java.util.List<?> list) {
+            float[] vector = new float[list.size()];
+            for (int i = 0; i < list.size(); i++) {
+                vector[i] = ((Number) list.get(i)).floatValue();
+            }
+            return vector;
+        }
+    }
+
     private void sendJson(HttpExchange exchange, int status, Object body) throws IOException {
         exchange.getResponseHeaders().set("Content-Type", "application/json");
         exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
         var json = body != null ? JsonSerde.toJson(body) : "";
         var bytes = json.getBytes(StandardCharsets.UTF_8);
         exchange.sendResponseHeaders(status, bytes.length);
-        try (var os = exchange.getResponseBody()) {
+        try ( var os = exchange.getResponseBody()) {
             os.write(bytes);
         }
     }
@@ -246,6 +488,43 @@ public class JNoSQLServer {
     private String readBody(HttpExchange exchange) throws IOException {
         try (InputStream is = exchange.getRequestBody()) {
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        }
+    }
+
+    private class SqlHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equals(exchange.getRequestMethod())) {
+                sendJson(exchange, 405, Map.of("error", "Only POST method is allowed for SQL execution"));
+                return;
+            }
+            if (!db.isH2Engine()) {
+                sendJson(exchange, 400, Map.of("error", "SQL execution is only available with H2 storage engine"));
+                return;
+            }
+            try {
+                var sql = readBody(exchange);
+                var result = db.h2Engine().executeSql(sql);
+                if (result.success()) {
+                    if (result.rows() != null) {
+                        sendJson(exchange, 200, Map.of(
+                            "type", "select",
+                            "columns", result.columns(),
+                            "rows", result.rows()
+                        ));
+                    } else {
+                        sendJson(exchange, 200, Map.of(
+                            "type", "other",
+                            "affected", result.affected(),
+                            "message", result.message()
+                        ));
+                    }
+                } else {
+                    sendJson(exchange, 400, Map.of("error", result.message()));
+                }
+            } catch (Exception e) {
+                sendJson(exchange, 500, Map.of("error", e.getMessage()));
+            }
         }
     }
 }

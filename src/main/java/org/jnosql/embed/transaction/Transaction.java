@@ -6,75 +6,134 @@ import org.jnosql.embed.event.EventBus;
 import org.jnosql.embed.metrics.DatabaseMetrics;
 import org.jnosql.embed.storage.StorageEngine;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class Transaction implements AutoCloseable {
 
+    public enum Status { ACTIVE, COMMITTED, ROLLED_BACK, TIMEOUT }
+    
+    private final String id;
     private final StorageEngine engine;
     private final EventBus eventBus;
     private final DatabaseMetrics metrics;
     private final List<Operation> operations;
-    private boolean committed;
-    private boolean rolledBack;
+    private volatile Status status;
+    private final Instant createdAt;
+    private volatile long timeoutMs;
+    private volatile Instant lastActivity;
 
     public Transaction(StorageEngine engine, EventBus eventBus, DatabaseMetrics metrics) {
+        this(engine, eventBus, metrics, 30000);
+    }
+
+    public Transaction(StorageEngine engine, EventBus eventBus, DatabaseMetrics metrics, long timeoutMs) {
+        this.id = UUID.randomUUID().toString();
         this.engine = engine;
         this.eventBus = eventBus;
         this.metrics = metrics;
         this.operations = new ArrayList<>();
-        this.committed = false;
-        this.rolledBack = false;
+        this.status = Status.ACTIVE;
+        this.createdAt = Instant.now();
+        this.timeoutMs = timeoutMs;
+        this.lastActivity = Instant.now();
+    }
+
+    public String id() {
+        return id;
+    }
+
+    public Status status() {
+        return status;
+    }
+
+    public Instant createdAt() {
+        return createdAt;
+    }
+
+    public long timeoutMs() {
+        return timeoutMs;
+    }
+
+    public Transaction timeoutMs(long timeoutMs) {
+        this.timeoutMs = timeoutMs;
+        return this;
+    }
+
+    public int operationCount() {
+        return operations.size();
     }
 
     public DocumentCollection documentCollection(String name) {
         checkOpen();
+        lastActivity = Instant.now();
         return new TransactionalCollection(name, engine, operations, eventBus, metrics);
     }
 
     public void commit() {
         checkOpen();
-        eventBus.emit(EventBus.EventType.BEFORE_COMMIT, "");
+        eventBus.emit(EventBus.EventType.BEFORE_COMMIT, id);
         for (var op : operations) {
             switch (op.type()) {
                 case PUT -> engine.put(op.collection(), op.key(), op.value());
                 case DELETE -> engine.delete(op.collection(), op.key());
             }
         }
-        committed = true;
+        status = Status.COMMITTED;
         metrics.recordTransactionCommit();
-        eventBus.emit(EventBus.EventType.AFTER_COMMIT, "");
+        eventBus.emit(EventBus.EventType.AFTER_COMMIT, id);
     }
 
     public void rollback() {
-        if (committed) {
+        if (status == Status.COMMITTED) {
             throw new IllegalStateException("Cannot rollback a committed transaction");
         }
-        eventBus.emit(EventBus.EventType.BEFORE_ROLLBACK, "");
-        rolledBack = true;
+        if (status == Status.ROLLED_BACK) {
+            return;
+        }
+        eventBus.emit(EventBus.EventType.BEFORE_ROLLBACK, id);
+        status = Status.ROLLED_BACK;
         operations.clear();
         metrics.recordTransactionRollback();
-        eventBus.emit(EventBus.EventType.AFTER_ROLLBACK, "");
+        eventBus.emit(EventBus.EventType.AFTER_ROLLBACK, id);
+    }
+
+    public boolean isOpen() {
+        return status == Status.ACTIVE;
     }
 
     public boolean isCommitted() {
-        return committed;
+        return status == Status.COMMITTED;
     }
 
     public boolean isRolledBack() {
-        return rolledBack;
+        return status == Status.ROLLED_BACK;
     }
 
     @Override
     public void close() {
-        if (!committed && !rolledBack) {
+        if (status == Status.ACTIVE) {
             rollback();
         }
     }
 
+    public Map<String, Object> info() {
+        return Map.of(
+            "id", id,
+            "status", status.name(),
+            "createdAt", createdAt.toString(),
+            "operations", operations.size(),
+            "timeoutMs", timeoutMs,
+            "lastActivity", lastActivity.toString()
+        );
+    }
+
     private void checkOpen() {
-        if (committed || rolledBack) {
-            throw new IllegalStateException("Transaction is closed");
+        if (status != Status.ACTIVE) {
+            throw new IllegalStateException("Transaction " + id + " is " + status.name().toLowerCase());
         }
     }
 
@@ -94,7 +153,7 @@ public class Transaction implements AutoCloseable {
         @Override
         public Document insert(Document doc) {
             if (doc.id() == null) {
-                doc.id(java.util.UUID.randomUUID().toString());
+                doc.id(UUID.randomUUID().toString());
             }
             ops.add(new Operation(Operation.Type.PUT, name(), doc.id(), doc.toJson()));
             return doc;

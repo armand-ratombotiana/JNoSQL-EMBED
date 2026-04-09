@@ -18,6 +18,11 @@ public class InMemoryEngine implements StorageEngine {
     }
 
     @Override
+    public String name() {
+        return "IN_MEMORY";
+    }
+
+    @Override
     public void put(String collection, String key, String value) {
         store.computeIfAbsent(collection, k -> new ConcurrentHashMap<>()).put(key, value);
     }
@@ -94,6 +99,21 @@ public class InMemoryEngine implements StorageEngine {
     @Override
     public void close() {
         store.clear();
+    }
+
+    @Override
+    public int size() {
+        return store.values().stream().mapToInt(ConcurrentMap::size).sum();
+    }
+
+    @Override
+    public Map<String, Object> stats() {
+        return Map.of(
+            "engine", name(),
+            "collections", store.size(),
+            "totalEntries", size(),
+            "type", "in-memory"
+        );
     }
 
     public ConcurrentMap<String, ConcurrentMap<String, String>> rawStore() {
