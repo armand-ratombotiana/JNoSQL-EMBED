@@ -33,11 +33,15 @@ public class EntityMapper {
                 Object value = field.get(entity);
                 if (value != null) {
                     if (field.isAnnotationPresent(Id.class)) {
-                        doc.id(field.getName());
+                        doc.id(value != null ? value.toString() : null);
                     } else {
-                        String fieldName = field.isAnnotationPresent(Column.class) 
-                            ? field.getAnnotation(Column.class).value()
-                            : field.getName();
+                        String fieldName;
+                        if (field.isAnnotationPresent(Column.class)) {
+                            String colValue = field.getAnnotation(Column.class).value();
+                            fieldName = !colValue.isEmpty() ? colValue : field.getName();
+                        } else {
+                            fieldName = field.getName();
+                        }
                         doc.add(fieldName, value);
                     }
                 }

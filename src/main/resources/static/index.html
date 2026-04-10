@@ -621,13 +621,60 @@
             .form-row { flex-direction: column; }
             .form-row > * { min-width: 100%; }
         }
+        
+        /* Enhanced Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 5px var(--accent-glow); }
+            50% { box-shadow: 0 0 20px var(--accent-glow); }
+        }
+        .card {
+            animation: fadeIn 0.4s ease-out;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            transition: all 0.2s ease;
+        }
+        .tab:hover {
+            background: var(--bg-tertiary);
+            transition: background 0.2s ease;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+        .doc-item:hover {
+            transform: translateX(4px);
+            border-color: var(--accent);
+            transition: all 0.2s ease;
+        }
+        .logo-section img {
+            animation: pulseGlow 3s ease-in-out infinite;
+        }
+        /* Loading skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-secondary) 50%, var(--bg-tertiary) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
     </style>
 </head>
 <body>
     <header class="header">
         <div class="header-content">
             <div class="logo-section">
-                <div class="logo">JN</div>
+                <img src="logo.svg" alt="JNoSQL Logo" style="width: 48px; height: 48px; border-radius: var(--radius-sm);">
                 <div class="brand">
                     <h1>JNoSQL-EMBED</h1>
                     <p>Embedded Multi-Model NoSQL Database</p>

@@ -154,7 +154,7 @@ public class H2StorageEngine implements StorageEngine {
                 ps.setString(2, key);
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
-                        String value = rs.getString("value");
+                        String value = rs.getString("kv_value");
                         cache.put(cacheKey, value.getBytes());
                         return value;
                     }
@@ -210,12 +210,12 @@ public class H2StorageEngine implements StorageEngine {
         List<String> results = new ArrayList<>();
         lock.readLock().lock();
         try {
-            String sql = "SELECT key_name FROM kv_store WHERE collection = ?";
+            String sql = "SELECT kv_value FROM kv_store WHERE collection = ?";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
                 ps.setString(1, collection);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
-                        results.add(rs.getString("key_name"));
+                        results.add(rs.getString("kv_value"));
                     }
                 }
             }
