@@ -1,4 +1,4 @@
-﻿package org.junify.db.eclipse;
+package org.junify.db.eclipse;
 
 import java.lang.annotation.*;
 

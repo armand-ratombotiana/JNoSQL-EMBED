@@ -1,4 +1,4 @@
-﻿package org.junify.db.migration;
+package org.junify.db.migration;
 
 import org.junify.db.JunifyDB;
 import org.junify.db.document.Document;

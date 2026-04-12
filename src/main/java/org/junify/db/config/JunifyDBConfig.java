@@ -1,4 +1,4 @@
-﻿package org.junify.db.config;
+package org.junify.db.config;
 
 import org.junify.db.JunifyDB;
 import org.junify.db.storage.StorageEngine;

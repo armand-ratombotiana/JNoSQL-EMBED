@@ -1,4 +1,4 @@
-﻿package org.junify.db.benchmark;
+package org.junify.db.benchmark;
 
 import org.junify.db.JunifyDB;
 import org.junify.db.document.Document;

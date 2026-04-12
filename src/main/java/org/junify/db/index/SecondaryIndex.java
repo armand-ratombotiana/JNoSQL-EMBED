@@ -1,4 +1,4 @@
-﻿package org.junify.db.index;
+package org.junify.db.index;
 
 import org.junify.db.document.Document;
 

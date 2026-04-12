@@ -1,4 +1,4 @@
-﻿package org.junify.db.document;
+package org.junify.db.document;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;

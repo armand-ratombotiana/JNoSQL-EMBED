@@ -1,4 +1,4 @@
-﻿package org.junify.db.integration;
+package org.junify.db.integration;
 
 import org.junify.db.JunifyDB;
 import org.junify.db.backup.BackupManager;

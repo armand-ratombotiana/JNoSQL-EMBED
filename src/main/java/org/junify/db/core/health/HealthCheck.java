@@ -1,4 +1,4 @@
-﻿package org.junify.db.health;
+package org.junify.db.health;
 
 import org.junify.db.JunifyDB;
 import org.junify.db.document.DocumentCollection;

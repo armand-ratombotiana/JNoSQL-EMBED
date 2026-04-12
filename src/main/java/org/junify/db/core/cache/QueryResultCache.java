@@ -1,4 +1,4 @@
-﻿package org.junify.db.core.cache;
+package org.junify.db.core.cache;
 
 import org.junify.db.document.Document;
 

@@ -1,4 +1,4 @@
-﻿package org.junify.db.backup;
+package org.junify.db.backup;
 
 import org.junify.db.storage.StorageEngine;
 

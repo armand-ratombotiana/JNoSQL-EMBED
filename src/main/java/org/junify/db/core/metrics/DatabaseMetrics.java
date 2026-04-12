@@ -1,4 +1,4 @@
-﻿package org.junify.db.core.metrics;
+package org.junify.db.core.metrics;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

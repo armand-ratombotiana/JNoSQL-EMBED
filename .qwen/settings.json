@@ -9,7 +9,8 @@
       "Bash(tree *)",
       "Bash(d *)",
       "Bash(@move *)",
-      "Bash(do *)"
+      "Bash(do *)",
+      "Bash(powershell *)"
     ]
   },
   "$version": 3

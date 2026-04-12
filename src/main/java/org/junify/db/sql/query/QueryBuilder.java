@@ -1,4 +1,4 @@
-﻿package org.junify.db.query;
+package org.junify.db.query;
 
 import org.junify.db.document.Document;
 import org.junify.db.document.DocumentCollection;

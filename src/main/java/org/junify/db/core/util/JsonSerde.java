@@ -1,4 +1,4 @@
-﻿package org.junify.db.core.util;
+package org.junify.db.core.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;

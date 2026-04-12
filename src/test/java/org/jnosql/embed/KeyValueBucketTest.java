@@ -1,4 +1,4 @@
-﻿package org.junify.db;
+package org.junify.db;
 
 import org.junify.db.kv.KeyValueBucket;
 import org.junit.jupiter.api.AfterEach;

@@ -1,4 +1,4 @@
-﻿package org.junify.db.reactive;
+package org.junify.db.reactive;
 
 import org.junify.db.JunifyDB;
 import org.junify.db.config.JunifyDBConfig;

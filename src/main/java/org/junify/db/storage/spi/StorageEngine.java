@@ -1,4 +1,4 @@
-﻿package org.junify.db.storage;
+package org.junify.db.storage;
 
 import java.util.List;
 import java.util.Map;

@@ -1,4 +1,4 @@
-﻿package org.junify.db;
+package org.junify.db;
 
 import org.junify.db.column.ColumnFamily;
 import org.junify.db.config.JunifyDBConfig;

@@ -1,4 +1,4 @@
-﻿package org.junify.db.core.crypto;
+package org.junify.db.core.crypto;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;

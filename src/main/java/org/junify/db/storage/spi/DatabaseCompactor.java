@@ -1,4 +1,4 @@
-﻿package org.junify.db.storage;
+package org.junify.db.storage;
 
 import org.junify.db.core.util.JsonSerde;
 

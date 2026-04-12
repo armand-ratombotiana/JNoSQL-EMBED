@@ -1,4 +1,4 @@
-﻿package org.junify.db.vector;
+package org.junify.db.vector;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

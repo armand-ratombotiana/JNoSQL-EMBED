@@ -1,4 +1,4 @@
-﻿package org.junify.db;
+package org.junify.db;
 
 import org.junify.db.document.Document;
 import org.junify.db.server.JunifyDBServer;
