@@ -1,8 +1,8 @@
 package org.junify.db.integration;
 
 import org.junify.db.JunifyDB;
-import org.junify.db.backup.BackupManager;
-import org.junify.db.column.ColumnFamily;
+import org.junify.db.core.backup.BackupManager;
+import org.junify.db.nosql.column.ColumnFamily;
 import org.junify.db.config.JunifyDBConfig;
 import org.junify.db.nosql.document.Document;
 import org.junify.db.nosql.document.DocumentCollection;

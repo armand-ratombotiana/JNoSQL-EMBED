@@ -1,6 +1,6 @@
 package org.junify.db;
 
-import org.junify.db.column.ColumnFamily;
+import org.junify.db.nosql.column.ColumnFamily;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
