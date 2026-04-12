@@ -33,19 +33,19 @@ public class JunifyDBProducer {
 
     @Produces
     @ApplicationScoped
-    public MVCCManager produceMVCC(JunifyDB db) {
+    public MVCCManager produceMVCCManager(JunifyDB db) {
         return db.mvcc();
     }
 
     @Produces
     @ApplicationScoped
-    public DocumentTemplate produceDocumentTemplate(JunifyDB db) {
+    public EclipseDocumentTemplate produceDocumentTemplate(JunifyDB db) {
         return EclipseDocumentTemplate.of(db.documentCollection("_default"));
     }
 
     @Produces
     @ApplicationScoped
-    public KeyValueTemplate produceKeyValueTemplate(JunifyDB db) {
-        return KeyValueTemplate.of(db.keyValueBucket("_default"));
+    public org.junify.db.nosql.kv.KeyValueBucket produceKeyValueBucket(JunifyDB db) {
+        return db.keyValueBucket("_default");
     }
 }
