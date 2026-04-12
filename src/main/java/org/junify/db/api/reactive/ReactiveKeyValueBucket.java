@@ -1,4 +1,4 @@
-package org.junify.db.api.reactive:
+package org.junify.db.api.reactive;
 
 import org.junify.db.kv.KeyValueBucket;
 
