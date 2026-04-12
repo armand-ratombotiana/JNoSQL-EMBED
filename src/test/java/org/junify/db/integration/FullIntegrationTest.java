@@ -4,13 +4,13 @@ import org.junify.db.JunifyDB;
 import org.junify.db.backup.BackupManager;
 import org.junify.db.column.ColumnFamily;
 import org.junify.db.config.JunifyDBConfig;
-import org.junify.db.document.Document;
-import org.junify.db.document.DocumentCollection;
-import org.junify.db.document.Query;
-import org.junify.db.kv.KeyValueBucket;
+import org.junify.db.nosql.document.Document;
+import org.junify.db.nosql.document.DocumentCollection;
+import org.junify.db.nosql.document.Query;
+import org.junify.db.nosql.kv.KeyValueBucket;
 import org.junify.db.core.metrics.DatabaseMetrics;
-import org.junify.db.storage.FileEngine;
-import org.junify.db.transaction.Transaction;
+import org.junify.db.storage.spi.FileEngine;
+import org.junify.db.transaction.mvcc.Transaction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +31,7 @@ class FullIntegrationTest {
     @BeforeEach
     void setUp() throws IOException {
         tempDir = Files.createTempDirectory("junify-integration");
-        db = JUNIFYDB.embed()
+        db = JunifyDB.embed()
                 .storageEngine(JunifyDBConfig.StorageEngineType.FILE)
                 .persistTo(tempDir.toString())
                 .build();
@@ -158,7 +158,7 @@ class FullIntegrationTest {
         assertTrue(Files.size(backupFile) > 0);
 
         db.close();
-        db = JUNIFYDB.embed()
+        db = JunifyDB.embed()
                 .storageEngine(JunifyDBConfig.StorageEngineType.FILE)
                 .persistTo(tempDir.toString())
                 .build();
@@ -194,7 +194,7 @@ class FullIntegrationTest {
         users.insert(Document.of("name", "Alice").add("age", 30));
         db.close();
 
-        db = JUNIFYDB.embed()
+        db = JunifyDB.embed()
                 .storageEngine(JunifyDBConfig.StorageEngineType.FILE)
                 .persistTo(tempDir.toString())
                 .build();

@@ -1,7 +1,7 @@
 package org.junify.db;
 
-import org.junify.db.document.Document;
-import org.junify.db.storage.BTreeEngine;
+import org.junify.db.nosql.document.Document;
+import org.junify.db.storage.spi.BTreeEngine;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

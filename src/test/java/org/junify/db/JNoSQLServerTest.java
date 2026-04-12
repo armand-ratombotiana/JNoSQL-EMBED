@@ -1,6 +1,6 @@
 package org.junify.db;
 
-import org.junify.db.document.Document;
+import org.junify.db.nosql.document.Document;
 import org.junify.db.server.JunifyDBServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +22,7 @@ class JunifyDBServerTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        db = JUNIFYDB.embed().build();
+        db = JunifyDB.embed().build();
         server = db.startServer(0);
     }
 

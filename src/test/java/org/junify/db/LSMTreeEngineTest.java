@@ -1,9 +1,9 @@
 package org.junify.db;
 
 import org.junify.db.config.JunifyDBConfig;
-import org.junify.db.document.Document;
-import org.junify.db.document.DocumentCollection;
-import org.junify.db.storage.LSMTreeEngine;
+import org.junify.db.nosql.document.Document;
+import org.junify.db.nosql.document.DocumentCollection;
+import org.junify.db.storage.spi.LSMTreeEngine;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,7 +23,7 @@ class LSMTreeEngineTest {
     @BeforeEach
     void setUp() throws IOException {
         tempDir = Files.createTempDirectory("junify-lsm");
-        db = JUNIFYDB.embed()
+        db = JunifyDB.embed()
                 .storageEngine(JunifyDBConfig.StorageEngineType.LSM_TREE)
                 .persistTo(tempDir.toString())
                 .build();
@@ -92,7 +92,7 @@ class LSMTreeEngineTest {
         users.insert(Document.of("name", "Alice").add("age", 30));
         db.close();
         
-        db = JUNIFYDB.embed()
+        db = JunifyDB.embed()
                 .storageEngine(JunifyDBConfig.StorageEngineType.LSM_TREE)
                 .persistTo(tempDir.toString())
                 .build();

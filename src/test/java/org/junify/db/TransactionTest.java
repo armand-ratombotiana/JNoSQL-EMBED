@@ -1,8 +1,8 @@
 package org.junify.db;
 
-import org.junify.db.document.Document;
-import org.junify.db.document.DocumentCollection;
-import org.junify.db.transaction.Transaction;
+import org.junify.db.nosql.document.Document;
+import org.junify.db.nosql.document.DocumentCollection;
+import org.junify.db.transaction.mvcc.Transaction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,7 +15,7 @@ class TransactionTest {
 
     @BeforeEach
     void setUp() {
-        db = JUNIFYDB.embed().build();
+        db = JunifyDB.embed().build();
     }
 
     @AfterEach

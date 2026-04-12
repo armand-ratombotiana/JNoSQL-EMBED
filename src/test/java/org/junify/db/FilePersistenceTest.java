@@ -1,8 +1,8 @@
 package org.junify.db;
 
 import org.junify.db.config.JunifyDBConfig;
-import org.junify.db.document.Document;
-import org.junify.db.document.DocumentCollection;
+import org.junify.db.nosql.document.Document;
+import org.junify.db.nosql.document.DocumentCollection;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +22,7 @@ class FilePersistenceTest {
     @BeforeEach
     void setUp() throws IOException {
         dataDir = Files.createTempDirectory("junify-test");
-        db = JUNIFYDB.embed()
+        db = JunifyDB.embed()
                 .storageEngine(JunifyDBConfig.StorageEngineType.FILE)
                 .persistTo(dataDir.toString())
                 .build();
@@ -48,7 +48,7 @@ class FilePersistenceTest {
         users.insert(Document.of("name", "Alice").add("age", 30));
         db.close();
 
-        db = JUNIFYDB.embed()
+        db = JunifyDB.embed()
                 .storageEngine(JunifyDBConfig.StorageEngineType.FILE)
                 .persistTo(dataDir.toString())
                 .build();
@@ -68,7 +68,7 @@ class FilePersistenceTest {
 
         db.close();
 
-        db = JUNIFYDB.embed()
+        db = JunifyDB.embed()
                 .storageEngine(JunifyDBConfig.StorageEngineType.FILE)
                 .persistTo(dataDir.toString())
                 .build();
@@ -84,7 +84,7 @@ class FilePersistenceTest {
         users.update(doc);
         db.close();
 
-        db = JUNIFYDB.embed()
+        db = JunifyDB.embed()
                 .storageEngine(JunifyDBConfig.StorageEngineType.FILE)
                 .persistTo(dataDir.toString())
                 .build();
@@ -100,7 +100,7 @@ class FilePersistenceTest {
         users.deleteById(doc.id());
         db.close();
 
-        db = JUNIFYDB.embed()
+        db = JunifyDB.embed()
                 .storageEngine(JunifyDBConfig.StorageEngineType.FILE)
                 .persistTo(dataDir.toString())
                 .build();

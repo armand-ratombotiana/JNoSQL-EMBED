@@ -1,8 +1,8 @@
 package org.junify.db;
 
-import org.junify.db.document.Document;
-import org.junify.db.document.DocumentCollection;
-import org.junify.db.document.Query;
+import org.junify.db.nosql.document.Document;
+import org.junify.db.nosql.document.DocumentCollection;
+import org.junify.db.nosql.document.Query;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +18,7 @@ class AdvancedQueryTest {
 
     @BeforeEach
     void setUp() {
-        db = JUNIFYDB.embed().build();
+        db = JunifyDB.embed().build();
         products = db.documentCollection("products");
         products.insertAll(List.of(
                 Document.of("name", "Apple").add("price", 1.5).add("category", "fruit"),

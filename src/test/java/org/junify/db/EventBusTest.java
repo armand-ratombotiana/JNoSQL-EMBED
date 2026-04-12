@@ -1,11 +1,11 @@
 package org.junify.db;
 
-import org.junify.db.document.Document;
-import org.junify.db.document.DocumentCollection;
-import org.junify.db.document.Query;
-import org.junify.db.event.EventBus;
-import org.junify.db.event.EventBus.Event;
-import org.junify.db.event.EventBus.EventType;
+import org.junify.db.nosql.document.Document;
+import org.junify.db.nosql.document.DocumentCollection;
+import org.junify.db.nosql.document.Query;
+import org.junify.db.core.event.EventBus;
+import org.junify.db.core.event.EventBus.Event;
+import org.junify.db.core.event.EventBus.EventType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ class EventBusTest {
 
     @BeforeEach
     void setUp() {
-        db = JUNIFYDB.embed().build();
+        db = JunifyDB.embed().build();
         eventBus = db.eventBus();
         users = db.documentCollection("users");
     }

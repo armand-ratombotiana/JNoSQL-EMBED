@@ -1,6 +1,6 @@
 package org.junify.db;
 
-import org.junify.db.kv.KeyValueBucket;
+import org.junify.db.nosql.kv.KeyValueBucket;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,7 +16,7 @@ class KeyValueBucketTest {
 
     @BeforeEach
     void setUp() {
-        db = JUNIFYDB.embed().build();
+        db = JunifyDB.embed().build();
         bucket = db.keyValueBucket("cache");
     }
 
