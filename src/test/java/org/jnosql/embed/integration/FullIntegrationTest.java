@@ -1,16 +1,16 @@
-package org.jnosql.embed.integration;
+﻿package org.junify.db.integration;
 
-import org.jnosql.embed.JNoSQL;
-import org.jnosql.embed.backup.BackupManager;
-import org.jnosql.embed.column.ColumnFamily;
-import org.jnosql.embed.config.JNoSQLConfig;
-import org.jnosql.embed.document.Document;
-import org.jnosql.embed.document.DocumentCollection;
-import org.jnosql.embed.document.Query;
-import org.jnosql.embed.kv.KeyValueBucket;
-import org.jnosql.embed.metrics.DatabaseMetrics;
-import org.jnosql.embed.storage.FileEngine;
-import org.jnosql.embed.transaction.Transaction;
+import org.junify.db.JunifyDB;
+import org.junify.db.backup.BackupManager;
+import org.junify.db.column.ColumnFamily;
+import org.junify.db.config.JunifyDBConfig;
+import org.junify.db.document.Document;
+import org.junify.db.document.DocumentCollection;
+import org.junify.db.document.Query;
+import org.junify.db.kv.KeyValueBucket;
+import org.junify.db.core.metrics.DatabaseMetrics;
+import org.junify.db.storage.FileEngine;
+import org.junify.db.transaction.Transaction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,14 +25,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class FullIntegrationTest {
 
-    private JNoSQL db;
+    private JunifyDB db;
     private Path tempDir;
 
     @BeforeEach
     void setUp() throws IOException {
-        tempDir = Files.createTempDirectory("jnosql-integration");
-        db = JNoSQL.embed()
-                .storageEngine(JNoSQLConfig.StorageEngineType.FILE)
+        tempDir = Files.createTempDirectory("junify-integration");
+        db = JUNIFYDB.embed()
+                .storageEngine(JunifyDBConfig.StorageEngineType.FILE)
                 .persistTo(tempDir.toString())
                 .build();
     }
@@ -150,7 +150,7 @@ class FullIntegrationTest {
                 Document.of("name", "Bob").add("age", 25)
         ));
 
-        var backupDir = Files.createTempDirectory("jnosql-backup");
+        var backupDir = Files.createTempDirectory("junify-backup");
         var backupManager = new BackupManager(new FileEngine(db.config().dataDir(), 1000, false));
         var backupFile = backupManager.backup(backupDir);
 
@@ -158,8 +158,8 @@ class FullIntegrationTest {
         assertTrue(Files.size(backupFile) > 0);
 
         db.close();
-        db = JNoSQL.embed()
-                .storageEngine(JNoSQLConfig.StorageEngineType.FILE)
+        db = JUNIFYDB.embed()
+                .storageEngine(JunifyDBConfig.StorageEngineType.FILE)
                 .persistTo(tempDir.toString())
                 .build();
 
@@ -194,8 +194,8 @@ class FullIntegrationTest {
         users.insert(Document.of("name", "Alice").add("age", 30));
         db.close();
 
-        db = JNoSQL.embed()
-                .storageEngine(JNoSQLConfig.StorageEngineType.FILE)
+        db = JUNIFYDB.embed()
+                .storageEngine(JunifyDBConfig.StorageEngineType.FILE)
                 .persistTo(tempDir.toString())
                 .build();
         users = db.documentCollection("users");

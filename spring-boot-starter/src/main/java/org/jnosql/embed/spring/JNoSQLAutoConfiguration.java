@@ -1,20 +1,20 @@
-package org.jnosql.embed.spring;
+﻿package org.junify.db.spring;
 
-import org.jnosql.embed.JNoSQL;
-import org.jnosql.embed.config.JNoSQLConfig;
+import org.junify.db.JunifyDB;
+import org.junify.db.config.JunifyDBConfig;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@EnableConfigurationProperties(JNoSQLProperties.class)
-public class JNoSQLAutoConfiguration {
+@EnableConfigurationProperties(JunifyDBProperties.class)
+public class JunifyDBAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public JNoSQL jnosql(JNoSQLProperties properties) {
-        return JNoSQL.embed()
+    public JunifyDB JunifyDB(JunifyDBProperties properties) {
+        return JUNIFYDB.embed()
                 .storageEngine(properties.getStorageEngine())
                 .persistTo(properties.getDataDir())
                 .autoFlush(properties.isAutoFlush())

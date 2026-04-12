@@ -1,9 +1,9 @@
-package org.jnosql.embed;
+﻿package org.junify.db;
 
-import org.jnosql.embed.document.AggregationPipeline;
-import org.jnosql.embed.document.Document;
-import org.jnosql.embed.document.DocumentCollection;
-import org.jnosql.embed.document.Query;
+import org.junify.db.document.AggregationPipeline;
+import org.junify.db.document.Document;
+import org.junify.db.document.DocumentCollection;
+import org.junify.db.document.Query;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,12 +14,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class AggregationPipelineTest {
 
-    private JNoSQL db;
+    private JunifyDB db;
     private DocumentCollection orders;
 
     @BeforeEach
     void setUp() {
-        db = JNoSQL.embed().build();
+        db = JUNIFYDB.embed().build();
         orders = db.documentCollection("orders");
         
         orders.insertAll(List.of(

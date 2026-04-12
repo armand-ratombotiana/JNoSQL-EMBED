@@ -1,10 +1,10 @@
-package org.jnosql.embed.spring;
+﻿package org.junify.db.spring;
 
-import org.jnosql.embed.config.JNoSQLConfig.StorageEngineType;
+import org.junify.db.config.JunifyDBConfig.StorageEngineType;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "jnosql")
-public class JNoSQLProperties {
+@ConfigurationProperties(prefix = "JUNIFYDB")
+public class JunifyDBProperties {
 
     private StorageEngineType storageEngine = StorageEngineType.IN_MEMORY;
     private String dataDir = "data";

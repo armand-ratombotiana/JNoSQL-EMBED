@@ -1,7 +1,7 @@
-package org.jnosql.embed;
+﻿package org.junify.db;
 
-import org.jnosql.embed.document.Document;
-import org.jnosql.embed.server.JNoSQLServer;
+import org.junify.db.document.Document;
+import org.junify.db.server.JunifyDBServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,14 +15,14 @@ import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class JNoSQLServerTest {
+class JunifyDBServerTest {
 
-    private JNoSQL db;
-    private JNoSQLServer server;
+    private JunifyDB db;
+    private JunifyDBServer server;
 
     @BeforeEach
     void setUp() throws Exception {
-        db = JNoSQL.embed().build();
+        db = JUNIFYDB.embed().build();
         server = db.startServer(0);
     }
 

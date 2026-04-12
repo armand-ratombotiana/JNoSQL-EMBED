@@ -1,7 +1,7 @@
-package org.jnosql.embed;
+﻿package org.junify.db;
 
-import org.jnosql.embed.document.Document;
-import org.jnosql.embed.storage.BTreeEngine;
+import org.junify.db.document.Document;
+import org.junify.db.storage.BTreeEngine;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

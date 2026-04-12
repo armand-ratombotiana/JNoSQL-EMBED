@@ -1,8 +1,8 @@
-package org.jnosql.embed;
+﻿package org.junify.db;
 
-import org.jnosql.embed.document.Document;
-import org.jnosql.embed.document.DocumentCollection;
-import org.jnosql.embed.document.TextSearch;
+import org.junify.db.document.Document;
+import org.junify.db.document.DocumentCollection;
+import org.junify.db.document.TextSearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,7 @@ class TextSearchTest {
 
     @BeforeEach
     void setUp() {
-        var db = JNoSQL.embed().build();
+        var db = JUNIFYDB.embed().build();
         articles = db.documentCollection("articles");
         
         articles.insertAll(List.of(

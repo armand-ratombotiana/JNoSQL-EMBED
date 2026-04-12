@@ -1,6 +1,6 @@
-package org.jnosql.embed;
+﻿package org.junify.db;
 
-import org.jnosql.embed.kv.KeyValueBucket;
+import org.junify.db.kv.KeyValueBucket;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,12 +11,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class KeyValueBucketTest {
 
-    private JNoSQL db;
+    private JunifyDB db;
     private KeyValueBucket bucket;
 
     @BeforeEach
     void setUp() {
-        db = JNoSQL.embed().build();
+        db = JUNIFYDB.embed().build();
         bucket = db.keyValueBucket("cache");
     }
 

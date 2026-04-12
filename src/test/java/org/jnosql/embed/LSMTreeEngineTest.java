@@ -1,9 +1,9 @@
-package org.jnosql.embed;
+﻿package org.junify.db;
 
-import org.jnosql.embed.config.JNoSQLConfig;
-import org.jnosql.embed.document.Document;
-import org.jnosql.embed.document.DocumentCollection;
-import org.jnosql.embed.storage.LSMTreeEngine;
+import org.junify.db.config.JunifyDBConfig;
+import org.junify.db.document.Document;
+import org.junify.db.document.DocumentCollection;
+import org.junify.db.storage.LSMTreeEngine;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,14 +17,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class LSMTreeEngineTest {
 
-    private JNoSQL db;
+    private JunifyDB db;
     private Path tempDir;
 
     @BeforeEach
     void setUp() throws IOException {
-        tempDir = Files.createTempDirectory("jnosql-lsm");
-        db = JNoSQL.embed()
-                .storageEngine(JNoSQLConfig.StorageEngineType.LSM_TREE)
+        tempDir = Files.createTempDirectory("junify-lsm");
+        db = JUNIFYDB.embed()
+                .storageEngine(JunifyDBConfig.StorageEngineType.LSM_TREE)
                 .persistTo(tempDir.toString())
                 .build();
     }
@@ -92,8 +92,8 @@ class LSMTreeEngineTest {
         users.insert(Document.of("name", "Alice").add("age", 30));
         db.close();
         
-        db = JNoSQL.embed()
-                .storageEngine(JNoSQLConfig.StorageEngineType.LSM_TREE)
+        db = JUNIFYDB.embed()
+                .storageEngine(JunifyDBConfig.StorageEngineType.LSM_TREE)
                 .persistTo(tempDir.toString())
                 .build();
         users = db.documentCollection("users");
@@ -141,7 +141,7 @@ class LSMTreeEngineTest {
         var result = users.findAll();
         assertTrue(result.size() >= 200);
         
-        var special = users.find(org.jnosql.embed.document.Query.eq("type", "important"));
+        var special = users.find(org.junify.db.document.Query.eq("type", "important"));
         assertEquals(1, special.size());
     }
 }

@@ -1,32 +1,32 @@
-package org.jnosql.embed.cli;
+﻿package org.junify.db.integration.standalone;
 
-import org.jnosql.embed.JNoSQL;
-import org.jnosql.embed.config.JNoSQLConfig;
-import org.jnosql.embed.document.Document;
-import org.jnosql.embed.document.DocumentCollection;
-import org.jnosql.embed.document.Query;
+import org.junify.db.JunifyDB;
+import org.junify.db.config.JunifyDBConfig;
+import org.junify.db.document.Document;
+import org.junify.db.document.DocumentCollection;
+import org.junify.db.document.Query;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.time.Duration;
 
-public class JNoSQLShell {
+public class JunifyDBShell {
 
-    private final JNoSQL db;
+    private final JunifyDB db;
     private final BufferedReader reader;
 
-    public JNoSQLShell(JNoSQL db) {
+    public JunifyDBShell(JunifyDB db) {
         this.db = db;
         this.reader = new BufferedReader(new InputStreamReader(System.in));
     }
 
     public void start() throws IOException {
-        System.out.println("JNoSQL-EMBED Shell v1.0");
+        System.out.println("junify-EMBED Shell v1.0");
         System.out.println("Type 'help' for commands, 'exit' to quit");
 
         while (true) {
-            System.out.print("jnosql> ");
+            System.out.print("JUNIFYDB> ");
             String line = reader.readLine();
             if (line == null) break; // EOF
 
@@ -129,9 +129,9 @@ public class JNoSQLShell {
     }
 
     public static void main(String[] args) throws IOException {
-        JNoSQL db = JNoSQL.embed().build();
+        JunifyDB db = JUNIFYDB.embed().build();
         try {
-            new JNoSQLShell(db).start();
+            new JunifyDBShell(db).start();
         } finally {
             db.close();
         }

@@ -1,10 +1,10 @@
-package org.jnosql.embed.benchmark;
+﻿package org.junify.db.benchmark;
 
-import org.jnosql.embed.JNoSQL;
-import org.jnosql.embed.document.Document;
-import org.jnosql.embed.document.DocumentCollection;
-import org.jnosql.embed.document.Query;
-import org.jnosql.embed.kv.KeyValueBucket;
+import org.junify.db.JunifyDB;
+import org.junify.db.document.Document;
+import org.junify.db.document.DocumentCollection;
+import org.junify.db.document.Query;
+import org.junify.db.kv.KeyValueBucket;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.results.format.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
@@ -21,15 +21,15 @@ import java.util.concurrent.TimeUnit;
 @Warmup(iterations = 3, time = 1)
 @Measurement(iterations = 5, time = 1)
 @Fork(1)
-public class JNoSQLBenchmark {
+public class JunifyDBBenchmark {
 
-    private JNoSQL db;
+    private JunifyDB db;
     private DocumentCollection collection;
     private KeyValueBucket bucket;
 
     @Setup
     public void setup() {
-        db = JNoSQL.embed().build();
+        db = JUNIFYDB.embed().build();
         collection = db.documentCollection("benchmark");
         bucket = db.keyValueBucket("benchmark-kv");
         for (int i = 0; i < 1000; i++) {
@@ -91,7 +91,7 @@ public class JNoSQLBenchmark {
 
     public static void main(String[] args) throws RunnerException {
         Options opt = new OptionsBuilder()
-                .include(JNoSQLBenchmark.class.getSimpleName())
+                .include(JunifyDBBenchmark.class.getSimpleName())
                 .result("target/benchmark-results.json")
                 .resultFormat(ResultFormatType.JSON)
                 .build();

@@ -1,6 +1,6 @@
-package org.jnosql.embed;
+﻿package org.junify.db;
 
-import org.jnosql.embed.column.ColumnFamily;
+import org.junify.db.column.ColumnFamily;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,12 +9,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ColumnFamilyTest {
 
-    private JNoSQL db;
+    private JunifyDB db;
     private ColumnFamily cf;
 
     @BeforeEach
     void setUp() {
-        db = JNoSQL.embed().build();
+        db = JUNIFYDB.embed().build();
         cf = db.columnFamily("users");
     }
 

@@ -1,11 +1,11 @@
-package org.jnosql.embed;
+﻿package org.junify.db;
 
-import org.jnosql.embed.document.Document;
-import org.jnosql.embed.document.DocumentCollection;
-import org.jnosql.embed.document.Query;
-import org.jnosql.embed.event.EventBus;
-import org.jnosql.embed.event.EventBus.Event;
-import org.jnosql.embed.event.EventBus.EventType;
+import org.junify.db.document.Document;
+import org.junify.db.document.DocumentCollection;
+import org.junify.db.document.Query;
+import org.junify.db.event.EventBus;
+import org.junify.db.event.EventBus.Event;
+import org.junify.db.event.EventBus.EventType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,13 +18,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class EventBusTest {
 
-    private JNoSQL db;
+    private JunifyDB db;
     private EventBus eventBus;
     private DocumentCollection users;
 
     @BeforeEach
     void setUp() {
-        db = JNoSQL.embed().build();
+        db = JUNIFYDB.embed().build();
         eventBus = db.eventBus();
         users = db.documentCollection("users");
     }

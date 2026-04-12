@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(git show *)",
+      "Bash(dir *)",
+      "Bash(move *)",
+      "Bash(rd *)",
+      "Bash(tree *)",
+      "Bash(d *)",
+      "Bash(@move *)",
+      "Bash(do *)"
     ]
-  }
+  },
+  "$version": 3
 }

@@ -1,7 +1,7 @@
-package org.jnosql.embed;
+﻿package org.junify.db;
 
-import org.jnosql.embed.document.Document;
-import org.jnosql.embed.document.DocumentCollection;
+import org.junify.db.document.Document;
+import org.junify.db.document.DocumentCollection;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,12 +17,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ConcurrencyTest {
 
-    private JNoSQL db;
+    private JunifyDB db;
     private DocumentCollection collection;
 
     @BeforeEach
     void setUp() {
-        db = JNoSQL.embed().build();
+        db = JUNIFYDB.embed().build();
         collection = db.documentCollection("concurrent");
     }
 
@@ -77,7 +77,7 @@ class ConcurrencyTest {
                         if (i % 2 == 0) {
                             collection.insert(Document.of("writer", threadId).add("op", i));
                         } else {
-                            collection.find(org.jnosql.embed.document.Query.eq("key", "item-0"));
+                            collection.find(org.junify.db.document.Query.eq("key", "item-0"));
                         }
                     }
                 } catch (Exception e) {
