@@ -1,8 +1,8 @@
 package org.junify.db.nosql.kv;
 
-import org.junify.db.event.EventBus;
+import org.junify.db.core.event.EventBus;
 import org.junify.db.core.metrics.DatabaseMetrics;
-import org.junify.db.storage.StorageEngine;
+import org.junify.db.storage.spi.StorageEngine;
 
 import java.time.Duration;
 import java.time.Instant;

@@ -1,6 +1,6 @@
 package org.junify.db.adapter.jnosql;
 
-import org.junify.db.document.Document;
+import org.junify.db.nosql.document.Document;
 import org.junify.db.core.util.JsonSerde;
 
 import java.lang.reflect.Field;

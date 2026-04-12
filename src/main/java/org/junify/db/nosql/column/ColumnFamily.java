@@ -1,6 +1,6 @@
 package org.junify.db.nosql.column;
 
-import org.junify.db.storage.StorageEngine;
+import org.junify.db.storage.spi.StorageEngine;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

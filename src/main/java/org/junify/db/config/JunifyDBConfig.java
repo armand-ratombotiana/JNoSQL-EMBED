@@ -1,7 +1,7 @@
 package org.junify.db.config;
 
 import org.junify.db.JunifyDB;
-import org.junify.db.storage.StorageEngine;
+import org.junify.db.storage.spi.StorageEngine;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;

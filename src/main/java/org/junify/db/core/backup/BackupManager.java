@@ -1,6 +1,6 @@
 package org.junify.db.core.backup;
 
-import org.junify.db.storage.StorageEngine;
+import org.junify.db.storage.spi.StorageEngine;
 
 import java.io.IOException;
 import java.nio.file.Files;

@@ -1,6 +1,6 @@
 package org.junify.db.index;
 
-import org.junify.db.document.Document;
+import org.junify.db.nosql.document.Document;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

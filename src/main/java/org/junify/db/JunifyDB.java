@@ -1,15 +1,15 @@
 package org.junify.db;
 
-import org.junify.db.column.ColumnFamily;
+import org.junify.db.nosql.column.ColumnFamily;
 import org.junify.db.config.JunifyDBConfig;
-import org.junify.db.document.DocumentCollection;
-import org.junify.db.event.EventBus;
-import org.junify.db.kv.KeyValueBucket;
+import org.junify.db.nosql.document.DocumentCollection;
+import org.junify.db.core.event.EventBus;
+import org.junify.db.nosql.kv.KeyValueBucket;
 import org.junify.db.core.metrics.DatabaseMetrics;
-import org.junify.db.server.JunifyDBServer;
-import org.junify.db.storage.H2StorageEngine;
-import org.junify.db.storage.StorageEngine;
-import org.junify.db.transaction.Transaction;
+import org.junify.db.console.http.JunifyDBServer;
+import org.junify.db.storage.spi.H2StorageEngine;
+import org.junify.db.storage.spi.StorageEngine;
+import org.junify.db.transaction.mvcc.Transaction;
 
 import java.io.Closeable;
 import java.io.IOException;

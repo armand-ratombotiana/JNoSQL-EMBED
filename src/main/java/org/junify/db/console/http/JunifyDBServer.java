@@ -4,9 +4,9 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import org.junify.db.JunifyDB;
-import org.junify.db.document.Document;
-import org.junify.db.document.DocumentCollection;
-import org.junify.db.document.Query;
+import org.junify.db.nosql.document.Document;
+import org.junify.db.nosql.document.DocumentCollection;
+import org.junify.db.nosql.document.Query;
 import org.junify.db.core.util.JsonSerde;
 
 import java.io.IOException;

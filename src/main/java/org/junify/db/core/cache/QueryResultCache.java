@@ -1,6 +1,6 @@
 package org.junify.db.core.cache;
 
-import org.junify.db.document.Document;
+import org.junify.db.nosql.document.Document;
 
 import java.time.Duration;
 import java.time.Instant;

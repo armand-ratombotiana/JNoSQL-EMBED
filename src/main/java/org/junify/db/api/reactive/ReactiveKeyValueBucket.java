@@ -1,6 +1,6 @@
 package org.junify.db.api.reactive;
 
-import org.junify.db.kv.KeyValueBucket;
+import org.junify.db.nosql.kv.KeyValueBucket;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;

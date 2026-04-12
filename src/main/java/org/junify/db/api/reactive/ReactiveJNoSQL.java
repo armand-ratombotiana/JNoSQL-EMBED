@@ -2,8 +2,8 @@ package org.junify.db.api.reactive;
 
 import org.junify.db.JunifyDB;
 import org.junify.db.config.JunifyDBConfig;
-import org.junify.db.kv.KeyValueBucket;
-import org.junify.db.transaction.Transaction;
+import org.junify.db.nosql.kv.KeyValueBucket;
+import org.junify.db.transaction.mvcc.Transaction;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;

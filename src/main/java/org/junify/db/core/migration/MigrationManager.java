@@ -1,8 +1,8 @@
 package org.junify.db.core.migration;
 
 import org.junify.db.JunifyDB;
-import org.junify.db.document.Document;
-import org.junify.db.document.DocumentCollection;
+import org.junify.db.nosql.document.Document;
+import org.junify.db.nosql.document.DocumentCollection;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

@@ -1,10 +1,10 @@
 package org.junify.db.nosql.document;
 
 import org.junify.db.core.cache.QueryResultCache;
-import org.junify.db.event.EventBus;
+import org.junify.db.core.event.EventBus;
 import org.junify.db.index.SecondaryIndex;
 import org.junify.db.core.metrics.DatabaseMetrics;
-import org.junify.db.storage.StorageEngine;
+import org.junify.db.storage.spi.StorageEngine;
 import org.junify.db.core.util.JsonSerde;
 
 import java.io.IOException;

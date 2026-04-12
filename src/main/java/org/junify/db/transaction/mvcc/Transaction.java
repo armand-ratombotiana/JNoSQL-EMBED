@@ -1,10 +1,10 @@
 package org.junify.db.transaction.mvcc;
 
-import org.junify.db.document.Document;
-import org.junify.db.document.DocumentCollection;
-import org.junify.db.event.EventBus;
+import org.junify.db.nosql.document.Document;
+import org.junify.db.nosql.document.DocumentCollection;
+import org.junify.db.core.event.EventBus;
 import org.junify.db.core.metrics.DatabaseMetrics;
-import org.junify.db.storage.StorageEngine;
+import org.junify.db.storage.spi.StorageEngine;
 
 import java.time.Instant;
 import java.util.ArrayList;

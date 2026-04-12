@@ -1,8 +1,8 @@
 package org.junify.db.adapter.jnosql;
 
-import org.junify.db.document.Document;
-import org.junify.db.document.DocumentCollection;
-import org.junify.db.document.Query;
+import org.junify.db.nosql.document.Document;
+import org.junify.db.nosql.document.DocumentCollection;
+import org.junify.db.nosql.document.Query;
 
 import java.util.ArrayList;
 import java.util.List;

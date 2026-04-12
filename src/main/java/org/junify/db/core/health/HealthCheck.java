@@ -1,8 +1,8 @@
 package org.junify.db.core.health;
 
 import org.junify.db.JunifyDB;
-import org.junify.db.document.DocumentCollection;
-import org.junify.db.kv.KeyValueBucket;
+import org.junify.db.nosql.document.DocumentCollection;
+import org.junify.db.nosql.kv.KeyValueBucket;
 
 import java.util.*;
 import java.util.concurrent.*;
