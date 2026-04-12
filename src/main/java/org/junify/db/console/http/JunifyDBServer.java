@@ -244,14 +244,14 @@ public class JunifyDBServer {
                 var data = JsonSerde.fromJson(body, Map.class);
                 
                 if (data.containsKey("backupFile")) {
-                    var backupManager = new org.junify.db.backup.BackupManager(db.config().storageEngine().create(
+                    var backupManager = new org.junify.db.core.backup.BackupManager(db.config().storageEngine().create(
                         db.config().dataDir(), true, 1000));
                     var backupFile = java.nio.file.Paths.get(data.get("backupFile").toString());
                     backupManager.restore(backupFile);
                     sendJson(exchange, 200, Map.of("status", "restored", "file", backupFile.toString()));
                 } else {
                     var backupDir = java.nio.file.Files.createTempDirectory("junify-backup");
-                    var backupManager = new org.junify.db.backup.BackupManager(
+                    var backupManager = new org.junify.db.core.backup.BackupManager(
                         new org.junify.db.storage.spi.FileEngine(backupDir, 1000, false));
                     var backupFile = backupManager.backup(backupDir);
                     sendJson(exchange, 200, Map.of(
@@ -383,7 +383,7 @@ public class JunifyDBServer {
         }
     }
 
-    private java.util.Map<Integer, org.junify.db.transaction.Transaction> activeTransactions = new java.util.concurrent.ConcurrentHashMap<>();
+    private java.util.Map<Integer, org.junify.db.transaction.mvcc.Transaction> activeTransactions = new java.util.concurrent.ConcurrentHashMap<>();
     private org.junify.db.core.schema.SchemaValidator schemaValidator = new org.junify.db.core.schema.SchemaValidator();
     private java.util.Map<String, org.junify.db.index.hnsw.HNSWIndex> vectorIndexes = new java.util.concurrent.ConcurrentHashMap<>();
 
