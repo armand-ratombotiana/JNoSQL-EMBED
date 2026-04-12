@@ -1,4 +1,4 @@
-package org.junify.db.pool;
+package org.junify.db.core.pool;
 
 import org.junify.db.JunifyDB;
 import org.junify.db.config.JunifyDBConfig;

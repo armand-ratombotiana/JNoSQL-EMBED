@@ -1,4 +1,4 @@
-package org.junify.db.server;
+package org.junify.db.console.http;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;

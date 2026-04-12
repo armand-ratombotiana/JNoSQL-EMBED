@@ -1,4 +1,4 @@
-package org.junify.db.schema;
+package org.junify.db.core.schema;
 
 import java.util.*;
 

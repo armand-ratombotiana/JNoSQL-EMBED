@@ -1,4 +1,4 @@
-package org.junify.db.eclipse;
+package org.junify.db.adapter.jnosql;
 
 import org.junify.db.document.Document;
 import org.junify.db.document.DocumentCollection;

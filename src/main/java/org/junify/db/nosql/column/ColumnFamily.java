@@ -1,4 +1,4 @@
-package org.junify.db.column;
+package org.junify.db.nosql.column;
 
 import org.junify.db.storage.StorageEngine;
 

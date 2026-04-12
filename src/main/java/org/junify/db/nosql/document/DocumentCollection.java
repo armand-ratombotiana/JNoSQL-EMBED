@@ -1,4 +1,4 @@
-package org.junify.db.document;
+package org.junify.db.nosql.document;
 
 import org.junify.db.core.cache.QueryResultCache;
 import org.junify.db.event.EventBus;

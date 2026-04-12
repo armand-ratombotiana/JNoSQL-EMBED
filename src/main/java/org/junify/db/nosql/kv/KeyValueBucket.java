@@ -1,4 +1,4 @@
-package org.junify.db.kv;
+package org.junify.db.nosql.kv;
 
 import org.junify.db.event.EventBus;
 import org.junify.db.core.metrics.DatabaseMetrics;

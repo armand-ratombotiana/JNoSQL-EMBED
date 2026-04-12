@@ -1,4 +1,4 @@
-package org.junify.db.transaction;
+package org.junify.db.transaction.mvcc;
 
 import org.junify.db.document.Document;
 import org.junify.db.document.DocumentCollection;

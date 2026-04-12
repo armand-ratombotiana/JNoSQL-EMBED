@@ -1,4 +1,4 @@
-package org.junify.db.storage;
+package org.junify.db.storage.spi;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,4 +1,4 @@
-package org.junify.db.event;
+package org.junify.db.core.event;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;

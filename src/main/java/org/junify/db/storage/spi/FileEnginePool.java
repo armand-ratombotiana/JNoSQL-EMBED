@@ -1,4 +1,4 @@
-package org.junify.db.storage;
+package org.junify.db.storage.spi;
 
 import java.io.Closeable;
 import java.io.IOException;

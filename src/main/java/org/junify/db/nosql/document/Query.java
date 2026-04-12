@@ -1,4 +1,4 @@
-package org.junify.db.document;
+package org.junify.db.nosql.document;
 
 import java.util.Comparator;
 import java.util.List;
