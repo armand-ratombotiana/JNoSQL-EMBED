@@ -1,15 +1,20 @@
 package org.junify.db.nosql.document;
 
+import org.junify.db.core.record.RecordMetadata;
+import org.junify.db.core.record.UnifiedRecord;
+import org.junify.db.core.util.JsonSerde;
+
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class Document {
+public class Document implements UnifiedRecord {
 
     private String id;
     private Map<String, Object> fields;
     private Long expiresAt;
+    private RecordMetadata metadata;
 
     public Document() {
         this.fields = new LinkedHashMap<>();
@@ -46,8 +51,43 @@ public class Document {
         return id;
     }
 
+    @Override
     public String id() {
         return id;
+    }
+
+    /**
+     * Java 25: Returns the entity type name for routing in hybrid engines.
+     */
+    @Override
+    public String entityName() {
+        return get("_entity");
+    }
+
+    /**
+     * Java 25: Returns the payload as raw bytes for zero-copy storage.
+     */
+    @Override
+    public byte[] payload() {
+        return toJson().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    @Override
+    public RecordMetadata metadata() {
+        if (metadata == null) {
+            metadata = RecordMetadata.initial(RecordMetadata.RecordType.DOCUMENT);
+        }
+        return metadata;
+    }
+
+    @Override
+    public UnifiedRecord withMetadata(RecordMetadata metadata) {
+        var doc = new Document();
+        doc.id = this.id;
+        doc.fields = new LinkedHashMap<>(this.fields);
+        doc.expiresAt = this.expiresAt;
+        doc.metadata = metadata;
+        return doc;
     }
 
     public void setId(String id) {

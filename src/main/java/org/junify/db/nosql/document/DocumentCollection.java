@@ -124,7 +124,7 @@ public class DocumentCollection {
         if (ttlSeconds > 0) {
             doc.expiresAt(System.currentTimeMillis() + (ttlSeconds * 1000));
         }
-        engine.put(name, doc.id(), doc.toJson());
+        engine.putRecord(name, doc);
         for (var idx : indexes.values()) {
             idx.add(doc);
         }
@@ -268,7 +268,7 @@ public class DocumentCollection {
         if (oldDoc == null) {
             throw new IllegalArgumentException("Document not found: " + doc.id());
         }
-        engine.put(name, doc.id(), doc.toJson());
+        engine.putRecord(name, doc);
         for (var idx : indexes.values()) {
             idx.update(oldDoc, doc);
         }
