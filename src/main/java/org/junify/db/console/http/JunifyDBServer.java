@@ -252,7 +252,7 @@ public class JunifyDBServer {
                 } else {
                     var backupDir = java.nio.file.Files.createTempDirectory("junify-backup");
                     var backupManager = new org.junify.db.backup.BackupManager(
-                        new org.junify.db.storage.FileEngine(backupDir, 1000, false));
+                        new org.junify.db.storage.spi.FileEngine(backupDir, 1000, false));
                     var backupFile = backupManager.backup(backupDir);
                     sendJson(exchange, 200, Map.of(
                         "status", "backup created",
@@ -367,7 +367,7 @@ public class JunifyDBServer {
             } else if ("POST".equals(exchange.getRequestMethod())) {
                 var body = readBody(exchange);
                 var data = JsonSerde.fromJson(body, Map.class);
-                var schema = org.junify.db.schema.SchemaValidator.builder(collectionName);
+                var schema = org.junify.db.core.schema.SchemaValidator.builder(collectionName);
                 
                 if (data.containsKey("strict")) {
                     var constructor = schema.getClass().getDeclaredConstructors()[0];
@@ -384,8 +384,8 @@ public class JunifyDBServer {
     }
 
     private java.util.Map<Integer, org.junify.db.transaction.Transaction> activeTransactions = new java.util.concurrent.ConcurrentHashMap<>();
-    private org.junify.db.schema.SchemaValidator schemaValidator = new org.junify.db.schema.SchemaValidator();
-    private java.util.Map<String, org.junify.db.vector.HNSWIndex> vectorIndexes = new java.util.concurrent.ConcurrentHashMap<>();
+    private org.junify.db.core.schema.SchemaValidator schemaValidator = new org.junify.db.core.schema.SchemaValidator();
+    private java.util.Map<String, org.junify.db.index.hnsw.HNSWIndex> vectorIndexes = new java.util.concurrent.ConcurrentHashMap<>();
 
     private class VectorHandler implements HttpHandler {
         @Override
@@ -397,7 +397,7 @@ public class JunifyDBServer {
                 return;
             }
             var indexName = parts[3];
-            var hnsw = vectorIndexes.computeIfAbsent(indexName, k -> new org.junify.db.vector.HNSWIndex(128));
+            var hnsw = vectorIndexes.computeIfAbsent(indexName, k -> new org.junify.db.index.hnsw.HNSWIndex(128));
             
             if (parts.length == 5) {
                 if ("GET".equals(exchange.getRequestMethod())) {

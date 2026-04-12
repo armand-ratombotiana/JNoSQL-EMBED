@@ -22,11 +22,11 @@ public record JunifyDBConfig(
 
         public StorageEngine create(Path dataDir, boolean autoFlush, int flushIntervalMs) {
             return switch (this) {
-                case IN_MEMORY -> new org.junify.db.storage.InMemoryEngine();
-                case FILE -> new org.junify.db.storage.FileEngine(dataDir, flushIntervalMs, autoFlush);
-                case LSM_TREE -> new org.junify.db.storage.LSMTreeEngine(dataDir, 1024 * 1024, 64 * 1024 * 1024);
-                case B_TREE -> new org.junify.db.storage.BTreeEngine(dataDir);
-                case H2 -> new org.junify.db.storage.H2StorageEngine(dataDir);
+                case IN_MEMORY -> new org.junify.db.storage.spi.InMemoryEngine();
+                case FILE -> new org.junify.db.storage.spi.FileEngine(dataDir, flushIntervalMs, autoFlush);
+                case LSM_TREE -> new org.junify.db.storage.spi.LSMTreeEngine(dataDir, 1024 * 1024, 64 * 1024 * 1024);
+                case B_TREE -> new org.junify.db.storage.spi.BTreeEngine(dataDir);
+                case H2 -> new org.junify.db.storage.spi.H2StorageEngine(dataDir);
             };
         }
     }

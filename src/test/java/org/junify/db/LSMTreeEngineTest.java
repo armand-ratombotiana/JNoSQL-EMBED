@@ -141,7 +141,7 @@ class LSMTreeEngineTest {
         var result = users.findAll();
         assertTrue(result.size() >= 200);
         
-        var special = users.find(org.junify.db.document.Query.eq("type", "important"));
+        var special = users.find(org.junify.db.nosql.document.Query.eq("type", "important"));
         assertEquals(1, special.size());
     }
 }

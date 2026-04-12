@@ -1,9 +1,9 @@
 package org.junify.db.benchmark;
 
 import org.junify.db.JunifyDB;
-import org.junify.db.document.Document;
-import org.junify.db.document.DocumentCollection;
-import org.junify.db.document.Query;
+import org.junify.db.nosql.document.Document;
+import org.junify.db.nosql.document.DocumentCollection;
+import org.junify.db.nosql.document.Query;
 import org.junify.db.kv.KeyValueBucket;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.results.format.ResultFormatType;

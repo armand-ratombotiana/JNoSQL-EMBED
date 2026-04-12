@@ -77,7 +77,7 @@ class ConcurrencyTest {
                         if (i % 2 == 0) {
                             collection.insert(Document.of("writer", threadId).add("op", i));
                         } else {
-                            collection.find(org.junify.db.document.Query.eq("key", "item-0"));
+                            collection.find(org.junify.db.nosql.document.Query.eq("key", "item-0"));
                         }
                     }
                 } catch (Exception e) {

@@ -88,7 +88,7 @@ public class KeyValueBucket {
         expirations.clear();
         for (var key : engine.scan(name)) {
             try {
-                var doc = org.junify.db.document.Document.fromJson(key);
+                var doc = org.junify.db.nosql.document.Document.fromJson(key);
                 engine.delete(name, doc.id());
             } catch (Exception ignored) {
             }

@@ -76,7 +76,7 @@ public class EclipseDocumentTemplate {
                 .collect(Collectors.toList());
     }
 
-    public <T> List<T> find(Class<T> entityClass, org.junify.db.document.Query query) {
+    public <T> List<T> find(Class<T> entityClass, org.junify.db.nosql.document.Query query) {
         return collection.find(query).stream()
                 .map(doc -> EntityMapper.fromDocument(doc, entityClass))
                 .collect(Collectors.toList());

@@ -47,7 +47,7 @@ public class BackupManager {
                 var values = entry.getValue();
                 for (var value : values) {
                     try {
-                        var doc = org.junify.db.document.Document.fromJson(value);
+                        var doc = org.junify.db.nosql.document.Document.fromJson(value);
                         engine.put(collection, doc.id(), value);
                     } catch (Exception ignored) {
                     }
