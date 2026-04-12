@@ -161,7 +161,7 @@ public class JunifyDB implements Closeable {
             }
         }
 
-        var config = JUNIFYDB.embed()
+        var config = JunifyDB.embed()
                 .storageEngine(switch (engineType.toUpperCase()) {
                     case "FILE" -> JunifyDBConfig.StorageEngineType.FILE;
                     case "LSM_TREE" -> JunifyDBConfig.StorageEngineType.LSM_TREE;
@@ -174,7 +174,7 @@ public class JunifyDB implements Closeable {
                 .flushIntervalMs(flushInterval)
                 .buildConfig();
 
-        var db = JUNIFYDB.create(config);
+        var db = JunifyDB.create(config);
         
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Shutting down...");

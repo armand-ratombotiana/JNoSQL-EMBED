@@ -14,7 +14,7 @@ class ColumnFamilyTest {
 
     @BeforeEach
     void setUp() {
-        db = JUNIFYDB.embed().build();
+        db = JunifyDB.embed().build();
         cf = db.columnFamily("users");
     }
 

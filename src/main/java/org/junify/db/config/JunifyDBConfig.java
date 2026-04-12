@@ -36,7 +36,7 @@ public record JunifyDBConfig(
     }
 
     public JunifyDB build() {
-        return JUNIFYDB.create(this);
+        return JunifyDB.create(this);
     }
 
     public static class Builder {

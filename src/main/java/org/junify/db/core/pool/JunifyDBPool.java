@@ -12,9 +12,9 @@ import java.util.function.Supplier;
 
 public class JunifyDBPool {
 
-    private final Supplier<JUNIFYDB> factory;
+    private final Supplier<JunifyDB> factory;
     private final List<PooledConnection> available;
-    private final ConcurrentHashMap<JUNIFYDB, PooledConnection> inUse;
+    private final ConcurrentHashMap<JunifyDB, PooledConnection> inUse;
     private final Semaphore semaphore;
     private final AtomicInteger totalCreated;
     private final int maxSize;
@@ -22,11 +22,11 @@ public class JunifyDBPool {
 
     private volatile boolean closed;
 
-    public JunifyDBPool(Supplier<JUNIFYDB> factory, int maxSize) {
+    public JunifyDBPool(Supplier<JunifyDB> factory, int maxSize) {
         this(factory, maxSize, true);
     }
 
-    public JunifyDBPool(Supplier<JUNIFYDB> factory, int maxSize, boolean autoShutdown) {
+    public JunifyDBPool(Supplier<JunifyDB> factory, int maxSize, boolean autoShutdown) {
         this.factory = factory;
         this.maxSize = maxSize;
         this.autoShutdown = autoShutdown;
@@ -194,11 +194,11 @@ public class JunifyDBPool {
     }
 
     public static class JunifyDBPoolBuilder {
-        private Supplier<JUNIFYDB> factory;
+        private Supplier<JunifyDB> factory;
         private int maxSize = 10;
         private boolean autoShutdown = true;
 
-        public JunifyDBPoolBuilder factory(Supplier<JUNIFYDB> factory) {
+        public JunifyDBPoolBuilder factory(Supplier<JunifyDB> factory) {
             this.factory = factory;
             return this;
         }
@@ -215,7 +215,7 @@ public class JunifyDBPool {
 
         public JunifyDBPool build() {
             if (factory == null) {
-                factory = () -> JUNIFYDB.embed().build();
+                factory = () -> JunifyDB.embed().build();
             }
             return new JunifyDBPool(factory, maxSize, autoShutdown);
         }

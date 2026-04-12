@@ -29,7 +29,7 @@ public class JunifyDBBenchmark {
 
     @Setup
     public void setup() {
-        db = JUNIFYDB.embed().build();
+        db = JunifyDB.embed().build();
         collection = db.documentCollection("benchmark");
         bucket = db.keyValueBucket("benchmark-kv");
         for (int i = 0; i < 1000; i++) {
