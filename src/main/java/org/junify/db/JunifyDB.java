@@ -9,6 +9,7 @@ import org.junify.db.core.metrics.DatabaseMetrics;
 import org.junify.db.console.http.JunifyDBServer;
 import org.junify.db.storage.spi.H2StorageEngine;
 import org.junify.db.storage.spi.StorageEngine;
+import org.junify.db.transaction.mvcc.MVCCManager;
 import org.junify.db.transaction.mvcc.Transaction;
 
 import java.io.Closeable;
@@ -20,6 +21,7 @@ public class JunifyDB implements Closeable {
 
     private final JunifyDBConfig config;
     private final StorageEngine engine;
+    private final MVCCManager mvcc;
     private final ConcurrentMap<String, DocumentCollection> collections;
     private final ConcurrentMap<String, KeyValueBucket> buckets;
     private final ConcurrentMap<String, ColumnFamily> columnFamilies;
@@ -31,6 +33,7 @@ public class JunifyDB implements Closeable {
     private JunifyDB(JunifyDBConfig config) {
         this.config = config;
         this.engine = config.storageEngine().create(config.dataDir(), config.autoFlush(), config.flushIntervalMs());
+        this.mvcc = new MVCCManager();
         this.collections = new ConcurrentHashMap<>();
         this.buckets = new ConcurrentHashMap<>();
         this.columnFamilies = new ConcurrentHashMap<>();
@@ -75,7 +78,11 @@ public class JunifyDB implements Closeable {
     public Transaction beginTransaction() {
         checkOpen();
         metrics.recordTransaction();
-        return new Transaction(engine, eventBus, metrics);
+        return new Transaction(engine, eventBus, metrics, mvcc);
+    }
+
+    public MVCCManager mvcc() {
+        return mvcc;
     }
 
     public EventBus eventBus() {
