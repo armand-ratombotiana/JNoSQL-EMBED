@@ -20,6 +20,7 @@ public class JunifyDBServer {
 
     private final JunifyDB db;
     private HttpServer server;
+    private long startTime;
 
     public JunifyDBServer(JunifyDB db) {
         this.db = db;
@@ -27,6 +28,7 @@ public class JunifyDBServer {
 
     public void start(int port) throws IOException {
         server = HttpServer.create(new InetSocketAddress(port), 0);
+        startTime = System.currentTimeMillis();
         server.createContext("/", new StaticHandler());
         server.createContext("/api/collections", new CollectionsHandler());
         server.createContext("/api/collections/", new CollectionHandler());
@@ -91,7 +93,29 @@ public class JunifyDBServer {
     private class HealthHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            sendJson(exchange, 200, Map.of("status", "ok", "open", db.isOpen()));
+            var runtime = Runtime.getRuntime();
+            var totalMem = runtime.totalMemory();
+            var freeMem = runtime.freeMemory();
+            
+            var health = Map.of(
+                "status", "ok",
+                "open", db.isOpen(),
+                "version", "1.0.0",
+                "engine", db.config().storageEngine().name(),
+                "uptime", System.currentTimeMillis() - startTime,
+                "timestamp", System.currentTimeMillis(),
+                "memory", Map.of(
+                    "used", totalMem - freeMem,
+                    "total", totalMem,
+                    "max", runtime.maxMemory(),
+                    "free", freeMem
+                ),
+                "threads", Map.of(
+                    "active", Thread.activeCount(),
+                    "daemon", Thread.activeCount()
+                )
+            );
+            sendJson(exchange, 200, health);
         }
     }
 

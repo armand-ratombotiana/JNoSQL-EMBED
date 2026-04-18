@@ -1,0 +1,9 @@
+2026-04-18 20:42:31.648837+03:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "{""query"":""SELECT * FROM users[*]""}" [42000-240]
+2026-04-18 20:42:32.327031+03:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "{""query"":""SELECT * FROM users WHERE age > 27 ORDER BY age DESC[*]""}" [42000-240]
+2026-04-18 20:42:32.353048+03:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "{""query"":""SELECT COUNT(*) FROM users[*]""}" [42000-240]
+2026-04-18 20:43:04.936765+03:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "users" not found; SQL statement:
+SELECT * FROM users [42102-240]
