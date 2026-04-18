@@ -8,29 +8,39 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-tertiary: #334155;
-            --bg-card: #1e293b;
-            --accent: #3b82f6;
-            --accent-hover: #2563eb;
-            --accent-light: #60a5fa;
-            --accent-glow: rgba(59, 130, 246, 0.15);
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a25;
+            --bg-card: #16161f;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --accent-light: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.2);
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
             --text-muted: #64748b;
-            --success: #22c55e;
-            --success-light: #86efac;
-            --error: #ef4444;
-            --error-light: #fca5a5;
+            --success: #10b981;
+            --success-light: #6ee7b7;
+            --error: #f43f5e;
+            --error-light: #fda4af;
             --warning: #f59e0b;
             --warning-light: #fcd34d;
-            --border: #334155;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
-            --radius: 12px;
-            --radius-sm: 8px;
+            --border: #2e2e3a;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+            --radius: 16px;
+            --radius-sm: 10px;
         }
+        
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        .slide-in { animation: slideIn 0.3s ease-out; }
         .light-theme {
             --bg-primary: #f1f5f9;
             --bg-secondary: #ffffff;
@@ -674,7 +684,7 @@
     <header class="header">
         <div class="header-content">
             <div class="logo-section">
-                <img src="logo.svg" alt="JNoSQL Logo" style="width: 48px; height: 48px; border-radius: var(--radius-sm);">
+                <img src="logo.svg" alt="JunifyDB" style="width: 48px; height: 48px; border-radius: var(--radius-sm);">
                 <div class="brand">
                     <h1>JunifyDB</h1>
                     <p>Embedded Multi-Model NoSQL Database</p>
