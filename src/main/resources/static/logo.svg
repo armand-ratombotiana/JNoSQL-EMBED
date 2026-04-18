@@ -4,18 +4,14 @@
       <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
-    </linearGradient>
   </defs>
   <!-- Background circle -->
   <circle cx="64" cy="64" r="60" fill="url(#grad1)"/>
   <!-- Database icon -->
-  <ellipse cx="64" cy="44" rx="28" ry="10" fill="none" stroke="white" stroke-width="4"/>
-  <path d="M36 44 L36 84 Q36 94 64 94 Q92 94 92 84 L92 44" fill="none" stroke="white" stroke-width="4"/>
-  <ellipse cx="64" cy="64" rx="28" ry="10" fill="none" stroke="white" stroke-width="4"/>
-  <ellipse cx="64" cy="84" rx="28" ry="10" fill="none" stroke="white" stroke-width="4"/>
-  <!-- JN text -->
-  <text x="64" y="68" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white" text-anchor="middle">JN</text>
+  <ellipse cx="64" cy="42" rx="26" ry="9" fill="none" stroke="white" stroke-width="3.5"/>
+  <path d="M38 42 L38 82 Q38 91 64 91 Q90 91 90 82 L90 42" fill="none" stroke="white" stroke-width="3.5"/>
+  <ellipse cx="64" cy="62" rx="26" ry="9" fill="none" stroke="white" stroke-width="3.5"/>
+  <ellipse cx="64" cy="82" rx="26" ry="9" fill="none" stroke="white" stroke-width="3.5"/>
+  <!-- DB text -->
+  <text x="64" y="66" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">DB</text>
 </svg>

@@ -189,7 +189,7 @@ public class JunifyDB implements Closeable {
         }));
 
         try {
-            System.out.println("Starting junify-EMBED server on port " + port + "...");
+            System.out.println("Starting JunifyDB server on port " + port + "...");
             System.out.println("Data directory: " + dataDir);
             System.out.println("Storage engine: " + engineType);
             System.out.println("Flush mode: " + (autoFlush ? "sync" : "async"));
