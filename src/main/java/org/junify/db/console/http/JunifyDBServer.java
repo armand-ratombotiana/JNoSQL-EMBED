@@ -43,6 +43,7 @@ public class JunifyDBServer {
         server.createContext("/api/schema/", new SchemaHandler());
         server.createContext("/api/vectors/", new VectorHandler());
         server.createContext("/api/sql", new SqlHandler());
+        server.createContext("/api/bulk", new BulkHandler());
         server.setExecutor(null);
         server.start();
     }
@@ -512,6 +513,60 @@ public class JunifyDBServer {
     private String readBody(HttpExchange exchange) throws IOException {
         try (InputStream is = exchange.getRequestBody()) {
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        }
+    }
+
+    private class BulkHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            var path = exchange.getRequestURI().getPath();
+            var parts = path.split("/");
+            if (parts.length < 4) {
+                sendJson(exchange, 400, Map.of("error", "Usage: /api/bulk/{collection}"));
+                return;
+            }
+            var collectionName = parts[3];
+            var collection = db.documentCollection(collectionName);
+            
+            if ("POST".equals(exchange.getRequestMethod())) {
+                var body = readBody(exchange);
+                var docs = JsonSerde.fromJson(body, java.util.List.class);
+                var count = 0;
+                if (docs instanceof java.util.List) {
+                    for (Object doc : (java.util.List<?>) docs) {
+                        if (doc instanceof java.util.Map) {
+                            var docMap = (java.util.Map<?, ?>) doc;
+                            var docEntity = new org.junify.db.nosql.document.Document();
+                            docEntity.id(java.util.UUID.randomUUID().toString());
+                            var fields = new java.util.HashMap<String, Object>();
+                            for (var entry : docMap.entrySet()) {
+                                fields.put(String.valueOf(entry.getKey()), entry.getValue());
+                            }
+                            docEntity.getFields().putAll(fields);
+                            collection.insert(docEntity);
+                            count++;
+                        }
+                    }
+                }
+                sendJson(exchange, 201, Map.of(
+                    "status", "success",
+                    "collection", collectionName,
+                    "inserted", count
+                ));
+            } else if ("DELETE".equals(exchange.getRequestMethod())) {
+                var count = 0;
+                for (var doc : collection.findAll()) {
+                    collection.deleteById(doc.getId());
+                    count++;
+                }
+                sendJson(exchange, 200, Map.of(
+                    "status", "success",
+                    "collection", collectionName,
+                    "deleted", count
+                ));
+            } else {
+                sendJson(exchange, 405, Map.of("error", "Only POST or DELETE allowed"));
+            }
         }
     }
 
