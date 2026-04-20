@@ -15,6 +15,9 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.GZIPOutputStream;
 
 public class JunifyDBServer {
 
@@ -23,6 +26,15 @@ public class JunifyDBServer {
     private long startTime;
     private String apiKey;
     private boolean authEnabled = false;
+    private boolean corsEnabled = true;
+    private boolean compressionEnabled = true;
+    private int rateLimit = 1000;
+    private Map<String, RateLimitEntry> rateLimitMap = new ConcurrentHashMap<>();
+    
+    private static class RateLimitEntry {
+        AtomicInteger count = new AtomicInteger(0);
+        long windowStart = System.currentTimeMillis();
+    }
 
     public JunifyDBServer(JunifyDB db) {
         this.db = db;
@@ -45,9 +57,41 @@ public class JunifyDBServer {
         sendJson(exchange, 401, Map.of("error", "Unauthorized", "message", "Invalid or missing API key"));
     }
 
+    private boolean isRateLimited(HttpExchange exchange) {
+        var clientIp = getClientIp(exchange);
+        var now = System.currentTimeMillis();
+        var entry = rateLimitMap.computeIfAbsent(clientIp, k -> new RateLimitEntry());
+        
+        if (now - entry.windowStart > 60000) {
+            entry.windowStart = now;
+            entry.count.set(0);
+        }
+        
+        return entry.count.incrementAndGet() > rateLimit;
+    }
+
+    private void sendRateLimitError(HttpExchange exchange) throws IOException {
+        sendJson(exchange, 429, Map.of("error", "Too Many Requests", "message", "Rate limit exceeded. Try again later."));
+    }
+
+    private String getClientIp(HttpExchange exchange) {
+        var forwarded = exchange.getRequestHeaders().getFirst("X-Forwarded-For");
+        if (forwarded != null) return forwarded.split(",")[0].trim();
+        return exchange.getRemoteAddress().getAddress().getHostAddress();
+    }
+
+    private void addCorsHeaders(HttpExchange exchange) {
+        if (corsEnabled) {
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization");
+        }
+    }
+
     public void start(int port) throws IOException {
         server = HttpServer.create(new InetSocketAddress(port), 0);
         startTime = System.currentTimeMillis();
+        
         server.createContext("/", new StaticHandler());
         server.createContext("/api/collections", new CollectionsHandler());
         server.createContext("/api/collections/", new CollectionHandler());
@@ -63,8 +107,22 @@ public class JunifyDBServer {
         server.createContext("/api/vectors/", new VectorHandler());
         server.createContext("/api/sql", new SqlHandler());
         server.createContext("/api/bulk", new BulkHandler());
+        
+        if (corsEnabled) {
+            server.createContext("/api/", new CorsPreflightHandler());
+        }
+        
         server.setExecutor(null);
         server.start();
+    }
+    
+    private class CorsPreflightHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            addCorsHeaders(exchange);
+            exchange.getResponseHeaders().set("Access-Control-Max-Age", "3600");
+            exchange.sendResponseHeaders(204, -1);
+        }
     }
 
     public void stop() {
@@ -499,12 +557,27 @@ public class JunifyDBServer {
     }
 
     private void sendJson(HttpExchange exchange, int status, Object body) throws IOException {
+        addCorsHeaders(exchange);
         exchange.getResponseHeaders().set("Content-Type", "application/json");
-        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        
         var json = body != null ? JsonSerde.toJson(body) : "";
         var bytes = json.getBytes(StandardCharsets.UTF_8);
+        
+        var acceptEncoding = exchange.getRequestHeaders().getFirst("Accept-Encoding");
+        boolean useGzip = compressionEnabled && acceptEncoding != null && acceptEncoding.contains("gzip");
+        
+        if (useGzip && bytes.length > 1024) {
+            exchange.getResponseHeaders().set("Content-Encoding", "gzip");
+            var baos = new java.io.ByteArrayOutputStream();
+            try (var gzos = new GZIPOutputStream(baos)) {
+                gzos.write(bytes);
+            }
+            bytes = baos.toByteArray();
+        }
+        
+        exchange.getResponseHeaders().set("Content-Length", String.valueOf(bytes.length));
         exchange.sendResponseHeaders(status, bytes.length);
-        try ( var os = exchange.getResponseBody()) {
+        try (var os = exchange.getResponseBody()) {
             os.write(bytes);
         }
     }
