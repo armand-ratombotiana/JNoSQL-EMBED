@@ -33,6 +33,7 @@ public class LSMTreeEngine implements StorageEngine {
     private final WriteAheadLog wal;
     private final List<SSTable> sstables;
     private final long maxSstableSize;
+    private final BloomFilter bloomFilter;
     private volatile boolean closed;
 
     public LSMTreeEngine(Path dataDir) {
@@ -57,6 +58,7 @@ public class LSMTreeEngine implements StorageEngine {
         this.compactionExecutor = Executors.newSingleThreadExecutor();
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
         this.closed = false;
+        this.bloomFilter = new BloomFilter(0.01, 100000);
 
         try {
             Files.createDirectories(sstDir);
@@ -87,6 +89,7 @@ public class LSMTreeEngine implements StorageEngine {
         memtableLock.writeLock().lock();
         try {
             memtable.put(compositeKey, value);
+            bloomFilter.add(compositeKey);
             dirty.set(true);
         } finally {
             memtableLock.writeLock().unlock();
@@ -115,6 +118,10 @@ public class LSMTreeEngine implements StorageEngine {
     public String get(String collection, String key) {
         checkOpen();
         String compositeKey = compositeKey(collection, key);
+        
+        if (!bloomFilter.mightContain(compositeKey)) {
+            return null;
+        }
         
         memtableLock.readLock().lock();
         try {
@@ -261,13 +268,14 @@ public class LSMTreeEngine implements StorageEngine {
             Thread.currentThread().interrupt();
         }
         
-        flush();
-        
         try {
             wal.close();
         } catch (IOException e) {
             System.err.println("WAL close failed: " + e.getMessage());
         }
+        
+        memtable.clear();
+        sstables.clear();
     }
 
     @Override
@@ -497,13 +505,32 @@ public class LSMTreeEngine implements StorageEngine {
                 
                 while (channel.position() < channel.size()) {
                     buffer.clear();
-                    int keyLen = channel.read(buffer);
-                    if (keyLen <= 0) break;
-                    
+                    buffer.limit(4);
+                    int bytesRead = channel.read(buffer);
+                    if (bytesRead <= 0) break;
                     buffer.flip();
-                    byte[] keyBytes = new byte[buffer.getInt()];
+                    
+                    int keyLen = buffer.getInt();
+                    if (keyLen <= 0 || keyLen > 1024 * 1024) break;
+                    
+                    buffer.clear();
+                    buffer.limit(keyLen);
+                    if (channel.read(buffer) != keyLen) break;
+                    buffer.flip();
+                    byte[] keyBytes = new byte[keyLen];
                     buffer.get(keyBytes);
+                    
+                    buffer.clear();
+                    buffer.limit(4);
+                    if (channel.read(buffer) != 4) break;
+                    buffer.flip();
                     int valueLen = buffer.getInt();
+                    if (valueLen < 0 || valueLen > 1024 * 1024) break;
+                    
+                    buffer.clear();
+                    buffer.limit(valueLen);
+                    if (channel.read(buffer) != valueLen) break;
+                    buffer.flip();
                     byte[] valueBytes = new byte[valueLen];
                     buffer.get(valueBytes);
                     
