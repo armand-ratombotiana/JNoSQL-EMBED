@@ -144,6 +144,7 @@ public class JunifyDB implements Closeable {
         String engineType = "FILE";
         boolean autoFlush = true;
         int flushInterval = 1000;
+        String apiKey = null;
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
@@ -153,6 +154,7 @@ public class JunifyDB implements Closeable {
                 case "--sync" -> autoFlush = true;
                 case "--async" -> autoFlush = false;
                 case "--flush-interval" -> flushInterval = Integer.parseInt(args[++i]);
+                case "--api-key" -> apiKey = args[++i];
                 case "--help" -> {
                     System.out.println("Usage: java -jar junify-embed.jar [options]");
                     System.out.println("Options:");
@@ -162,6 +164,7 @@ public class JunifyDB implements Closeable {
                     System.out.println("  --sync                 Enable synchronous flush (default)");
                     System.out.println("  --async                Enable asynchronous flush");
                     System.out.println("  --flush-interval <ms>  Flush interval in ms (default: 1000)");
+                    System.out.println("  --api-key <key>        API key for authentication (optional)");
                     System.out.println("  --help                 Show this help");
                     return;
                 }
@@ -193,7 +196,11 @@ public class JunifyDB implements Closeable {
             System.out.println("Data directory: " + dataDir);
             System.out.println("Storage engine: " + engineType);
             System.out.println("Flush mode: " + (autoFlush ? "sync" : "async"));
-            db.startServer(port);
+            var server = db.startServer(port);
+            if (apiKey != null && !apiKey.isEmpty()) {
+                server.setApiKey(apiKey);
+                System.out.println("API authentication enabled");
+            }
             System.out.println("Server started successfully!");
             System.out.println("API available at http://localhost:" + port + "/api");
             System.out.println("Health check at http://localhost:" + port + "/api/health");

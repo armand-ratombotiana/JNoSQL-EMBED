@@ -21,9 +21,28 @@ public class JunifyDBServer {
     private final JunifyDB db;
     private HttpServer server;
     private long startTime;
+    private String apiKey;
+    private boolean authEnabled = false;
 
     public JunifyDBServer(JunifyDB db) {
         this.db = db;
+    }
+
+    public void setApiKey(String apiKey) {
+        if (apiKey != null && !apiKey.isEmpty()) {
+            this.apiKey = apiKey;
+            this.authEnabled = true;
+        }
+    }
+
+    private boolean isAuthValid(HttpExchange exchange) {
+        if (!authEnabled) return true;
+        var authHeader = exchange.getRequestHeaders().getFirst("X-API-Key");
+        return apiKey != null && apiKey.equals(authHeader);
+    }
+
+    private void sendAuthError(HttpExchange exchange) throws IOException {
+        sendJson(exchange, 401, Map.of("error", "Unauthorized", "message", "Invalid or missing API key"));
     }
 
     public void start(int port) throws IOException {
@@ -94,6 +113,7 @@ public class JunifyDBServer {
     private class HealthHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             var runtime = Runtime.getRuntime();
             var totalMem = runtime.totalMemory();
             var freeMem = runtime.freeMemory();
@@ -123,6 +143,7 @@ public class JunifyDBServer {
     private class CollectionsHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             if ("GET".equals(exchange.getRequestMethod())) {
                 sendJson(exchange, 200, Map.of("collections", "use /api/collections/{name}"));
             }
@@ -132,6 +153,7 @@ public class JunifyDBServer {
     private class CollectionHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
             if (parts.length < 4) {
@@ -178,6 +200,7 @@ public class JunifyDBServer {
     private class KeyValueHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
             if (parts.length < 4) {
@@ -211,6 +234,7 @@ public class JunifyDBServer {
     private class ColumnHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
             if (parts.length < 4) {
@@ -247,6 +271,7 @@ public class JunifyDBServer {
     private class BackupHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
             
@@ -322,6 +347,7 @@ public class JunifyDBServer {
     private class IndexHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
             if (parts.length < 4) {
@@ -357,6 +383,7 @@ public class JunifyDBServer {
     private class TransactionHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             if ("POST".equals(exchange.getRequestMethod())) {
                 var tx = db.beginTransaction();
                 var txId = tx.hashCode();
@@ -374,6 +401,7 @@ public class JunifyDBServer {
     private class SchemaHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
             if (parts.length < 4) {
@@ -415,6 +443,7 @@ public class JunifyDBServer {
     private class VectorHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
             if (parts.length < 5) {
@@ -483,6 +512,7 @@ public class JunifyDBServer {
     private class MetricsHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             if ("GET".equals(exchange.getRequestMethod())) {
                 sendJson(exchange, 200, db.metrics().snapshot());
             }
@@ -492,6 +522,7 @@ public class JunifyDBServer {
     private class StatsHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             if ("GET".equals(exchange.getRequestMethod())) {
                 var runtime = Runtime.getRuntime();
                 var memory = Map.of(
@@ -519,6 +550,7 @@ public class JunifyDBServer {
     private class BulkHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
             if (parts.length < 4) {
@@ -573,6 +605,7 @@ public class JunifyDBServer {
     private class SqlHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             if (!"POST".equals(exchange.getRequestMethod())) {
                 sendJson(exchange, 405, Map.of("error", "Only POST method is allowed for SQL execution"));
                 return;
