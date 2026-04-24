@@ -145,12 +145,12 @@ public class QueryCache {
     }
 
     public static class Stats {
-        public static class QueryCache {
+        public static class CacheStats {
             private final ConcurrentHashMap<String, CacheEntry> cache;
             private final AtomicLong hits;
             private final AtomicLong misses;
 
-            public QueryCache(ConcurrentHashMap<String, CacheEntry> cache, AtomicLong hits, AtomicLong misses) {
+            public CacheStats(ConcurrentHashMap<String, CacheEntry> cache, AtomicLong hits, AtomicLong misses) {
                 this.cache = cache;
                 this.hits = hits;
                 this.misses = misses;

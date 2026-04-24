@@ -601,19 +601,19 @@ public class H2StorageEngine implements StorageEngine {
         } finally {
             lock.readLock().unlock();
         }
-        return java.util.Map.of(
-            "engine", name(),
-            "documents", docCount,
-            "keyValues", kvCount,
-            "columns", colCount,
-            "totalEntries", docCount + kvCount + colCount,
-            "cacheSize", cache.size(),
-            "statementCacheSize", statementCache.size(),
-            "dataDir", dataDir.toString(),
-            "autoCommit", autoCommit,
-            "isolationLevel", isolationLevelName(isolationLevel),
-            "type", "h2-sql"
-        );
+        var map = new java.util.HashMap<String, Object>();
+        map.put("engine", name());
+        map.put("documents", docCount);
+        map.put("keyValues", kvCount);
+        map.put("columns", colCount);
+        map.put("totalEntries", docCount + kvCount + colCount);
+        map.put("cacheSize", cache.size());
+        map.put("statementCacheSize", statementCache.size());
+        map.put("dataDir", dataDir.toString());
+        map.put("autoCommit", autoCommit);
+        map.put("isolationLevel", isolationLevelName(isolationLevel));
+        map.put("type", "h2-sql");
+        return map;
     }
 
     private String isolationLevelName(int level) {

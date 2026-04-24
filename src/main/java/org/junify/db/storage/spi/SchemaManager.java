@@ -3,6 +3,8 @@ package org.junify.db.storage.spi;
 import java.sql.*;
 import java.util.*;
 
+import static org.junify.db.storage.spi.H2StorageEngine.SqlResult;
+
 public class SchemaManager {
 
     private final H2StorageEngine engine;
