@@ -107,6 +107,11 @@ public class JunifyDBServer {
         server.createContext("/api/vectors/", new VectorHandler());
         server.createContext("/api/sql", new SqlHandler());
         server.createContext("/api/bulk", new BulkHandler());
+        server.createContext("/api/cdc", new CDCHandler());
+        server.createContext("/api/schema", new SchemaSqlHandler());
+        server.createContext("/api/schema/", new SchemaSqlHandler());
+        server.createContext("/api/tables", new TablesHandler());
+        server.createContext("/api/tables/", new TablesHandler());
         
         if (corsEnabled) {
             server.createContext("/api/", new CorsPreflightHandler());
@@ -709,6 +714,142 @@ public class JunifyDBServer {
                 }
             } catch (Exception e) {
                 sendJson(exchange, 500, Map.of("error", e.getMessage()));
+            }
+        }
+    }
+
+    private class CDCHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
+            var path = exchange.getRequestURI().getPath();
+            var parts = path.split("/");
+            
+            if (parts.length == 3) {
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    var status = db.cdcManager().getStatus();
+                    sendJson(exchange, 200, status);
+                    return;
+                }
+            }
+            
+            if (parts.length >= 4) {
+                var action = parts[3];
+                
+                if ("connectors".equals(action) && parts.length >= 5) {
+                    var connectorName = parts[4];
+                    
+                    if ("POST".equals(exchange.getRequestMethod())) {
+                        var body = readBody(exchange);
+                        var data = JsonSerde.fromJson(body, Map.class);
+                        var type = data.get("type").toString();
+                        
+                        if ("file".equals(type)) {
+                            var outputDir = java.nio.file.Paths.get(data.get("outputDir").toString());
+                            db.cdcManager().addFileConnector(connectorName, outputDir);
+                            sendJson(exchange, 201, Map.of("status", "connected", "type", "file", "name", connectorName));
+                        } else if ("kafka".equals(type)) {
+                            var bootstrapServers = data.get("bootstrapServers").toString();
+                            var topic = data.get("topic").toString();
+                            db.cdcManager().addKafkaConnector(connectorName, bootstrapServers, topic);
+                            sendJson(exchange, 201, Map.of("status", "connected", "type", "kafka", "name", connectorName));
+                        } else {
+                            sendJson(exchange, 400, Map.of("error", "Unknown connector type"));
+                        }
+                        return;
+                    } else if ("DELETE".equals(exchange.getRequestMethod())) {
+                        db.cdcManager().removeFileConnector(connectorName);
+                        db.cdcManager().removeKafkaConnector(connectorName);
+                        sendJson(exchange, 200, Map.of("status", "disconnected", "name", connectorName));
+                        return;
+                    }
+                }
+                
+                if ("events".equals(action)) {
+                    var since = exchange.getRequestHeaders().getFirst("Since");
+                    var events = since != null 
+                        ? db.cdcManager().processor().getEventsSince(Long.parseLong(since))
+                        : db.cdcManager().processor().getEventLog();
+                    sendJson(exchange, 200, Map.of("events", events));
+                    return;
+                }
+                
+                if ("enable".equals(action)) {
+                    db.cdcManager().processor().enable();
+                    sendJson(exchange, 200, Map.of("status", "enabled"));
+                    return;
+                }
+                
+                if ("disable".equals(action)) {
+                    db.cdcManager().processor().disable();
+                    sendJson(exchange, 200, Map.of("status", "disabled"));
+                    return;
+                }
+            }
+            
+            sendJson(exchange, 400, Map.of("error", "Usage: GET /api/cdc, POST/DELETE /api/cdc/connectors/{name}, GET /api/cdc/events"));
+        }
+    }
+
+    private class SchemaSqlHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
+            var path = exchange.getRequestURI().getPath();
+            
+            if ("GET".equals(exchange.getRequestMethod()) && path.equals("/api/schema")) {
+                var tables = db.h2Engine().schemaManager().getTables();
+                sendJson(exchange, 200, Map.of("tables", tables));
+                return;
+            }
+            
+            var parts = path.split("/");
+            if (parts.length >= 4) {
+                var tableName = parts[3];
+                var sm = db.h2Engine().schemaManager();
+                
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    sendJson(exchange, 200, sm.getTableInfo(tableName));
+                    return;
+                }
+                
+                if ("DELETE".equals(exchange.getRequestMethod())) {
+                    var result = sm.dropTable(tableName, false);
+                    sendJson(exchange, 200, Map.of("success", result.success(), "message", result.message()));
+                    return;
+                }
+            }
+            
+            sendJson(exchange, 400, Map.of("error", "Usage: GET /api/schema or GET/DELETE /api/schema/{table}"));
+        }
+    }
+
+    private class TablesHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
+            var path = exchange.getRequestURI().getPath();
+            var parts = path.split("/");
+            
+            if (parts.length < 4) {
+                sendJson(exchange, 400, Map.of("error", "Usage: /api/tables/{name}"));
+                return;
+            }
+            
+            var tableName = parts[3];
+            var sm = db.h2Engine().schemaManager();
+            
+            if ("GET".equals(exchange.getRequestMethod())) {
+                sendJson(exchange, 200, sm.getTableInfo(tableName));
+            } else if ("POST".equals(exchange.getRequestMethod())) {
+                var body = readBody(exchange);
+                var data = JsonSerde.fromJson(body, Map.class);
+                var columns = (Map<String, ?>) data.get("columns");
+                var result = sm.createTable(tableName, columns);
+                sendJson(exchange, result.success() ? 201 : 400, 
+                    Map.of("success", result.success(), "message", result.message()));
+            } else {
+                sendJson(exchange, 405, Map.of("error", "Method not allowed"));
             }
         }
     }

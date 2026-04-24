@@ -17,7 +17,13 @@ public class H2StorageEngine implements StorageEngine {
     private Connection connection;
     private final ReentrantReadWriteLock lock;
     private final Map<String, byte[]> cache;
+    private final Map<String, PreparedStatement> statementCache;
     private volatile boolean closed;
+    private boolean autoCommit;
+    private int isolationLevel = Connection.TRANSACTION_READ_COMMITTED;
+    private final List<Savepoint> savepoints;
+    private SchemaManager schemaManager;
+    private QueryOptimizer queryOptimizer;
 
     public H2StorageEngine(Path dataDir) {
         this(dataDir, "embeddb");
@@ -28,11 +34,16 @@ public class H2StorageEngine implements StorageEngine {
         this.dbName = dbName;
         this.lock = new ReentrantReadWriteLock();
         this.cache = new ConcurrentHashMap<>();
+        this.statementCache = new ConcurrentHashMap<>(50);
+        this.savepoints = new ArrayList<>();
         this.closed = false;
+        this.autoCommit = true;
         
         try {
             Files.createDirectories(dataDir);
             initializeDatabase();
+            this.schemaManager = new SchemaManager(this);
+            this.queryOptimizer = new QueryOptimizer(this);
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize H2 database", e);
         }
@@ -342,6 +353,9 @@ public class H2StorageEngine implements StorageEngine {
         lock.writeLock().lock();
         try {
             cache.clear();
+            if (statementCache.size() > 100) {
+                statementCache.clear();
+            }
             try (Statement stmt = connection.createStatement()) {
                 stmt.execute("CHECKPOINT");
             }
@@ -350,6 +364,73 @@ public class H2StorageEngine implements StorageEngine {
         } finally {
             lock.writeLock().unlock();
         }
+    }
+
+    public void beginTransaction() throws SQLException {
+        checkOpen();
+        connection.setAutoCommit(false);
+        autoCommit = false;
+    }
+
+    public void commit() throws SQLException {
+        checkOpen();
+        if (!autoCommit) {
+            connection.commit();
+            connection.setAutoCommit(true);
+            autoCommit = true;
+            savepoints.clear();
+        }
+    }
+
+    public void rollback() throws SQLException {
+        checkOpen();
+        if (!autoCommit) {
+            connection.rollback();
+            connection.setAutoCommit(true);
+            autoCommit = true;
+            savepoints.clear();
+        }
+    }
+
+    public void setTransactionIsolation(int level) throws SQLException {
+        checkOpen();
+        this.isolationLevel = level;
+        connection.setTransactionIsolation(level);
+    }
+
+    public int getTransactionIsolation() {
+        return isolationLevel;
+    }
+
+    public Savepoint setSavepoint(String name) throws SQLException {
+        checkOpen();
+        Savepoint sp = connection.setSavepoint(name);
+        savepoints.add(sp);
+        return sp;
+    }
+
+    public void rollbackTo(Savepoint sp) throws SQLException {
+        checkOpen();
+        connection.rollback(sp);
+        savepoints.remove(sp);
+    }
+
+    public void releaseSavepoint(Savepoint sp) throws SQLException {
+        checkOpen();
+        connection.releaseSavepoint(sp);
+        savepoints.remove(sp);
+    }
+
+    public SchemaManager schemaManager() {
+        return schemaManager;
+    }
+
+    public QueryOptimizer queryOptimizer() {
+        return queryOptimizer;
+    }
+
+    boolean isAutoCommit() {
+        return autoCommit;
     }
 
     @Override
@@ -379,11 +460,30 @@ public class H2StorageEngine implements StorageEngine {
         cache.clear();
     }
 
+    private int queryTimeout = 30;
+
+    public void setQueryTimeout(int seconds) {
+        this.queryTimeout = seconds;
+    }
+
+    public int getQueryTimeout() {
+        return queryTimeout;
+    }
+
     public SqlResult executeSql(String sql) {
+        return executeSql(sql, false);
+    }
+
+    public SqlResult executeSql(String sql, boolean analyze) {
         checkOpen();
         if (sql == null || sql.trim().isEmpty()) {
             return new SqlResult(false, null, 0, "Empty SQL statement");
         }
+        
+        if (analyze) {
+            sql = "EXPLAIN " + sql;
+        }
+        
         String trimmed = sql.trim().toUpperCase();
         lock.readLock().lock();
         try {
@@ -475,8 +575,22 @@ public class H2StorageEngine implements StorageEngine {
             "columns", colCount,
             "totalEntries", docCount + kvCount + colCount,
             "cacheSize", cache.size(),
+            "statementCacheSize", statementCache.size(),
             "dataDir", dataDir.toString(),
+            "autoCommit", autoCommit,
+            "isolationLevel", isolationLevelName(isolationLevel),
             "type", "h2-sql"
         );
+    }
+
+    private String isolationLevelName(int level) {
+        return switch (level) {
+            case Connection.TRANSACTION_NONE -> "NONE";
+            case Connection.TRANSACTION_READ_UNCOMMITTED -> "READ_UNCOMMITTED";
+            case Connection.TRANSACTION_READ_COMMITTED -> "READ_COMMITTED";
+            case Connection.TRANSACTION_REPEATABLE_READ -> "REPEATABLE_READ";
+            case Connection.TRANSACTION_SERIALIZABLE -> "SERIALIZABLE";
+            default -> "UNKNOWN";
+        };
     }
 }

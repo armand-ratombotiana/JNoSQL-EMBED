@@ -2,11 +2,13 @@ package org.junify.db;
 
 import org.junify.db.nosql.column.ColumnFamily;
 import org.junify.db.config.JunifyDBConfig;
-import org.junify.db.nosql.document.DocumentCollection;
-import org.junify.db.core.event.EventBus;
-import org.junify.db.nosql.kv.KeyValueBucket;
-import org.junify.db.core.metrics.DatabaseMetrics;
 import org.junify.db.console.http.JunifyDBServer;
+import org.junify.db.core.cdc.CDCManager;
+import org.junify.db.core.event.EventBus;
+import org.junify.db.core.metrics.DatabaseMetrics;
+import org.junify.db.nosql.column.ColumnFamily;
+import org.junify.db.nosql.document.DocumentCollection;
+import org.junify.db.nosql.kv.KeyValueBucket;
 import org.junify.db.storage.spi.H2StorageEngine;
 import org.junify.db.storage.spi.StorageEngine;
 import org.junify.db.transaction.mvcc.MVCCManager;
@@ -27,6 +29,7 @@ public class JunifyDB implements Closeable {
     private final ConcurrentMap<String, ColumnFamily> columnFamilies;
     private final EventBus eventBus;
     private final DatabaseMetrics metrics;
+    private final CDCManager cdcManager;
     private volatile boolean closed;
     private JunifyDBServer server;
 
@@ -39,6 +42,7 @@ public class JunifyDB implements Closeable {
         this.columnFamilies = new ConcurrentHashMap<>();
         this.eventBus = new EventBus();
         this.metrics = new DatabaseMetrics();
+        this.cdcManager = new CDCManager();
         this.closed = false;
     }
 
@@ -91,6 +95,10 @@ public class JunifyDB implements Closeable {
 
     public DatabaseMetrics metrics() {
         return metrics;
+    }
+
+    public CDCManager cdcManager() {
+        return cdcManager;
     }
 
     public H2StorageEngine h2Engine() {
