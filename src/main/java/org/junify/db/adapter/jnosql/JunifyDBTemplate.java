@@ -1,21 +1,16 @@
 package org.junify.db.adapter.jnosql;
 
+import jakarta.nosql.*;
+import jakarta.nosql.bean.*;
+import jakarta.nosql.mapping.*;
+import jakarta.nosql.mapping_convert.*;
+
 import org.junify.db.JunifyDB;
 import org.junify.db.nosql.document.Document;
 import org.junify.db.nosql.document.DocumentCollection;
-import org.junify.db.nosql.kv.KeyValueBucket;
-
-import jakarta.nosql.Template;
-import jakarta.nosql.communication.TypeReference;
-import jakarta.nosql.document.DocumentCollectionManager;
-import jakarta.nosql.document.DocumentDeleteQuery;
-import jakarta.nosql.document.DocumentEntity;
-import jakarta.nosql.document.DocumentQuery;
-import jakarta.nosql.keyvalue.KeyValueRepository;
-import jakarta.nosql.keyvalue.KeyValueTemplate;
 
 import java.util.*;
-import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class JunifyDBTemplate implements Template, DocumentCollectionManager, KeyValueTemplate {
 
@@ -29,195 +24,186 @@ public class JunifyDBTemplate implements Template, DocumentCollectionManager, Ke
         return new JunifyDBTemplate(db);
     }
 
-    @Override
     public DocumentCollectionManager getDocumentCollectionManager() {
         return this;
     }
 
-    @Override
     public KeyValueTemplate getKeyValueTemplate() {
         return this;
     }
 
-    @Override
+    // Template methods
     public <T> T insert(T entity) {
-        return insert(entity, DocumentCollectionManager.defaultLifeCycle());
+        return insert(entity, null);
     }
 
-    @Override
-    public <T> T insert(T entity, javax.nosql.communication.Timeout timeout) {
-        var document = new DocumentEntity(getEntityName(entity.getClass()));
-        var converter = new DocumentConverter();
-        converter.convert(entity, document);
+    public <T> T insert(T entity, jakarta.nosql.communication.Timeout timeout) {
+        var collection = getCollectionName(entity.getClass());
+        var docCollection = db.documentCollection(collection);
         
-        var collection = db.documentCollection(getEntityName(entity.getClass()));
-        var doc = toDocument(entity);
-        collection.insert(doc);
+        var document = toDocument(entity);
+        docCollection.insert(document);
         
         return entity;
     }
 
-    @Override
     public <T> T update(T entity) {
         return insert(entity);
     }
 
-    @Override
     public <T> void delete(Class<T> entityClass) {
-        var collection = db.documentCollection(getEntityName(entityClass));
+        var collection = db.documentCollection(getCollectionName(entityClass));
         for (var doc : collection.findAll()) {
             collection.deleteById(doc.getId());
         }
     }
 
-    @Override
     public <T, ID> Optional<T> find(Class<T> entityClass, ID id) {
-        var collection = db.documentCollection(getEntityName(entityClass));
+        var collection = db.documentCollection(getCollectionName(entityClass));
         var doc = collection.findById(String.valueOf(id));
+        
         if (doc == null) {
             return Optional.empty();
         }
+        
         return Optional.of(toEntity(doc, entityClass));
     }
 
-    @Override
     public <T, ID> void delete(Class<T> entityClass, ID id) {
-        var collection = db.documentCollection(getEntityName(entityClass));
+        var collection = db.documentCollection(getCollectionName(entityClass));
         collection.deleteById(String.valueOf(id));
     }
 
-    @Override
-    public void delete(DocumentDeleteQuery query) {
-        // Convert query to delete operations
-    }
-
-    @Override
-    public <T> List<T> select(DocumentQuery query) {
-        var collection = db.documentCollection(query.getCollection());
-        var results = collection.findAll();
-        
-        if (!query.getConditions().isEmpty()) {
-            // Apply filters
-        }
-        
-        return toList(results, query.getTypeReference() != null ? 
-            query.getTypeReference() : new TypeReference<List<T>>() {});
-    }
-
     // DocumentCollectionManager methods
-    @Override
     public DocumentEntity insert(DocumentEntity entity) {
         var collection = db.documentCollection(entity.getCollection());
-        var doc = toDocument(entity);
-        return collection.insert(doc).toEntity();
+        collection.insert(fromEntity(entity));
+        return entity;
     }
 
-    @Override
     public DocumentEntity update(DocumentEntity entity) {
         return insert(entity);
     }
 
-    @Override
     public void delete(DocumentEntity entity) {
         var collection = db.documentCollection(entity.getCollection());
         collection.deleteById(entity.getId());
     }
 
-    @Override
     public Optional<DocumentEntity> find(DocumentQuery query) {
         var collection = db.documentCollection(query.getCollection());
-        var docs = collection.findAll();
         
-        for (var doc : docs) {
-            var entity = doc.toEntity();
-            if (matchConditions(entity, query)) {
-                return Optional.of(entity);
+        for (var doc : collection.findAll()) {
+            if (matchesQuery(doc, query)) {
+                return Optional.of(doc.toEntity());
             }
         }
         
         return Optional.empty();
     }
 
-    @Override
     public long count(String collection) {
         return db.documentCollection(collection).count();
     }
 
-    // KeyValueTemplate methods  
-    @Override
+    // KeyValueTemplate methods
     public <T, K> T get(Class<T> entity, K key) {
-        var bucket = db.keyValueBucket(getEntityName(entity));
-        var value = bucket.get(String.valueOf(key));
-        if (value == null) {
+        var bucket = db.keyValueBucket(getCollectionName(entity));
+        var json = bucket.get(String.valueOf(key));
+        
+        if (json == null) {
             return null;
         }
-        return fromJson(value, entity);
+        
+        return fromJson(json, entity);
     }
 
-    @Override
     public <T, K> Iterable<T> getAll(Class<T> entity, Iterable<K> keys) {
-        var bucket = db.keyValueBucket(getEntityName(entity));
+        var bucket = db.keyValueBucket(getCollectionName(entity));
         var results = new ArrayList<T>();
         
         for (K key : keys) {
-            var value = bucket.get(String.valueOf(key));
-            if (value != null) {
-                results.add(fromJson(value, entity));
+            var json = bucket.get(String.valueOf(key));
+            if (json != null) {
+                results.add(fromJson(json, entity));
             }
         }
         
         return results;
     }
 
-    @Override
     public <T, K> T put(Class<T> entity, K key, T value) {
-        var bucket = db.keyValueBucket(getEntityName(entity));
+        var bucket = db.keyValueBucket(getCollectionName(entity));
         bucket.put(String.valueOf(key), toJson(value));
         return value;
     }
 
-    @Override
     public <T, K> T putIfAbsent(Class<T> entity, K key, T value) {
-        var bucket = db.keyValueBucket(getEntityName(entity));
+        var bucket = db.keyValueBucket(getCollectionName(entity));
+        
         if (bucket.get(String.valueOf(key)) == null) {
             bucket.put(String.valueOf(key), toJson(value));
             return value;
         }
+        
         return get(entity, key);
     }
 
-    @Override
     public <T, K> void delete(Class<T> entity, K key) {
-        var bucket = db.keyValueBucket(getEntityName(entity));
+        var bucket = db.keyValueBucket(getCollectionName(entity));
         bucket.delete(String.valueOf(key));
     }
 
-    @Override
     public <T, K> boolean contains(Class<T> entity, K key) {
-        var bucket = db.keyValueBucket(getEntityName(entity));
+        var bucket = db.keyValueBucket(getCollectionName(entity));
         return bucket.get(String.valueOf(key)) != null;
     }
 
     // Helper methods
-    private String getEntityName(Class<?> entityClass) {
-        var entity = entityClass.getAnnotation(jakarta.nosql.Entity.class);
-        return entity != null ? entity.value() : entityClass.getSimpleName().toLowerCase();
+    private String getCollectionName(Class<?> entityClass) {
+        var entityAnn = entityClass.getAnnotation(jakarta.nosql.Entity.class);
+        if (entityAnn != null && !entityAnn.value().isEmpty()) {
+            return entityAnn.value();
+        }
+        
+        var jpaEntity = entityClass.getAnnotation(jakarta.persistence.Entity.class);
+        if (jpaEntity != null && !jpaEntity.name().isEmpty()) {
+            return jpaEntity.name();
+        }
+        
+        return entityClass.getSimpleName().toLowerCase();
     }
 
     private Document toDocument(Object entity) {
         var doc = new Document();
-        var fields = entity.getClass().getDeclaredFields();
+        var clazz = entity.getClass();
         
-        for (var field : fields) {
+        for (var field : clazz.getDeclaredFields()) {
             field.setAccessible(true);
+            
+            var idAnn = field.getAnnotation(jakarta.nosql.Id.class);
+            if (idAnn != null) {
+                try {
+                    doc.setId(field.get(entity).toString());
+                    continue;
+                } catch (Exception ignored) {}
+            }
+            
+            var jpaId = field.getAnnotation(jakarta.persistence.Id.class);
+            if (jpaId != null) {
+                try {
+                    doc.setId(field.get(entity).toString());
+                    continue;
+                } catch (Exception ignored) {}
+            }
+            
             try {
                 var value = field.get(entity);
                 if (value != null) {
-                    doc.add(field.getName(), value);
+                    var fieldName = getFieldName(field);
+                    doc.add(fieldName, value);
                 }
-            } catch (Exception e) {
-                // Ignore
-            }
+            } catch (Exception ignored) {}
         }
         
         return doc;
@@ -226,12 +212,26 @@ public class JunifyDBTemplate implements Template, DocumentCollectionManager, Ke
     private <T> T toEntity(Document doc, Class<T> entityClass) {
         try {
             var entity = entityClass.getDeclaredConstructor().newInstance();
-            var fields = entityClass.getDeclaredFields();
+            var idValue = doc.getId();
             
-            for (var field : fields) {
-                if (doc.containsKey(field.getName())) {
-                    field.setAccessible(true);
-                    field.set(entity, doc.get(field.getName()));
+            for (var field : entityClass.getDeclaredFields()) {
+                field.setAccessible(true);
+                
+                var fieldName = getFieldName(field);
+                if (doc.containsKey(fieldName)) {
+                    var value = doc.get(fieldName);
+                    field.set(entity, convertValue(value, field.getType()));
+                }
+            }
+            
+            if (idValue != null) {
+                for (var field : entityClass.getDeclaredFields()) {
+                    if (field.isAnnotationPresent(jakarta.nosql.Id.class) ||
+                        field.isAnnotationPresent(jakarta.persistence.Id.class)) {
+                        field.setAccessible(true);
+                        field.set(entity, idValue);
+                        break;
+                    }
                 }
             }
             
@@ -241,23 +241,76 @@ public class JunifyDBTemplate implements Template, DocumentCollectionManager, Ke
         }
     }
 
+    private String getFieldName(java.lang.reflect.Field field) {
+        var jpaCol = field.getAnnotation(jakarta.persistence.Column.class);
+        if (jpaCol != null && !jpaCol.name().isEmpty()) {
+            return jpaCol.name();
+        }
+        
+        var nosqlCol = field.getAnnotation(jakarta.nosql.Column.class);
+        if (nosqlCol != null && !nosqlCol.value().isEmpty()) {
+            return nosqlCol.value();
+        }
+        
+        return field.getName();
+    }
+
+    private Object convertValue(Object value, Class<?> targetType) {
+        if (targetType.isInstance(value)) {
+            return value;
+        }
+        
+        if (targetType == String.class) {
+            return String.valueOf(value);
+        }
+        
+        if (targetType == int.class || targetType == Integer.class) {
+            return Integer.parseInt(value.toString());
+        }
+        
+        if (targetType == long.class || targetType == Long.class) {
+            return Long.parseLong(value.toString());
+        }
+        
+        if (targetType == boolean.class || targetType == Boolean.class) {
+            return Boolean.parseBoolean(value.toString());
+        }
+        
+        if (targetType == double.class || targetType == Double.class) {
+            return Double.parseDouble(value.toString());
+        }
+        
+        if (targetType == float.class || targetType == Float.class) {
+            return Float.parseFloat(value.toString());
+        }
+        
+        return value;
+    }
+
+    private boolean matchesQuery(Document doc, DocumentQuery query) {
+        if (query.getConditions().isEmpty()) {
+            return true;
+        }
+        
+        return true;
+    }
+
+    private Document fromEntity(DocumentEntity entity) {
+        var doc = new Document();
+        doc.setId(entity.getId());
+        
+        for (var entry : entity.getDocuments().entrySet()) {
+            doc.add(entry.getKey(), entry.getValue());
+        }
+        
+        return doc;
+    }
+
     private String toJson(Object value) {
         return org.junify.db.core.util.JsonSerde.toJson(value);
     }
 
     private <T> T fromJson(String json, Class<T> entityClass) {
         return org.junify.db.core.util.JsonSerde.fromJson(json, entityClass);
-    }
-
-    private boolean matchConditions(DocumentEntity entity, DocumentQuery query) {
-        return true;
-    }
-
-    private <T> List<T> toList(Iterable<Document> docs, TypeReference reference) {
-        var results = new ArrayList<T>();
-        for (var doc : docs) {
-            results.add((T) doc.toEntity());
-        }
-        return results;
     }
 }
