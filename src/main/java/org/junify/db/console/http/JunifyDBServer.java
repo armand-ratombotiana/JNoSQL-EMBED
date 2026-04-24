@@ -112,6 +112,8 @@ public class JunifyDBServer {
         server.createContext("/api/schema/", new SchemaSqlHandler());
         server.createContext("/api/tables", new TablesHandler());
         server.createContext("/api/tables/", new TablesHandler());
+        server.createContext("/api/constraints", new ConstraintsHandler());
+        server.createContext("/api/constraints/", new ConstraintsHandler());
         
         if (corsEnabled) {
             server.createContext("/api/", new CorsPreflightHandler());
@@ -848,6 +850,30 @@ public class JunifyDBServer {
                 var result = sm.createTable(tableName, columns);
                 sendJson(exchange, result.success() ? 201 : 400, 
                     Map.of("success", result.success(), "message", result.message()));
+            } else {
+                sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+            }
+        }
+    }
+
+    private class ConstraintsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
+            var path = exchange.getRequestURI().getPath();
+            var parts = path.split("/");
+            
+            if (parts.length < 4) {
+                sendJson(exchange, 400, Map.of("error", "Usage: /api/constraints/{table}"));
+                return;
+            }
+            
+            var tableName = parts[3];
+            var cm = db.h2Engine().constraintManager();
+            
+            if ("GET".equals(exchange.getRequestMethod())) {
+                var constraints = cm.getAllConstraints(tableName);
+                sendJson(exchange, 200, constraints);
             } else {
                 sendJson(exchange, 405, Map.of("error", "Method not allowed"));
             }

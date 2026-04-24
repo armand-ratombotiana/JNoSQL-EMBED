@@ -429,6 +429,39 @@ public class H2StorageEngine implements StorageEngine {
         return queryOptimizer;
     }
 
+    private ConstraintManager constraintManager;
+    private WindowFunctionManager windowFunctionManager;
+    private CTEAndRecursiveManager cteManager;
+    private AnalyticFunctionManager analyticManager;
+
+    public ConstraintManager constraintManager() {
+        if (constraintManager == null) {
+            constraintManager = new ConstraintManager(this);
+        }
+        return constraintManager;
+    }
+
+    public WindowFunctionManager windowFunctionManager() {
+        if (windowFunctionManager == null) {
+            windowFunctionManager = new WindowFunctionManager(this);
+        }
+        return windowFunctionManager;
+    }
+
+    public CTEAndRecursiveManager cteManager() {
+        if (cteManager == null) {
+            cteManager = new CTEAndRecursiveManager(this);
+        }
+        return cteManager;
+    }
+
+    public AnalyticFunctionManager analyticFunctionManager() {
+        if (analyticManager == null) {
+            analyticManager = new AnalyticFunctionManager(this);
+        }
+        return analyticManager;
+    }
+
     boolean isAutoCommit() {
         return autoCommit;
     }
