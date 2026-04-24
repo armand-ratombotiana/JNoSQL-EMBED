@@ -1,30 +1,50 @@
-# JNoSQL-EMBED
+# JunifyDB
 
-> The embedded multi-model NoSQL database for the JVM.
+> The embedded multi-model NoSQL database for the JVM with SQL support.
 
-JNoSQL-EMBED is a lightweight embedded NoSQL database written entirely in Java that implements the Jakarta NoSQL specification.
-
-Think of it as **H2 for the NoSQL world** — a fast, tiny database you can embed directly into JVM applications.
+JunifyDB (formerly JNoSQL-EMBED) is a lightweight embedded NoSQL database written entirely in Java that implements the Jakarta NoSQL specification. Think of it as **H2 for the NoSQL world** — a fast, tiny database you can embed directly into JVM applications.
 
 ## Features
 
-- **Multi-model**: Document, Key-Value stores
-- **ACID Transactions**: Commit/rollback with write-ahead logging
-- **Tiny footprint**: <5MB JAR, minimal dependencies
-- **Embedded mode**: Zero-config, no server required
-- **Pluggable storage engines**: In-Memory, File-based persistence
-- **Rich query API**: Equality, range, regex, AND/OR composition
-- **TTL support**: Auto-expiring key-value entries
-- **Docker ready**: Multi-stage build, minimal image
+### Multi-Model Support
+- **Document Store**: JSON-like documents with rich query API
+- **Key-Value Store**: Fast in-memory or persistent caching
+- **Column-Family**: Wide-column store for sparse data
+- **SQL (H2)**: Full relational queries with JOINs, views, triggers
 
-## Quick Start
+### Storage Engines
+- **In-Memory**: Fastest for ephemeral data and testing
+- **File-based**: Persistent JSON storage with WAL
+- **B-Tree**: Sorted indexes with range queries
+- **LSM-Tree**: Optimized for writes with bloom filter
+- **H2**: Full SQL with JDBC compatibility
+
+### Advanced Features
+- **ACID Transactions**: MVCC with savepoints
+- **Full-Text Search**: TF-IDF ranking with highlighting
+- **Vector Search**: HNSW for similarity search
+- **CDC**: Change Data Capture for Kafka/File output
+- **Replication**: Master-slave async replication
+- **Query Cache**: LRU with TTL support
+
+### Security
+- **API Key Authentication**: Per-endpoint auth
+- **Rate Limiting**: 1000 req/min per IP
+- **CORS**: Cross-origin support
+- **Compression**: GZIP response compression
+
+### Framework Integration
+- Spring Boot Starter
+- Quarkus Extension
+
+## Installation
 
 ### Maven
 
 ```xml
 <dependency>
-    <groupId>org.jnosql.embed</groupId>
-    <artifactId>jnosql-embed-core</artifactId>
+    <groupId>org.junify.db</groupId>
+    <artifactId>junify-db-core</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
@@ -32,125 +52,162 @@ Think of it as **H2 for the NoSQL world** — a fast, tiny database you can embe
 ### Gradle
 
 ```kotlin
-implementation("org.jnosql.embed:jnosql-embed-core:1.0.0")
+implementation("org.junify.db:junify-db-core:1.0.0")
 ```
 
-## Usage
+## Quick Start
+
+### Embedded Database
+
+```java
+var db = JunifyDB.embed()
+    .storageEngine("IN_MEMORY") // or FILE, H2, B_TREE, LSM_TREE
+    .persistTo("data")
+    .build();
+```
 
 ### Document Store
 
 ```java
-JNoSQL db = JNoSQL.embed().build();
-
-DocumentCollection users = db.documentCollection("users");
+var users = db.documentCollection("users");
 
 // Insert
-Document user = users.insert(
-    Document.of("name", "Alice").add("age", 30).add("email", "alice@example.com")
-);
-
-// Find by ID
-Document found = users.findById(user.id());
+var user = new Document();
+user.id("user-1");
+user.add("name", "Alice");
+user.add("email", "alice@example.com");
+user.add("age", 30);
+users.insert(user);
 
 // Query
-List<Document> adults = users.find(Query.gt("age", 18));
-List<Document> alice = users.find(Query.eq("name", "Alice"));
+var results = users.find(
+    Query.builder()
+        .add("age", QueryCondition.GREATER_THAN, 25)
+        .build()
+);
 
-// Update
-user.add("age", 31);
-users.update(user);
-
-// Delete
-users.deleteById(user.id());
+// Stream
+users.stream()
+    .filter(d -> d.get("name").equals("Alice"))
+    .forEach(System.out::println);
 ```
 
 ### Key-Value Store
 
 ```java
-KeyValueBucket cache = db.keyValueBucket("cache");
+var cache = db.keyValueBucket("cache");
 
-// Basic operations
-cache.put("session:123", "user-data");
-String value = cache.get("session:123");
+// Put
+cache.put("user:1", "{\"name\": \"Alice\"}");
+cache.put("user:2", "{\"name\": \"Bob\"}");
 
-// With TTL
-cache.put("token:abc", "secret", Duration.ofMinutes(30));
+// Get
+var value = cache.get("user:1");
 
-// Atomic counters
-cache.increment("page-views");
-cache.increment("page-views", 5);
+// TTL
+cache.put("session:abc", "data", 3600); // 1 hour TTL
 ```
 
-### Transactions
+### SQL (H2)
 
 ```java
-try (Transaction tx = db.beginTransaction()) {
-    DocumentCollection accounts = tx.documentCollection("accounts");
-    accounts.insert(Document.of("user", "Alice").add("balance", 1000));
-    tx.commit();
-}
-// Auto-rollback if exception occurs or tx.close() without commit
+var h2 = db.h2Engine();
+
+// Create table
+h2.executeSql("""
+    CREATE TABLE users (
+        id INT PRIMARY KEY,
+        name VARCHAR(255),
+        email VARCHAR(255)
+    )
+    """);
+
+// Insert
+h2.executeSql("INSERT INTO users VALUES (1, 'Alice', 'alice@example.com')");
+
+// Query
+var result = h2.executeSql("SELECT * FROM users WHERE name = 'Alice'");
+result.rows().forEach(row -> System.out.println(row));
 ```
 
-### File Persistence
-
-```java
-JNoSQL db = JNoSQL.embed()
-    .storageEngine(StorageEngineType.FILE)
-    .persistTo("./data")
-    .build();
-// Data persists across restarts
-```
-
-## Docker
+### REST API
 
 ```bash
-# Build
-docker build -t jnosql-embed .
+# Start server
+java -jar junify-db-core.jar --port 8080 --engine FILE --data-dir ./data
 
-# Run with docker-compose
-docker-compose up -d
+# Health check
+curl http://localhost:8080/api/health
 
-# Run standalone with data volume
-docker run -d -v jnosql-data:/data jnosql-embed
+# Create document
+curl -X POST http://localhost:8080/api/collections/users \
+    -H "Content-Type: application/json" \
+    -d '{"name": "Alice", "email": "alice@example.com"}'
+
+# Query
+curl http://localhost:8080/api/collections/users
+
+# SQL
+curl -X POST http://localhost:8080/api/sql \
+    -H "Content-Type: application/json" \
+    -d 'SELECT * FROM users'
 ```
 
-## Build from Source
+## Configuration
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--port` | 8080 | HTTP server port |
+| `--engine` | FILE | Storage engine (FILE, IN_MEMORY, B_TREE, LSM_TREE, H2) |
+| `--data-dir` | data | Data directory |
+| `--sync` | true | Synchronous flush |
+| `--async` | false | Asynchronous flush |
+| `--flush-interval` | 1000 | Flush interval (ms) |
+| `--api-key` | - | API key for authentication |
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|---------|--------|-------------|
+| `/api/health` | GET | Health check with system metrics |
+| `/api/collections/{name}` | GET/POST | Document CRUD |
+| `/api/collections/{name}/{id}` | GET/PUT/DELETE | Single document |
+| `/api/kv/{bucket}/{key}` | GET/PUT/DELETE | Key-Value operations |
+| `/api/columns/{name}/{key}` | GET/PUT/DELETE | Column-family ops |
+| `/api/bulk/{collection}` | POST | Batch operations |
+| `/api/sql` | POST | SQL execution (H2) |
+| `/api/cdc` | GET/POST | CDC management |
+| `/api/schema` | GET | List tables |
+| `/api/tables/{name}` | GET/POST/DELETE | Table management |
+
+## Benchmarks
 
 ```bash
-mvn clean install
+# Run benchmark
+java -cp target/junify-db-core-1.0.0.jar org.junify.db.benchmark.BenchmarkRunner \
+    --ops 10000 --engine IN_MEMORY --workload all
+```
+
+## Testing
+
+```bash
+# Run all tests
 mvn test
+
+# Run specific test
+mvn test -Dtest=SchemaManagerTest
 ```
 
-## Architecture
+## Building
 
+```bash
+# Build JAR
+mvn package -DskipTests
+
+# Build with tests
+mvn package
 ```
-JNoSQL-EMBED
-├── Storage Engine (pluggable)
-│   ├── InMemoryEngine — ConcurrentHashMap-backed, fastest
-│   └── FileEngine — JSON file persistence, durable
-├── Document Model
-│   ├── Document — JSON-like with nested fields
-│   ├── DocumentCollection — CRUD + query API
-│   └── Query — Equality, range, regex, AND/OR
-├── Key-Value Model
-│   ├── KeyValueBucket — Get/Put/Delete
-│   └── TTL support — Auto-expiration
-└── Transactions
-    ├── Commit/Rollback
-    └── Auto-close with rollback
-```
-
-## Roadmap
-
-| Version | Focus | Features |
-|---------|-------|----------|
-| **1.0** | Core engine | Document, KV, transactions, file persistence |
-| **1.1** | Developer experience | Query language, B-Tree/LSM engines, Spring Boot starter |
-| **1.2** | Framework integrations | Quarkus, Micronaut |
-| **1.3** | AI features | Vector search (HNSW), LangChain4j |
-| **2.0** | Distributed | Replication, clustering, sharding |
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
+Apache License 2.0
