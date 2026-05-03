@@ -113,7 +113,9 @@ public class QueryOptimizer {
         
         return new SqlResult(true, List.of("suggestion"), suggestions.size(), 
             "Consider creating indexes for WHERE clauses: " + suggestions,
-            suggestions.stream().map(s -> Map.of("suggestion", s)).toList(),
+            suggestions.stream()
+                .map(s -> Map.entry("suggestion", (Object)s))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)),
             List.of("suggestion"));
     }
 

@@ -805,14 +805,40 @@ public class JunifyDBServer {
                 return;
             }
             
-            var parts = path.split("/");
-            if (parts.length >= 4) {
-                var tableName = parts[3];
-                var sm = db.h2Engine().schemaManager();
-                
-                if ("GET".equals(exchange.getRequestMethod())) {
-                    sendJson(exchange, 200, sm.getTableInfo(tableName));
-                    return;
+var parts = path.split("/");
+                if (parts.length >= 4) {
+                    var tableName = parts[3];
+                    var sm = db.h2Engine().schemaManager();
+                    
+                    if ("GET".equals(exchange.getRequestMethod())) {
+                        var tables = sm.getTables().stream()
+                            .filter(t -> t.startsWith(tableName))
+                            .map(t -> Map.of("name", t, "tables", sm.getColumns(t)))
+                            .collect(Collectors.toList());
+                        sendJson(exchange, 200, Map.of("tables", tables));
+                        return;
+                    }
+                    
+                    if ("POST".equals(exchange.getRequestMethod())) {
+                        var body = readBody(exchange);
+                        var data = JsonSerde.fromJson(body, Map.class);
+                        var columnsRaw = (Map<String, Object>) data.get("columns");
+                        var columns = new java.util.HashMap<String, Object>();
+                        for (var entry : columnsRaw.entrySet()) {
+                            columns.put(entry.getKey(), entry.getValue());
+                        }
+                        var result = sm.createTable(tableName, columns);
+                        sendJson(exchange, result.success() ? 201 : 400, 
+                            Map.of("success", result.success(), "message", result.message()));
+                        return;
+                    }
+                    
+                    if ("DELETE".equals(exchange.getRequestMethod())) {
+                        var result = sm.dropTable(tableName);
+                        sendJson(exchange, result.success() ? 200 : 400, 
+                            Map.of("success", result.success(), "message", result.message()));
+                        return;
+                    }
                 }
                 
                 if ("DELETE".equals(exchange.getRequestMethod())) {
