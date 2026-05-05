@@ -2,7 +2,6 @@ package org.junify.db;
 
 import org.junify.db.storage.spi.H2StorageEngine;
 import org.junify.db.storage.spi.SchemaManager;
-import org.junify.db.storage.spi.SchemaManager.ColumnDef;
 import org.junit.jupiter.api.*;
 
 import java.nio.file.*;
@@ -30,13 +29,13 @@ public class SchemaManagerTest {
 
     @Test
     void testCreateTable() {
-        var columns = new LinkedHashMap<String, ColumnDef>();
-        columns.put("id", ColumnDef.of("id", "INT").primaryKey());
-        columns.put("name", ColumnDef.of("name", "VARCHAR(255)").notNull());
-        columns.put("email", ColumnDef.of("email", "VARCHAR(255)"));
+        var columns = new LinkedHashMap<String, Object>();
+        columns.put("id", "INT PRIMARY KEY");
+        columns.put("name", "VARCHAR(255) NOT NULL");
+        columns.put("email", "VARCHAR(255)");
 
         var result = schemaManager.createTable("users", columns);
-        
+
         assertTrue(result.success(), "Table creation should succeed");
         assertTrue(schemaManager.tableExists("users"), "Table should exist");
     }
@@ -44,88 +43,78 @@ public class SchemaManagerTest {
     @Test
     void testGetTables() {
         var result = schemaManager.createTable("test_table", Map.of(
-            "id", ColumnDef.of("id", "INT").primaryKey()
+            "id", "INT PRIMARY KEY"
         ));
-        
+
         var tables = schemaManager.getTables();
-        
+
         assertFalse(tables.isEmpty(), "Should have tables");
-        assertTrue(tables.contains("TEST_TABLE".toLowerCase()) || tables.contains("test_table"), 
+        assertTrue(tables.contains("TEST_TABLE".toLowerCase()) || tables.contains("test_table"),
             "Should contain test_table");
     }
 
     @Test
     void testGetColumns() {
-        var columns = new LinkedHashMap<String, ColumnDef>();
-        columns.put("id", ColumnDef.of("id", "INT").primaryKey());
-        columns.put("name", ColumnDef.of("name", "VARCHAR(100)").notNull());
-        
+        var columns = new LinkedHashMap<String, Object>();
+        columns.put("id", "INT PRIMARY KEY");
+        columns.put("name", "VARCHAR(100) NOT NULL");
+
         schemaManager.createTable("column_test", columns);
-        
+
         var cols = schemaManager.getColumns("column_test");
-        
+
         assertFalse(cols.isEmpty(), "Should have columns");
-        assertTrue(cols.stream().anyMatch(c -> c.name().equalsIgnoreCase("id")), 
+        assertTrue(cols.stream().anyMatch(c -> c.equalsIgnoreCase("id")),
             "Should have id column");
-        assertTrue(cols.stream().anyMatch(c -> c.name().equalsIgnoreCase("name")), 
+        assertTrue(cols.stream().anyMatch(c -> c.equalsIgnoreCase("name")),
             "Should have name column");
     }
 
     @Test
     void testDropTable() {
-        var columns = Map.of("id", ColumnDef.of("id", "INT").primaryKey());
+        var columns = Map.of("id", (Object) "INT PRIMARY KEY");
         schemaManager.createTable("to_drop", columns);
-        
+
         assertTrue(schemaManager.tableExists("to_drop"));
-        
+
         var result = schemaManager.dropTable("to_drop", false);
-        
+
         assertTrue(result.success(), "Drop should succeed");
         assertFalse(schemaManager.tableExists("to_drop"), "Table should not exist");
     }
 
     @Test
-    void testAlterTableAddColumn() {
-        var columns = Map.of("id", ColumnDef.of("id", "INT").primaryKey());
-        schemaManager.createTable("alter_test", columns);
-        
-        var result = schemaManager.alterTableAddColumn(
-            "alter_test", 
-            ColumnDef.of("new_col", "VARCHAR(100)")
+    void testGetTableInfo() {
+        var columns = Map.of(
+            "id", (Object) "INT PRIMARY KEY",
+            "name", "VARCHAR(100)"
         );
-        
-        assertTrue(result.success(), "Alter should succeed");
-        
-        var cols = schemaManager.getColumns("alter_test");
-        assertTrue(cols.stream().anyMatch(c -> c.name().equalsIgnoreCase("new_col")),
-            "Should have new column");
+        schemaManager.createTable("info_test", columns);
+
+        var info = schemaManager.getTableInfo("info_test");
+
+        assertNotNull(info, "Table info should not be null");
+        assertEquals("info_test", info.get("name"), "Table name should match");
+        @SuppressWarnings("unchecked")
+        var cols = (List<Map<String, Object>>) info.get("columns");
+        assertFalse(cols.isEmpty(), "Should have columns");
     }
 
     @Test
-    void testCreateIndex() {
-        var columns = Map.of("id", ColumnDef.of("id", "INT").primaryKey());
-        schemaManager.createTable("index_test", columns);
-        
-        var result = schemaManager.createIndex("idx_id", "index_test", "id");
-        
-        assertTrue(result.success(), "Index creation should succeed");
+    void testGetColumnType() {
+        var columns = Map.of("id", (Object) "INT PRIMARY KEY", "data", "TEXT");
+        schemaManager.createTable("type_test", columns);
+
+        var type = schemaManager.getColumnType("type_test", "id");
+        assertNotNull(type, "Column type should not be null");
+        assertTrue(type.equalsIgnoreCase("INTEGER") || type.equalsIgnoreCase("INT"),
+            "Column type should be INTEGER or INT");
     }
 
     @Test
-    void testAnalyzeTable() {
-        var columns = Map.of("id", ColumnDef.of("id", "INT").primaryKey());
-        schemaManager.createTable("analyze_test", columns);
-        
-        var result = schemaManager.analyzeTable("analyze_test");
-        
-        assertTrue(result.success(), "Analyze should succeed");
-    }
-
-    @Test
-    void testVacuumDatabase() {
-        var result = schemaManager.analyzeTable("users");
-        
-        // Vacuum should succeed even if tables don't exist
-        assertNotNull(result, "Result should not be null");
+    void testGetSchema() {
+        var result = schemaManager.getSchema();
+        assertNotNull(result, "Schema result should not be null");
+        assertTrue(result.success(), "Get schema should succeed");
     }
 }

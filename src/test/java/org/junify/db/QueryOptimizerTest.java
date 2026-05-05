@@ -3,7 +3,6 @@ package org.junify.db;
 import org.junify.db.storage.spi.H2StorageEngine;
 import org.junify.db.storage.spi.QueryOptimizer;
 import org.junify.db.storage.spi.SchemaManager;
-import org.junify.db.storage.spi.SchemaManager.ColumnDef;
 import org.junit.jupiter.api.*;
 
 import java.nio.file.*;
@@ -24,11 +23,11 @@ public class QueryOptimizerTest {
         engine = new H2StorageEngine(tempDir, "optimizerdb");
         optimizer = engine.queryOptimizer();
         schemaManager = engine.schemaManager();
-        
+
         schemaManager.createTable("orders", Map.of(
-            "id", ColumnDef.of("id", "INT").primaryKey(),
-            "customer_id", ColumnDef.of("customer_id", "INT"),
-            "total", ColumnDef.of("total", "DECIMAL(10,2)")
+            "id", "INT PRIMARY KEY",
+            "customer_id", "INT",
+            "total", "DECIMAL(10,2)"
         ));
     }
 

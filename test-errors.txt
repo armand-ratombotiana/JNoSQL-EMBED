@@ -1,0 +1,200 @@
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/AdvancedQueryTest.java:[16,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/AggregationPipelineTest.java:[17,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/ColumnFamilyTest.java:[12,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/ConcurrencyTest.java:[20,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/DocumentCollectionTest.java:[16,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/EventBusTest.java:[21,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FilePersistenceTest.java:[19,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[3,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[4,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[5,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[6,47] package org.junify.db.storage.spi.SchemaManager does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[17,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[18,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[19,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JNoSQLServerTest.java:[4,36] package org.junify.db.nosql.document does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JNoSQLServerTest.java:[5,34] package org.junify.db.console.http does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JNoSQLServerTest.java:[22,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyConsoleTest.java:[4,28] package org.junify.db.server does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyConsoleTest.java:[20,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyConsoleTest.java:[21,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[3,36] package org.junify.db.nosql.document does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[4,28] package org.junify.db.server does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[20,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[21,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/KeyValueBucketTest.java:[14,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/LSMTreeEngineTest.java:[20,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[3,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[4,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[5,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[6,47] package org.junify.db.storage.spi.SchemaManager does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[17,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[18,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[19,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[3,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[4,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[5,47] package org.junify.db.storage.spi.SchemaManager does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[16,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[17,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/TransactionTest.java:[14,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/integration/FullIntegrationTest.java:[3,21] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/integration/FullIntegrationTest.java:[28,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[5,34] package org.junify.db.jpa.criteria does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[6,34] package org.junify.db.jpa.criteria does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[7,35] package org.junify.db.jpa.metamodel does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[23,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[417,6] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[358,10] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[363,10] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[368,10] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[373,10] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[378,10] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[444,10] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[449,10] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/AdvancedQueryTest.java:[21,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/AggregationPipelineTest.java:[22,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/ColumnFamilyTest.java:[17,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/ConcurrencyTest.java:[25,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/DocumentCollectionTest.java:[21,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/EventBusTest.java:[27,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FilePersistenceTest.java:[25,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FilePersistenceTest.java:[51,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FilePersistenceTest.java:[71,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FilePersistenceTest.java:[87,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FilePersistenceTest.java:[103,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[24,22] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[25,26] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[29,27] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[30,30] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[31,32] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[32,31] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JNoSQLServerTest.java:[58,47] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JNoSQLServerTest.java:[59,47] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JNoSQLServerTest.java:[69,57] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JNoSQLServerTest.java:[78,57] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyConsoleTest.java:[25,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[25,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[55,47] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[56,47] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[66,57] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[75,57] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/KeyValueBucketTest.java:[19,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/LSMTreeEngineTest.java:[26,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/LSMTreeEngineTest.java:[95,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[24,22] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[29,27] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[30,36] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[31,30] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[22,22] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[34,27] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[35,29] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[36,30] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[47,27] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[59,27] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[60,29] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[75,63] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[87,66] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[91,21] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[102,66] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[111,68] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/TextSearchTest.java:[20,18] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/AdvancedQueryTest.java:[16,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/AggregationPipelineTest.java:[17,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/ColumnFamilyTest.java:[12,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/ConcurrencyTest.java:[20,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/DocumentCollectionTest.java:[16,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/EventBusTest.java:[21,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FilePersistenceTest.java:[19,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[3,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[4,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[5,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[6,47] package org.junify.db.storage.spi.SchemaManager does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[17,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[18,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[19,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JNoSQLServerTest.java:[4,36] package org.junify.db.nosql.document does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JNoSQLServerTest.java:[5,34] package org.junify.db.console.http does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JNoSQLServerTest.java:[22,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyConsoleTest.java:[4,28] package org.junify.db.server does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyConsoleTest.java:[20,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyConsoleTest.java:[21,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[3,36] package org.junify.db.nosql.document does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[4,28] package org.junify.db.server does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[20,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[21,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/KeyValueBucketTest.java:[14,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/LSMTreeEngineTest.java:[20,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[3,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[4,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[5,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[6,47] package org.junify.db.storage.spi.SchemaManager does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[17,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[18,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[19,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[3,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[4,33] package org.junify.db.storage.spi does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[5,47] package org.junify.db.storage.spi.SchemaManager does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[16,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[17,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/TransactionTest.java:[14,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/integration/FullIntegrationTest.java:[3,21] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/integration/FullIntegrationTest.java:[28,13] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[5,34] package org.junify.db.jpa.criteria does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[6,34] package org.junify.db.jpa.criteria does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[7,35] package org.junify.db.jpa.metamodel does not exist
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[23,20] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[417,6] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[358,10] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[363,10] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[368,10] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[373,10] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[378,10] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[444,10] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/jpa/JPA31ComplianceTest.java:[449,10] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/AdvancedQueryTest.java:[21,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/AggregationPipelineTest.java:[22,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/ColumnFamilyTest.java:[17,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/ConcurrencyTest.java:[25,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/DocumentCollectionTest.java:[21,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/EventBusTest.java:[27,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FilePersistenceTest.java:[25,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FilePersistenceTest.java:[51,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FilePersistenceTest.java:[71,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FilePersistenceTest.java:[87,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FilePersistenceTest.java:[103,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[24,22] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[25,26] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[29,27] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[30,30] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[31,32] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/FullTextSearchTest.java:[32,31] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JNoSQLServerTest.java:[58,47] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JNoSQLServerTest.java:[59,47] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JNoSQLServerTest.java:[69,57] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JNoSQLServerTest.java:[78,57] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyConsoleTest.java:[25,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[25,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[55,47] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[56,47] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[66,57] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/JunifyServerTest.java:[75,57] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/KeyValueBucketTest.java:[19,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/LSMTreeEngineTest.java:[26,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/LSMTreeEngineTest.java:[95,14] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[24,22] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[29,27] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[30,36] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/QueryOptimizerTest.java:[31,30] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[22,22] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[34,27] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[35,29] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[36,30] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[47,27] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[59,27] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[60,29] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[75,63] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[87,66] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[91,21] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[102,66] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/SchemaManagerTest.java:[111,68] cannot find symbol
+[ERROR] /C:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/src/test/java/org/junify/db/TextSearchTest.java:[20,18] cannot find symbol

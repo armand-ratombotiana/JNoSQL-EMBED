@@ -60,13 +60,16 @@ public class H2StorageEngine implements StorageEngine {
         } catch (ClassNotFoundException e) {
             System.err.println("H2 Driver not found. Make sure h2 dependency is added.");
         }
-        
+
         String dbPath = dataDir.resolve(dbName).toAbsolutePath().toString();
-        String url = "jdbc:h2:file:" + dbPath + 
-                     ";MODE=MySQL;DATABASE_TO_LOWER=TRUE";
-        
+        String url = "jdbc:h2:file:" + dbPath +
+                     ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+
         connection = DriverManager.getConnection(url, "sa", "");
         
+        // Register shutdown hook to prevent file locks on improper close
+        Runtime.getRuntime().addShutdownHook(new Thread(this::close, "H2-ShutdownHook"));
+
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(
                 "CREATE TABLE IF NOT EXISTS kv_store (" +
@@ -470,14 +473,27 @@ public class H2StorageEngine implements StorageEngine {
     public void close() {
         if (closed) return;
         closed = true;
-        flush();
+        try {
+            flush();
+        } catch (Exception e) {
+            System.err.println("Warning: Failed to flush H2 storage engine: " + e.getMessage());
+        }
         lock.writeLock().lock();
         try {
             if (connection != null && !connection.isClosed()) {
+                try {
+                    // Commit any pending transactions before closing
+                    if (!autoCommit) {
+                        connection.commit();
+                    }
+                } catch (SQLException e) {
+                    System.err.println("Warning: Failed to commit: " + e.getMessage());
+                }
                 connection.close();
+                System.out.println("[H2StorageEngine] Database connection closed successfully");
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Failed to close", e);
+            System.err.println("Warning: Failed to close H2 connection: " + e.getMessage());
         } finally {
             lock.writeLock().unlock();
         }

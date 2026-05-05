@@ -10,7 +10,12 @@
       "Bash(d *)",
       "Bash(@move *)",
       "Bash(do *)",
-      "Bash(powershell *)"
+      "Bash(powershell *)",
+      "Bash(mvn *)",
+      "Bash(select-object *)",
+      "Bash(java *)",
+      "Bash(curl *)",
+      "Bash(git add *)"
     ]
   },
   "$version": 3

@@ -3,7 +3,6 @@ package org.junify.db;
 import org.junify.db.storage.spi.H2StorageEngine;
 import org.junify.db.storage.spi.FullTextSearchManager;
 import org.junify.db.storage.spi.SchemaManager;
-import org.junify.db.storage.spi.SchemaManager.ColumnDef;
 import org.junit.jupiter.api.*;
 
 import java.nio.file.*;
@@ -21,17 +20,17 @@ public class FullTextSearchTest {
     @BeforeAll
     static void setup() throws Exception {
         var tempDir = Files.createTempDirectory("fts-test");
-        engine = new H2StorageEngine(tempDir, "ftsd b");
+        engine = new H2StorageEngine(tempDir, "ftsdb");
         ftsManager = new FullTextSearchManager(engine);
         schemaManager = engine.schemaManager();
-        
+
         schemaManager.createTable("articles", Map.of(
-            "id", ColumnDef.of("id", "INT").primaryKey(),
-            "title", ColumnDef.of("title", "VARCHAR(500)"),
-            "content", ColumnDef.of("content", "TEXT"),
-            "author", ColumnDef.of("author", "VARCHAR(255)")
+            "id", "INT PRIMARY KEY",
+            "title", "VARCHAR(500)",
+            "content", "TEXT",
+            "author", "VARCHAR(255)"
         ));
-        
+
         // Insert test data
         engine.executeSql("INSERT INTO articles VALUES (1, 'Java Programming', 'Java is a programming language created by Sun Microsystems. It is object-oriented.', 'James Gosling')");
         engine.executeSql("INSERT INTO articles VALUES (2, 'Python Programming', 'Python is a high-level programming language. It emphasizes code readability.', 'Guido van Rossum')");

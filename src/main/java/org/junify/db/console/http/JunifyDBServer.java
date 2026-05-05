@@ -93,13 +93,14 @@ public class JunifyDBServer {
     public void start(int port) throws IOException {
         server = HttpServer.create(new InetSocketAddress(port), 0);
         startTime = System.currentTimeMillis();
-        
+
         server.createContext("/", new StaticHandler());
         server.createContext("/api/collections/", new CollectionsHandler());
         server.createContext("/api/kv/", new KeyValueHandler());
         server.createContext("/api/columns/", new ColumnHandler());
         server.createContext("/api/health", new HealthHandler());
         server.createContext("/api/metrics", new MetricsHandler());
+        server.createContext("/api/metrics/stream", new MetricsStreamHandler());
         server.createContext("/api/stats", new StatsHandler());
         server.createContext("/api/backup", new BackupHandler());
         server.createContext("/api/indexes/", new IndexHandler());
@@ -111,11 +112,11 @@ public class JunifyDBServer {
         server.createContext("/api/cdc", new CDCHandler());
         server.createContext("/api/tables/", new TablesHandler());
         server.createContext("/api/constraints/", new ConstraintsHandler());
-        
+
         if (corsEnabled) {
             server.createContext("/api/cors", new CorsPreflightHandler());
         }
-        
+
         server.setExecutor(null);
         server.start();
     }
@@ -229,10 +230,14 @@ public class JunifyDBServer {
                 if ("GET".equals(exchange.getRequestMethod())) {
                     sendJson(exchange, 200, collection.findAll());
                 } else if ("POST".equals(exchange.getRequestMethod())) {
-                    var body = readBody(exchange);
-                    var doc = Document.fromJson(body);
-                    var saved = collection.insert(doc);
-                    sendJson(exchange, 201, saved);
+                    try {
+                        var body = readBody(exchange);
+                        var doc = Document.fromJson(body);
+                        var saved = collection.insert(doc);
+                        sendJson(exchange, 201, saved);
+                    } catch (Exception e) {
+                        sendJson(exchange, 500, Map.of("error", "Internal server error", "message", e.getMessage()));
+                    }
                 }
             } else {
                 var id = parts[4];
@@ -241,16 +246,20 @@ public class JunifyDBServer {
                     if (doc != null) sendJson(exchange, 200, doc);
                     else sendJson(exchange, 404, Map.of("error", "Not found"));
                 } else if ("PUT".equals(exchange.getRequestMethod()) || "POST".equals(exchange.getRequestMethod())) {
-                    var body = readBody(exchange);
-                    var data = JsonSerde.fromJson(body, Map.class);
-                    var doc = Document.of("name", "temp");
-                    doc.id(id);
-                    for (var entry : data.entrySet()) {
-                        var e = (java.util.Map.Entry<?, ?>) entry;
-                        doc.add(e.getKey().toString(), e.getValue());
+                    try {
+                        var body = readBody(exchange);
+                        var data = JsonSerde.fromJson(body, Map.class);
+                        var doc = Document.of("name", "temp");
+                        doc.id(id);
+                        for (var entry : data.entrySet()) {
+                            var e = (java.util.Map.Entry<?, ?>) entry;
+                            doc.add(e.getKey().toString(), e.getValue());
+                        }
+                        var saved = collection.insert(doc);
+                        sendJson(exchange, 201, saved);
+                    } catch (Exception e) {
+                        sendJson(exchange, 500, Map.of("error", "Internal server error", "message", e.getMessage()));
                     }
-                    var saved = collection.insert(doc);
-                    sendJson(exchange, 201, saved);
                 } else if ("DELETE".equals(exchange.getRequestMethod())) {
                     collection.deleteById(id);
                     sendJson(exchange, 204, null);
@@ -529,25 +538,36 @@ public class JunifyDBServer {
             var id = parts[4];
             
             if ("GET".equals(exchange.getRequestMethod())) {
-                var body = readBody(exchange);
-                var data = JsonSerde.fromJson(body, Map.class);
-                var vector = parseVector((java.util.List<?>) data.get("vector"));
-                var k = data.containsKey("k") ? ((Number) data.get("k")).intValue() : 5;
-                
-                var results = hnsw.search(vector, k);
-                sendJson(exchange, 200, Map.of(
-                    "query", id,
-                    "results", results
-                ));
+                try {
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    var vector = parseVector((java.util.List<?>) data.get("vector"));
+                    var k = data.containsKey("k") ? ((Number) data.get("k")).intValue() : 5;
+                    var results = hnsw.search(vector, k);
+                    sendJson(exchange, 200, Map.of(
+                        "query", id,
+                        "results", results
+                    ));
+                } catch (Exception e) {
+                    sendJson(exchange, 500, Map.of("error", "Search failed", "message", e.getMessage()));
+                }
             } else if ("POST".equals(exchange.getRequestMethod())) {
-                var body = readBody(exchange);
-                var data = JsonSerde.fromJson(body, Map.class);
-                var vector = parseVector((java.util.List<?>) data.get("vector"));
-                hnsw.add(id, vector);
-                sendJson(exchange, 201, Map.of("id", id, "status", "added"));
+                try {
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    var vector = parseVector((java.util.List<?>) data.get("vector"));
+                    hnsw.add(id, vector);
+                    sendJson(exchange, 201, Map.of("id", id, "status", "added"));
+                } catch (Exception e) {
+                    sendJson(exchange, 500, Map.of("error", "Insert failed", "message", e.getMessage()));
+                }
             } else if ("DELETE".equals(exchange.getRequestMethod())) {
-                hnsw.remove(id);
-                sendJson(exchange, 204, null);
+                try {
+                    hnsw.remove(id);
+                    sendJson(exchange, 204, null);
+                } catch (Exception e) {
+                    sendJson(exchange, 500, Map.of("error", "Delete failed", "message", e.getMessage()));
+                }
             }
         }
         
@@ -592,6 +612,38 @@ public class JunifyDBServer {
             if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             if ("GET".equals(exchange.getRequestMethod())) {
                 sendJson(exchange, 200, db.metrics().snapshot());
+            }
+        }
+    }
+
+    private class MetricsStreamHandler implements HttpHandler {
+        private volatile boolean running = true;
+
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
+            
+            // SSE headers
+            exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
+            exchange.getResponseHeaders().set("Cache-Control", "no-cache");
+            exchange.getResponseHeaders().set("Connection", "keep-alive");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            
+            exchange.sendResponseHeaders(200, 0);
+            
+            try (var os = exchange.getResponseBody()) {
+                while (running && !Thread.currentThread().isInterrupted()) {
+                    try {
+                        var metrics = db.metrics().snapshot();
+                        var event = "data: " + JsonSerde.toJson(metrics) + "\n\n";
+                        os.write(event.getBytes(StandardCharsets.UTF_8));
+                        os.flush();
+                        Thread.sleep(1000); // Stream metrics every second
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
             }
         }
     }

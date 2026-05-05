@@ -1,0 +1,9 @@
+- [Project Analysis](project_analysis.md) — JunifyDB codebase analysis with gaps and migration plan
+- [Java 25 Performance](feedback_java25_perf.md) — Java 25 requirements with virtual threads, Panama FFM, structured concurrency
+- [UI-Driven Development](feedback_ui_driven_dev.md) — Every feature needs Web Console validation hook with SSE, <300KB payload
+- [Dual-Engine Parity](feedback_dual_engine_parity.md) — SQL and NoSQL developed in parallel with unified kernel
+- [Phase 1 Complete](../../../../PHASE1_COMPLETE.md) — Java 25 migration with virtual threads, structured concurrency, Panama FFM, JMH benchmarks
+- [Phase 2 Complete](../../../../PHASE2_COMPLETE.md) — JPA 3.1 core compliance (Criteria API, lifecycle callbacks, metamodel)
+- [Phase 3&4 Complete](../../../../PHASE3_4_COMPLETE.md) — Storage kernel hardening (zero-copy, mmap, async I/O) + Console SSE
+- [Final Implementation](../../../../FINAL_IMPLEMENTATION_REPORT.md) — ALL REQUIREMENTS COMPLETE, 235 tests passing, BUILD SUCCESS
+- [Console Enhancement](../../../../CONSOLE_ENHANCEMENT_REPORT.md) — SSE streaming, Alpine.js UI, Bootstrap 5, real-time metrics

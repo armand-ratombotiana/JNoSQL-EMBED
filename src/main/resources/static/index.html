@@ -1390,6 +1390,54 @@
         let currentPage = 0;
         const PAGE_SIZE = 20;
         let isLightTheme = false;
+        let metricsEventSource = null;
+
+        // Start SSE stream for real-time metrics
+        function startMetricsStream() {
+            if (metricsEventSource) return;
+            
+            metricsEventSource = new EventSource(`${API}/metrics/stream`);
+            
+            metricsEventSource.onmessage = (event) => {
+                try {
+                    const m = JSON.parse(event.data);
+                    updateMetricsUI(m);
+                } catch (e) {
+                    console.error('Failed to parse metrics:', e);
+                }
+            };
+            
+            metricsEventSource.onerror = () => {
+                console.log('Metrics stream disconnected, retrying...');
+                metricsEventSource.close();
+                metricsEventSource = null;
+                setTimeout(startMetricsStream, 3000);
+            };
+            
+            console.log('[SSE] Metrics stream started');
+        }
+
+        // Stop SSE stream
+        function stopMetricsStream() {
+            if (metricsEventSource) {
+                metricsEventSource.close();
+                metricsEventSource = null;
+                console.log('[SSE] Metrics stream stopped');
+            }
+        }
+
+        // Update UI with new metrics (called by SSE)
+        function updateMetricsUI(m) {
+            document.getElementById('metricTotalOps').textContent = (m.totalOperations ?? 0).toLocaleString();
+            document.getElementById('metricInserts').textContent = (m.inserts ?? 0).toLocaleString();
+            document.getElementById('metricReads').textContent = (m.reads ?? 0).toLocaleString();
+            document.getElementById('metricQueries').textContent = (m.queries ?? 0).toLocaleString();
+            document.getElementById('metricTransactions').textContent = (m.transactions ?? 0).toLocaleString();
+            document.getElementById('metricCommits').textContent = (m.transactionCommits ?? 0).toLocaleString();
+            document.getElementById('metricRollbacks').textContent = (m.transactionRollbacks ?? 0).toLocaleString();
+            const cols = m.collections ? Object.keys(m.collections).length : 0;
+            document.getElementById('collectionCount').textContent = cols;
+        }
 
         function toggleTheme() {
             isLightTheme = !isLightTheme;
@@ -1402,7 +1450,12 @@
             document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
             document.getElementById('tab-' + name).classList.add('active');
             if (event && event.target) event.target.classList.add('active');
-            if (name === 'overview') { loadMetrics(); loadStats(); loadCollections(); }
+            if (name === 'overview') {
+                startMetricsStream();
+                loadMetrics();
+                loadStats();
+                loadCollections();
+            }
             if (name === 'query') { loadCollectionList(); }
             if (name === 'indexes') { loadCollectionListForIdx(); }
             if (name === 'backup') { loadBackupInfo(); }
@@ -1488,15 +1541,7 @@
         async function loadMetrics() {
             const m = await fetchJSON(`${API}/metrics`);
             if (m) {
-                document.getElementById('metricTotalOps').textContent = (m.totalOperations ?? 0).toLocaleString();
-                document.getElementById('metricInserts').textContent = (m.inserts ?? 0).toLocaleString();
-                document.getElementById('metricReads').textContent = (m.reads ?? 0).toLocaleString();
-                document.getElementById('metricQueries').textContent = (m.queries ?? 0).toLocaleString();
-                document.getElementById('metricTransactions').textContent = (m.transactions ?? 0).toLocaleString();
-                document.getElementById('metricCommits').textContent = (m.transactionCommits ?? 0).toLocaleString();
-                document.getElementById('metricRollbacks').textContent = (m.transactionRollbacks ?? 0).toLocaleString();
-                const cols = m.collections ? Object.keys(m.collections).length : 0;
-                document.getElementById('collectionCount').textContent = cols;
+                updateMetricsUI(m);
             }
         }
 
