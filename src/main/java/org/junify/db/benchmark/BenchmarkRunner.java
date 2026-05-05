@@ -2,6 +2,7 @@ package org.junify.db.benchmark;
 
 import org.junify.db.JunifyDB;
 import org.junify.db.config.JunifyDBConfig;
+import org.junify.db.config.JunifyDBConfig.StorageEngineType;
 import org.junify.db.nosql.document.Document;
 import org.junify.db.nosql.document.DocumentCollection;
 import org.junify.db.nosql.kv.KeyValueBucket;
@@ -138,10 +139,6 @@ public class BenchmarkRunner {
             collection.insert(doc);
         }
         
-        if (collection.parent().config().storageEngine().name().equals("FILE")) {
-            collection.parent().flush();
-        }
-        
         return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
     }
 
@@ -157,10 +154,6 @@ public class BenchmarkRunner {
         var start = System.nanoTime();
         for (int i = 0; i < options.ops; i++) {
             bucket.put("key-" + i, "value-" + i);
-        }
-        
-        if (bucket.parent().config().storageEngine().name().equals("FILE")) {
-            bucket.parent().flush();
         }
         
         return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
@@ -180,7 +173,13 @@ public class BenchmarkRunner {
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "--ops" -> options.ops = Integer.parseInt(args[++i]);
-                case "--engine" -> options.engine = args[++i];
+                case "--engine" -> options.engine = switch (args[++i].toUpperCase()) {
+                    case "FILE" -> StorageEngineType.FILE;
+                    case "LSM_TREE" -> StorageEngineType.LSM_TREE;
+                    case "B_TREE" -> StorageEngineType.B_TREE;
+                    case "H2" -> StorageEngineType.H2;
+                    default -> StorageEngineType.IN_MEMORY;
+                };
                 case "--threads" -> options.threads = Integer.parseInt(args[++i]);
                 case "--workload" -> options.workload = args[++i];
             }
@@ -191,7 +190,7 @@ public class BenchmarkRunner {
 
     static class Options {
         int ops = 10000;
-        String engine = "IN_MEMORY";
+        StorageEngineType engine = StorageEngineType.IN_MEMORY;
         int threads = 1;
         String workload = "all";
     }

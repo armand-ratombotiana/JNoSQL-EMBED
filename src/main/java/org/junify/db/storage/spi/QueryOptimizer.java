@@ -2,6 +2,7 @@ package org.junify.db.storage.spi;
 
 import java.sql.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class QueryOptimizer {
 
@@ -114,8 +115,8 @@ public class QueryOptimizer {
         return new SqlResult(true, List.of("suggestion"), suggestions.size(), 
             "Consider creating indexes for WHERE clauses: " + suggestions,
             suggestions.stream()
-                .map(s -> Map.entry("suggestion", (Object)s))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)),
+                .map(s -> Map.of("suggestion", (Object)s))
+                .collect(Collectors.toList()),
             List.of("suggestion"));
     }
 

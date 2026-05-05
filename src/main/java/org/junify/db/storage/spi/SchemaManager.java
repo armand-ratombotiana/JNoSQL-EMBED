@@ -84,4 +84,54 @@ public class SchemaManager {
 
     public record SqlResult(boolean success, List<String> columns, int affected, String message, 
         List<Map<String, Object>> rows, List<String> allColumns) {}
+
+    public record CreateResult(boolean success, String message) {}
+
+    public record DropResult(boolean success, String message) {}
+
+    public CreateResult createTable(String tableName, Map<String, Object> columns) {
+        if (tableExists(tableName)) {
+            return new CreateResult(false, "Table already exists: " + tableName);
+        }
+        var columnDefs = new StringBuilder();
+        for (var entry : columns.entrySet()) {
+            if (columnDefs.length() > 0) columnDefs.append(", ");
+            var colName = entry.getKey();
+            var colType = entry.getValue() != null ? entry.getValue().toString() : "VARCHAR";
+            columnDefs.append(colName).append(" ").append(colType);
+        }
+        var sql = "CREATE TABLE " + tableName + " (" + columnDefs + ")";
+        var result = engine.executeSql(sql);
+        return new CreateResult(result.success(), result.success() ? "Table created: " + tableName : result.message());
+    }
+
+    public DropResult dropTable(String tableName) {
+        return dropTable(tableName, false);
+    }
+
+    public DropResult dropTable(String tableName, boolean force) {
+        if (!force && !tableExists(tableName)) {
+            return new DropResult(false, "Table does not exist: " + tableName);
+        }
+        var sql = "DROP TABLE IF EXISTS " + tableName;
+        var result = engine.executeSql(sql);
+        return new DropResult(result.success(), result.success() ? "Table dropped: " + tableName : result.message());
+    }
+
+    public Map<String, Object> getTableInfo(String tableName) {
+        var info = new java.util.HashMap<String, Object>();
+        info.put("name", tableName);
+        var columns = getColumns(tableName).stream()
+            .map(c -> {
+                var colMap = new java.util.HashMap<String, Object>();
+                colMap.put("name", c);
+                colMap.put("type", getColumnType(tableName, c));
+                var size = getColumnSize(tableName, c);
+                if (size != null) colMap.put("size", size);
+                return colMap;
+            })
+            .collect(Collectors.toList());
+        info.put("columns", columns);
+        return info;
+    }
 }
