@@ -14,7 +14,51 @@ An embedded multi-model NoSQL database for the JVM that supports document, key-v
 ### Repository
 - **GitHub**: https://github.com/armand-ratombotiana/JNoSQL-EMBED
 - **Branch**: `junify-retry` (current working branch)
-- **Total Commits**: 10 (on junify-retry)
+- **Total Commits**: 11 (on junify-retry)
+
+---
+
+## Quick Start
+
+### Build and Run
+
+```bash
+# Compile
+mvn compile -DskipTests
+
+# Copy dependencies
+mvn dependency:copy-dependencies -DoutputDirectory=target/dep -DincludeScope=compile
+
+# Start server (IN_MEMORY - no persistence issues)
+java -cp "target/classes;target/dep/*" org.junify.db.JunifyDB --port 14000 --engine IN_MEMORY
+
+# Start server (H2 - with SQL support)
+java -cp "target/classes;target/dep/*" org.junify.db.JunifyDB --port 14000 --engine H2
+
+# Access Web Console
+# Open browser to: http://localhost:14000
+```
+
+### Web Console Features
+- **Dynamic API URL**: Uses `window.location.origin + '/api'` for automatic port detection
+- **Dashboard**: Health, metrics, stats, logs
+- **Documents**: CRUD operations (requires H2)
+- **SQL Console**: Full SQL support (H2 engine only)
+- **Key-Value**: Bucket/key operations
+- **Column-Family**: Column family CRUD
+- **Vectors**: Vector storage and similarity search
+- **Transactions**: ACID transaction support
+- **Backup/Restore**: Data export/import
+- **Dark/Light Theme**: Toggle in header
+
+---
+
+## Known Fixed Issues
+
+### Web Console Connection (Fixed)
+- **Issue**: Web console hardcoded to port 8080, couldn't connect to server on different ports
+- **Solution**: Changed to dynamic URL: `const API = window.location.origin + '/api'`
+- **File**: `src/main/resources/static/index.html`
 
 ---
 
@@ -295,7 +339,7 @@ curl -X POST http://localhost:10003/api/sql \
 
 ---
 
-## 13. Running Commands
+## 12. Running Commands
 
 ### Build the project
 ```bash
@@ -310,29 +354,61 @@ mvn compile -DskipTests
 mvn dependency:copy-dependencies -DoutputDirectory=target/dep -DincludeScope=compile
 ```
 
-### Start server
+### Start server (IN_MEMORY - recommended for testing)
 ```bash
-$cp = "target/classes"; Get-ChildItem "target/dep" -Filter "*.jar" | ForEach-Object { $cp = $cp + ";target/dep/" + $_.Name }
-java -cp $cp org.junify.db.JunifyDB --port 10003 --engine H2
+java -cp "target/classes;target/dep/*" org.junify.db.JunifyDB --port 14000 --engine IN_MEMORY
+```
+
+### Start server (H2 - with SQL support, requires no existing connections)
+```bash
+# Kill any existing servers first to avoid file lock issues
+java -cp "target/classes;target/dep/*" org.junify.db.JunifyDB --port 14000 --engine H2
 ```
 
 ### Test API
 ```powershell
-Invoke-WebRequest -Uri "http://localhost:10003/api/health" -UseBasicParsing | Select-Object -ExpandProperty Content
+Invoke-WebRequest -Uri "http://localhost:14000/api/health" -UseBasicParsing | Select-Object -ExpandProperty Content
+```
+
+### Access Web Console
+```
+# Open in browser - dynamically connects to correct port
+http://localhost:14000
 ```
 
 ---
 
-## 14. Important Notes
+## 13. Important Notes
 
 - Current branch: `junify-retry`
-- Server runs on: `http://localhost:10003` (H2 engine)
-- Web console is fully functional with dark/light theme
-- SQL queries work via H2 engine
-- Most read operations work; some write operations may hang
+- Web console now uses dynamic port detection (window.location.origin)
+- H2 engine may have file lock issues if server not properly shutdown - use IN_MEMORY for testing
+- SQL queries only work with H2 engine
+- Server runs on port 14000 (IN_MEMORY mode)
+- Web console is fully functional with dark/light theme toggle
+
+---
+
+## 14. API Endpoints Quick Reference
+
+| Endpoint | Method | Engine | Description |
+|----------|--------|--------|-------------|
+| `/api/health` | GET | Both | Server health status |
+| `/api/metrics` | GET | Both | Operations metrics |
+| `/api/stats` | GET | Both | System statistics |
+| `/api/sql` | POST | H2 only | SQL query execution |
+| `/api/backup` | GET/POST | Both | Backup/restore |
+| `/api/cdc` | GET | Both | CDC status |
+| `/api/tables/{name}` | GET | H2 | Table metadata |
+| `/api/indexes/{col}` | GET | Both | Index info |
+| `/api/transactions` | POST/PUT/DELETE | Both | Transaction control |
+| `/api/collections/{name}` | GET/POST | Both | Document operations |
+| `/api/kv/{bucket}/{key}` | GET/POST/DELETE | Both | Key-Value operations |
+| `/api/columns/{cf}/{key}` | GET/PUT/DELETE | Both | Column-family ops |
+| `/api/vectors/{index}/{id}` | GET/POST/DELETE | Both | Vector operations |
 
 ---
 
 *Generated: May 2026*
 *Branch: junify-retry*
-*Status: Working web server with partial feature implementation*
+*Status: Working web server with full API connectivity*
