@@ -114,7 +114,11 @@ public class BenchmarkRunner {
             }
             
             executor.shutdown();
-            executor.awaitTermination(60, TimeUnit.SECONDS);
+            try {
+                executor.awaitTermination(60, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             
             var elapsed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
             results.record("Mixed Write", options.ops, elapsed);

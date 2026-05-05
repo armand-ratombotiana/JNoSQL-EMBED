@@ -6,6 +6,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junify.db.storage.spi.H2StorageEngine.SqlResult;
+
 public class UserManager {
 
     private final H2StorageEngine engine;
@@ -144,14 +146,6 @@ public class UserManager {
     }
 
     public record UserInfo(String username, String role, long createdAt, Long lastLogin, boolean enabled) {}
-    
-    public record SqlResult(boolean success, List<String> columns, int affected, String message,
-                     List<Map<String, Object>> rows, List<String> allColumns) {
-        public boolean success() { return success; }
-        public int affected() { return affected; }
-        public String message() { return message; }
-        public List<Map<String, Object>> rows() { return rows; }
-    }
 
     private class UserSession {
         final String sessionId;

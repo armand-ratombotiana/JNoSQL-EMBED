@@ -4,6 +4,8 @@ import java.sql.*;
 import java.util.*;
 import java.time.*;
 
+import static org.junify.db.storage.spi.H2StorageEngine.SqlResult;
+
 public class DatabaseMetaManager {
 
     private final H2StorageEngine engine;
@@ -39,8 +41,13 @@ public class DatabaseMetaManager {
         info.put("autoCommit", engine.isAutoCommit());
         info.put("isolationLevel", engine.getTransactionIsolation());
         info.put("readOnly", false);
-        info.put("catalog", connection().getCatalog());
-        info.put("schema", connection().getSchema());
+        try {
+            info.put("catalog", connection().getCatalog());
+            info.put("schema", connection().getSchema());
+        } catch (SQLException e) {
+            info.put("catalog", "unknown");
+            info.put("schema", "unknown");
+        }
         
         return info;
     }
@@ -80,7 +87,7 @@ public class DatabaseMetaManager {
         
         return new SqlResult(true, List.of("table", "status"), results.size(),
             "Analyzed " + results.size() + " tables",
-            results.stream().map(r -> Map.of("table", r)).toList(),
+            results.stream().map(r -> (Map<String, Object>) Map.of("table", (Object) r)).toList(),
             List.of("table"));
     }
 
@@ -95,7 +102,7 @@ public class DatabaseMetaManager {
         
         return new SqlResult(true, List.of("table", "status"), results.size(),
             "Optimized " + results.size() + " tables",
-            results.stream().map(r -> Map.of("table", r)).toList(),
+            results.stream().map(r -> (Map<String, Object>) Map.of("table", (Object) r)).toList(),
             List.of("table"));
     }
 
@@ -152,12 +159,4 @@ public class DatabaseMetaManager {
         }
     }
 
-    public record SqlResult(boolean success, List<String> columns, int affected, String message,
-                     List<Map<String, Object>> rows, List<String> allColumns) {
-        public boolean success() { return success; }
-        public List<String> columns() { return columns; }
-        public int affected() { return affected; }
-        public String message() { return message; }
-        public List<Map<String, Object>> rows() { return rows; }
     }
-}

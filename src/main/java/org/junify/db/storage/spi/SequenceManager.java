@@ -3,6 +3,8 @@ package org.junify.db.storage.spi;
 import java.sql.*;
 import java.util.*;
 
+import static org.junify.db.storage.spi.H2StorageEngine.SqlResult;
+
 public class SequenceManager {
 
     private final H2StorageEngine engine;
@@ -94,13 +96,4 @@ public class SequenceManager {
 
     public record SequenceInfo(String name, long startWith, int increment, 
                          long minValue, long maxValue, boolean cycle) {}
-
-    public record SqlResult(boolean success, List<String> columns, int affected, String message,
-                     List<Map<String, Object>> rows, List<String> allColumns) {
-        public boolean success() { return success; }
-        public List<String> columns() { return columns; }
-        public int affected() { return affected; }
-        public String message() { return message; }
-        public List<Map<String, Object>> rows() { return rows; }
-    }
 }

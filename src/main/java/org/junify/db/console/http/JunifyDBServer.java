@@ -868,15 +868,11 @@ public class JunifyDBServer {
                 var body = readBody(exchange);
                 var data = JsonSerde.fromJson(body, Map.class);
                 var columnsRaw = (Map<String, Object>) data.get("columns");
-                var columns = new java.util.HashMap<String, SchemaManager.ColumnDef>();
+                var columns = new java.util.HashMap<String, Object>();
                 for (var entry : columnsRaw.entrySet()) {
                     var colDef = (Map<String, Object>) entry.getValue();
-                    columns.put(entry.getKey(), new SchemaManager.ColumnDef(
-                        (String) colDef.get("type"),
-                        (Boolean) colDef.get("nullable"),
-                        (Boolean) colDef.get("primaryKey"),
-                        (Integer) colDef.get("size")
-                    ));
+                    var colType = colDef.get("type") != null ? colDef.get("type").toString() : "VARCHAR";
+                    columns.put(entry.getKey(), colType);
                 }
                 var result = sm.createTable(tableName, columns);
                 sendJson(exchange, result.success() ? 201 : 400, 

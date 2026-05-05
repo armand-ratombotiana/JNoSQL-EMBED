@@ -3,6 +3,8 @@ package org.junify.db.storage.spi;
 import java.sql.*;
 import java.util.*;
 
+import static org.junify.db.storage.spi.H2StorageEngine.SqlResult;
+
 public class StoredProcedureManager {
 
     private final H2StorageEngine engine;
@@ -42,10 +44,11 @@ public class StoredProcedureManager {
         
         var params = new ArrayList<ProcedureParam>();
         for (var row : result.rows()) {
+            var mode = row.get("PARAMETER_MODE");
             params.add(new ProcedureParam(
                 (String) row.get("PARAMETER_NAME"),
                 (String) row.get("DATA_TYPE"),
-                "IN".equalsIgnoreCase(row.get("PARAMETER_MODE"))
+                mode != null && "IN".equalsIgnoreCase(mode.toString())
             ));
         }
         
@@ -74,13 +77,4 @@ public class StoredProcedureManager {
 
     public record ProcedureInfo(String name, List<ProcedureParam> params) {}
     public record ProcedureParam(String name, String dataType, boolean isInput) {}
-    
-    public record SqlResult(boolean success, List<String> columns, int affected, String message,
-                     List<Map<String, Object>> rows, List<String> allColumns) {
-        public boolean success() { return success; }
-        public List<String> columns() { return columns; }
-        public int affected() { return affected; }
-        public String message() { return message; }
-        public List<Map<String, Object>> rows() { return rows; }
-    }
 }

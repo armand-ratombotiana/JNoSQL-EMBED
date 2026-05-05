@@ -5,6 +5,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import static org.junify.db.storage.spi.H2StorageEngine.SqlResult;
+
 public class FullTextSearchManager {
 
     private final H2StorageEngine engine;
@@ -196,7 +198,7 @@ public class FullTextSearchManager {
         
         return new SqlResult(true, List.of("metric", "value"), 4, "OK",
             info.entrySet().stream()
-                .map(e -> Map.of("metric", e.getKey(), "value", String.valueOf(e.getValue())))
+                .map(e -> (Map<String, Object>) Map.of("metric", (Object) e.getKey(), "value", (Object) String.valueOf(e.getValue())))
                 .toList(),
             List.of("metric", "value"));
     }
@@ -253,9 +255,4 @@ public class FullTextSearchManager {
     }
 
     public record FTSSearchResult(List<FTSScore> results, int count, String status) {}
-
-    public record SqlResult(boolean success, List<String> columns, int affected, String message,
-                     List<Map<String, Object>> rows, List<String> allColumns) {
-        public boolean success() { return success; }
-    }
 }

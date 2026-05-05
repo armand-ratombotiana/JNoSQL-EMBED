@@ -6,6 +6,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.junify.db.storage.spi.H2StorageEngine.SqlResult;
+
 public class ReplicationManager {
 
     private final H2StorageEngine engine;
@@ -224,8 +226,4 @@ public class ReplicationManager {
         }
     }
 
-    public record SqlResult(boolean success, List<String> columns, int affected, String message,
-                        List<Map<String, Object>> rows, List<String> allColumns) {
-        public boolean success() { return success; }
     }
-}

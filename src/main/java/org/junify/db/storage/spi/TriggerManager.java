@@ -3,6 +3,8 @@ package org.junify.db.storage.spi;
 import java.sql.*;
 import java.util.*;
 
+import static org.junify.db.storage.spi.H2StorageEngine.SqlResult;
+
 public class TriggerManager {
 
     private final H2StorageEngine engine;
@@ -122,14 +124,4 @@ public class TriggerManager {
     }
 
     public record TriggerInfo(String name, String type, String tableName, String definition) {}
-
-    public record SqlResult(boolean success, java.util.List<String> columns, int affected, 
-                      String message, java.util.List<java.util.Map<String, Object>> rows,
-                      java.util.List<String> allColumns) {
-        public boolean success() { return success; }
-        public java.util.List<String> columns() { return columns; }
-        public int affected() { return affected; }
-        public String message() { return message; }
-        public java.util.List<java.util.Map<String, Object>> rows() { return rows; }
-    }
 }
