@@ -95,8 +95,7 @@ public class JunifyDBServer {
         startTime = System.currentTimeMillis();
         
         server.createContext("/", new StaticHandler());
-        server.createContext("/api/collections", new CollectionsHandler());
-        server.createContext("/api/collections/", new CollectionHandler());
+        server.createContext("/api/collections/", new CollectionsHandler());
         server.createContext("/api/kv/", new KeyValueHandler());
         server.createContext("/api/columns/", new ColumnHandler());
         server.createContext("/api/health", new HealthHandler());
@@ -110,15 +109,11 @@ public class JunifyDBServer {
         server.createContext("/api/sql", new SqlHandler());
         server.createContext("/api/bulk", new BulkHandler());
         server.createContext("/api/cdc", new CDCHandler());
-        server.createContext("/api/schema", new SchemaSqlHandler());
-        server.createContext("/api/schema/", new SchemaSqlHandler());
-        server.createContext("/api/tables", new TablesHandler());
         server.createContext("/api/tables/", new TablesHandler());
-        server.createContext("/api/constraints", new ConstraintsHandler());
         server.createContext("/api/constraints/", new ConstraintsHandler());
         
         if (corsEnabled) {
-            server.createContext("/api/", new CorsPreflightHandler());
+            server.createContext("/api/cors", new CorsPreflightHandler());
         }
         
         server.setExecutor(null);
