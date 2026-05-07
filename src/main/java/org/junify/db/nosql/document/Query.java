@@ -21,6 +21,17 @@ public class Query {
         this.sortField = null;
     }
 
+    /**
+     * Package-private constructor for QueryParser.
+     */
+    Query(Predicate<Document> docPredicate, SortOrder sortOrder, String sortField, int limit, int offset) {
+        this.docPredicate = docPredicate;
+        this.sortOrder = sortOrder != null ? sortOrder : SortOrder.NONE;
+        this.sortField = sortField;
+        this.limit = limit;
+        this.offset = offset;
+    }
+
     public static Query all() {
         return new Query(doc -> true);
     }

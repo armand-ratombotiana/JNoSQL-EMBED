@@ -6,6 +6,7 @@ import org.junit.jupiter.api.*;
 
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -14,6 +15,11 @@ public class SchemaManagerTest {
 
     private static H2StorageEngine engine;
     private static SchemaManager schemaManager;
+    private static final AtomicInteger testCounter = new AtomicInteger(0);
+    
+    private String uniqueTableName(String base) {
+        return base + "_" + testCounter.incrementAndGet() + "_" + System.currentTimeMillis();
+    }
 
     @BeforeAll
     static void setup() throws Exception {
@@ -35,72 +41,77 @@ public class SchemaManagerTest {
 
     @Test
     void testCreateTable() {
+        var tableName = uniqueTableName("users");
         var columns = new LinkedHashMap<String, Object>();
         columns.put("id", "INT PRIMARY KEY");
         columns.put("name", "VARCHAR(255) NOT NULL");
         columns.put("email", "VARCHAR(255)");
 
-        var result = schemaManager.createTable("users", columns);
+        var result = schemaManager.createTable(tableName, columns);
 
         assertTrue(result.success(), "Table creation should succeed: " + result.message());
-        assertTrue(schemaManager.tableExists("users"), "Table should exist");
+        assertTrue(schemaManager.tableExists(tableName), "Table should exist");
     }
 
     @Test
     void testGetTables() {
-        var result = schemaManager.createTable("test_table", Map.of(
+        var tableName = uniqueTableName("test_table");
+        var result = schemaManager.createTable(tableName, Map.of(
             "id", "INT PRIMARY KEY"
         ));
 
         var tables = schemaManager.getTables();
 
-        assertFalse(tables.isEmpty(), "Should have tables");
-        assertTrue(tables.stream().anyMatch(t -> t.equalsIgnoreCase("test_table")),
+        assertTrue(tables != null && !tables.isEmpty(), "Should have tables");
+        assertTrue(tables.stream().anyMatch(t -> t != null && t.contains("test_table")),
             "Should contain test_table (tables: " + tables + ")");
     }
 
     @Test
     void testGetColumns() {
+        var tableName = uniqueTableName("column_test");
         var columns = new LinkedHashMap<String, Object>();
         columns.put("id", "INT PRIMARY KEY");
         columns.put("name", "VARCHAR(100) NOT NULL");
 
-        schemaManager.createTable("column_test", columns);
+        schemaManager.createTable(tableName, columns);
 
-        var cols = schemaManager.getColumns("column_test");
+        var cols = schemaManager.getColumns(tableName);
 
-        assertFalse(cols.isEmpty(), "Should have columns");
-        assertTrue(cols.stream().anyMatch(c -> c.equalsIgnoreCase("id")),
+        assertFalse(cols.isEmpty(), "Should have columns (table: " + tableName + ")");
+        assertTrue(cols.stream().anyMatch(c -> c != null && c.equalsIgnoreCase("id")),
             "Should have id column (columns: " + cols + ")");
-        assertTrue(cols.stream().anyMatch(c -> c.equalsIgnoreCase("name")),
+        assertTrue(cols.stream().anyMatch(c -> c != null && c.equalsIgnoreCase("name")),
             "Should have name column (columns: " + cols + ")");
     }
 
     @Test
     void testDropTable() {
+        var tableName = uniqueTableName("to_drop");
         var columns = Map.of("id", (Object) "INT PRIMARY KEY");
-        schemaManager.createTable("to_drop", columns);
+        schemaManager.createTable(tableName, columns);
 
-        assertTrue(schemaManager.tableExists("to_drop"), "Table should exist before drop");
+        assertTrue(schemaManager.tableExists(tableName), "Table should exist before drop");
 
-        var result = schemaManager.dropTable("to_drop", false);
+        var result = schemaManager.dropTable(tableName, false);
 
         assertTrue(result.success(), "Drop should succeed: " + result.message());
-        assertFalse(schemaManager.tableExists("to_drop"), "Table should not exist after drop");
+        assertFalse(schemaManager.tableExists(tableName), "Table should not exist after drop");
     }
 
     @Test
     void testGetTableInfo() {
+        var tableName = uniqueTableName("info_test");
         var columns = Map.of(
             "id", (Object) "INT PRIMARY KEY",
             "name", "VARCHAR(100)"
         );
-        schemaManager.createTable("info_test", columns);
+        schemaManager.createTable(tableName, columns);
 
-        var info = schemaManager.getTableInfo("info_test");
+        var info = schemaManager.getTableInfo(tableName);
 
         assertNotNull(info, "Table info should not be null");
-        assertEquals("info_test", info.get("name"), "Table name should match");
+        assertEquals(tableName, info.get("name"), "Table name should match");
         @SuppressWarnings("unchecked")
         var cols = (List<Map<String, Object>>) info.get("columns");
         assertFalse(cols == null || cols.isEmpty(), "Should have columns");
@@ -108,12 +119,13 @@ public class SchemaManagerTest {
 
     @Test
     void testGetColumnType() {
+        var tableName = uniqueTableName("type_test");
         var columns = Map.of("id", (Object) "INT PRIMARY KEY", "data", "TEXT");
-        schemaManager.createTable("type_test", columns);
+        schemaManager.createTable(tableName, columns);
 
-        var type = schemaManager.getColumnType("type_test", "id");
+        var type = schemaManager.getColumnType(tableName, "id");
         assertNotNull(type, "Column type should not be null");
-        assertTrue(type.equalsIgnoreCase("INTEGER") || type.equalsIgnoreCase("INT") || 
+        assertTrue(type.equalsIgnoreCase("INTEGER") || type.equalsIgnoreCase("INT") ||
                    type.equalsIgnoreCase("BIGINT") || type.equalsIgnoreCase("NUMERIC"),
             "Column type should be numeric (got: " + type + ")");
     }

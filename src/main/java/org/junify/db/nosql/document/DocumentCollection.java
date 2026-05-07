@@ -231,10 +231,15 @@ public class DocumentCollection {
         return results;
     }
 
+    /**
+     * Check if query should use index optimization.
+     * TEMPORARY FIX: Disable automatic index usage until predicate analysis is implemented.
+     * Current implementation causes hangs with complex predicates (regex, etc.).
+     */
     private boolean shouldUseIndex(Query query) {
-        var pred = query.docPredicate();
-        if (indexes.isEmpty()) return false;
-        return true;
+        // TODO: Implement proper predicate analysis to determine if index can be used
+        // For now, disable auto-index to prevent hangs
+        return false;
     }
 
     private List<Document> findWithIndex(Query query) {
@@ -362,12 +367,51 @@ public class DocumentCollection {
     }
 
     public Map<String, Object> stats() {
+        var allDocs = findAll();
+        long expiredCount = allDocs.stream().filter(Document::isExpired).count();
+        long activeCount = allDocs.size() - expiredCount;
+        long withTtlCount = allDocs.stream().filter(d -> d.getExpiresAt() != null).count();
+
         return Map.of(
                 "collection", name,
                 "count", count(),
                 "indexCount", indexes.size(),
                 "storageEngine", engine.name(),
-                "engineStats", engine.stats()
+                "engineStats", engine.stats(),
+                "ttl", Map.of(
+                        "total", allDocs.size(),
+                        "expired", expiredCount,
+                        "active", activeCount,
+                        "withTtl", withTtlCount
+                )
+        );
+    }
+
+    public long setTtl(String documentId, long ttlSeconds) {
+        var doc = findById(documentId);
+        if (doc == null) {
+            return 0;
+        }
+        if (ttlSeconds > 0) {
+            doc.expiresAt(System.currentTimeMillis() + (ttlSeconds * 1000));
+        } else {
+            doc.setExpiresAt(null);
+        }
+        update(doc);
+        return 1;
+    }
+
+    public Map<String, Object> ttlStats() {
+        var allDocs = findAll();
+        long expiredCount = allDocs.stream().filter(Document::isExpired).count();
+        long activeCount = allDocs.size() - expiredCount;
+        long withTtlCount = allDocs.stream().filter(d -> d.getExpiresAt() != null).count();
+
+        return Map.of(
+                "total", allDocs.size(),
+                "expired", expiredCount,
+                "active", activeCount,
+                "withTtl", withTtlCount
         );
     }
 

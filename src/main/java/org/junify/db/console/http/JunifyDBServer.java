@@ -7,6 +7,7 @@ import org.junify.db.JunifyDB;
 import org.junify.db.nosql.document.Document;
 import org.junify.db.nosql.document.DocumentCollection;
 import org.junify.db.nosql.document.Query;
+import org.junify.db.nosql.document.QueryParser;
 import org.junify.db.core.util.JsonSerde;
 import org.junify.db.storage.spi.SchemaManager;
 
@@ -245,6 +246,113 @@ public class JunifyDBServer {
                     sendJson(exchange, 405, Map.of("error", "Method not allowed"));
                 }
             } else if (parts.length >= 5) {
+                // Check for /api/collections/{name}/stats endpoint
+                if ("stats".equals(parts[4])) {
+                    if ("GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 200, collection.stats());
+                    } else {
+                        sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                    }
+                    return;
+                }
+
+                // Check for /api/collections/{name}/set-ttl endpoint
+                if ("set-ttl".equals(parts[4])) {
+                    if ("POST".equals(exchange.getRequestMethod())) {
+                        try {
+                            var body = readBody(exchange);
+                            var data = JsonSerde.fromJson(body, Map.class);
+                            var documentId = data.get("documentId").toString();
+                            var ttlSeconds = ((Number) data.get("ttlSeconds")).longValue();
+                            var updated = collection.setTtl(documentId, ttlSeconds);
+                            sendJson(exchange, 200, Map.of(
+                                    "success", updated > 0,
+                                    "updated", updated
+                            ));
+                        } catch (Exception e) {
+                            System.err.println("[CollectionsHandler] Set-TTL error: " + e.getMessage());
+                            e.printStackTrace();
+                            sendJson(exchange, 500, Map.of("error", "Set TTL failed", "message", e.getMessage()));
+                        }
+                    } else {
+                        sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                    }
+                    return;
+                }
+
+                // Check for /api/collections/{name}/cleanup endpoint
+                if ("cleanup".equals(parts[4])) {
+                    if ("POST".equals(exchange.getRequestMethod())) {
+                        try {
+                            var deleted = collection.cleanupExpired();
+                            sendJson(exchange, 200, Map.of("deleted", deleted));
+                        } catch (Exception e) {
+                            System.err.println("[CollectionsHandler] Cleanup error: " + e.getMessage());
+                            e.printStackTrace();
+                            sendJson(exchange, 500, Map.of("error", "Cleanup failed", "message", e.getMessage()));
+                        }
+                    } else {
+                        sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                    }
+                    return;
+                }
+
+                // Check for /api/collections/{name}/query endpoint
+                if ("query".equals(parts[4])) {
+                    if ("POST".equals(exchange.getRequestMethod())) {
+                        try {
+                            var body = readBody(exchange);
+                            var data = JsonSerde.fromJson(body, Map.class);
+
+                            // Simple query format: {"field": "value"} for equality
+                            // Or: {"$gt": {"field": 30}} for greater than
+                            // Or: {"$lt": {"field": 50}} for less than
+                            org.junify.db.nosql.document.Query query = null;
+
+                            if (data.containsKey("$gt")) {
+                                var gtData = (Map<String, Object>) data.get("$gt");
+                                for (var entry : gtData.entrySet()) {
+                                    query = org.junify.db.nosql.document.Query.gt(entry.getKey(), ((Number) entry.getValue()).doubleValue());
+                                }
+                            } else if (data.containsKey("$lt")) {
+                                var ltData = (Map<String, Object>) data.get("$lt");
+                                for (var entry : ltData.entrySet()) {
+                                    query = org.junify.db.nosql.document.Query.lt(entry.getKey(), ((Number) entry.getValue()).doubleValue());
+                                }
+                            } else if (data.containsKey("$eq")) {
+                                var eqData = (Map<String, Object>) data.get("$eq");
+                                for (Object entryObj : eqData.entrySet()) {
+                                    var entry = (java.util.Map.Entry<String, Object>) entryObj;
+                                    query = org.junify.db.nosql.document.Query.eq(entry.getKey(), entry.getValue());
+                                }
+                            } else {
+                                // Default: simple equality query
+                                for (Object entryObj : data.entrySet()) {
+                                    var entry = (java.util.Map.Entry<String, Object>) entryObj;
+                                    query = org.junify.db.nosql.document.Query.eq(entry.getKey(), entry.getValue());
+                                    break; // Only first field for simple query
+                                }
+                            }
+
+                            if (query == null) {
+                                query = org.junify.db.nosql.document.Query.all();
+                            }
+
+                            var results = collection.find(query);
+                            sendJson(exchange, 200, results.stream()
+                                .map(Document::getFields)
+                                .collect(java.util.stream.Collectors.toList()));
+                        } catch (Exception e) {
+                            System.err.println("[CollectionsHandler] Query error: " + e.getMessage());
+                            e.printStackTrace();
+                            sendJson(exchange, 500, Map.of("error", "Query failed", "message", e.getMessage()));
+                        }
+                    } else {
+                        sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                    }
+                    return;
+                }
+                
                 var id = parts[4];
                 System.out.println("[CollectionsHandler] " + exchange.getRequestMethod() + " /api/collections/" + name + "/" + id);
                 if ("GET".equals(exchange.getRequestMethod())) {

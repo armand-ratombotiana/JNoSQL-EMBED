@@ -515,6 +515,7 @@ public class H2StorageEngine implements StorageEngine {
     }
 
     private int queryTimeout = 30;
+    private static final int STATEMENT_CACHE_MAX_SIZE = 256;
 
     public void setQueryTimeout(int seconds) {
         this.queryTimeout = seconds;
@@ -528,42 +529,97 @@ public class H2StorageEngine implements StorageEngine {
         return executeSql(sql, false);
     }
 
-    public SqlResult executeSql(String sql, boolean analyze) {
+    /**
+     * Executes SQL with parameterized values to prevent SQL injection.
+     * Supports String, Number, Boolean, Date, Time, Timestamp, byte[] parameters.
+     *
+     * @param sql SQL with ? placeholders
+     * @param params parameter values to bind
+     * @return SqlResult with execution outcome
+     */
+    public SqlResult executeSql(String sql, Object... params) {
+        return executeSql(sql, false, params);
+    }
+
+    /**
+     * Executes SQL with optional EXPLAIN analysis and parameterized values.
+     * Uses PreparedStatement for SELECT/INSERT/UPDATE/DELETE with parameters.
+     * Falls back to Statement for SQL without parameters or multi-statement SQL.
+     *
+     * @param sql SQL statement (with ? placeholders for parameters)
+     * @param analyze if true, prepends EXPLAIN for query plan
+     * @param params parameter values to bind (optional)
+     * @return SqlResult with execution outcome
+     */
+    public SqlResult executeSql(String sql, boolean analyze, Object... params) {
         checkOpen();
         if (sql == null || sql.trim().isEmpty()) {
             return new SqlResult(false, null, 0, "Empty SQL statement");
         }
-        
+
+        String originalSql = sql;
         if (analyze) {
             sql = "EXPLAIN " + sql;
         }
-        
+
         String trimmed = sql.trim().toUpperCase();
-        lock.readLock().lock();
+        boolean hasParams = params != null && params.length > 0;
+        boolean isMultiStatement = trimmed.contains(";") && !trimmed.startsWith("SELECT") && !trimmed.startsWith("EXPLAIN");
+        boolean isSelectQuery = trimmed.startsWith("SELECT") || trimmed.startsWith("EXPLAIN");
+        boolean isWriteQuery = trimmed.startsWith("INSERT") || trimmed.startsWith("UPDATE") || 
+                               trimmed.startsWith("DELETE") || trimmed.startsWith("MERGE") ||
+                               trimmed.startsWith("CREATE") || trimmed.startsWith("DROP") ||
+                               trimmed.startsWith("ALTER") || trimmed.startsWith("TRUNCATE");
+
+        // Use write lock for write operations, read lock for reads
+        if (isWriteQuery) {
+            lock.writeLock().lock();
+        } else {
+            lock.readLock().lock();
+        }
+        
         try {
-            if (trimmed.startsWith("SELECT")) {
-                try (PreparedStatement ps = connection.prepareStatement(sql)) {
-                    try (ResultSet rs = ps.executeQuery()) {
-                        var columns = new java.util.ArrayList<String>();
-                        var meta = rs.getMetaData();
-                        for (int i = 1; i <= meta.getColumnCount(); i++) {
-                            columns.add(meta.getColumnLabel(i));
+            if (isSelectQuery) {
+                if (hasParams) {
+                    PreparedStatement ps = getCachedPreparedStatement(sql);
+                    try {
+                        bindParameters(ps, params);
+                        try (ResultSet rs = ps.executeQuery()) {
+                            return extractResultSet(rs);
                         }
-                        var rows = new java.util.ArrayList<java.util.Map<String, Object>>();
-                        while (rs.next()) {
-                            var row = new java.util.LinkedHashMap<String, Object>();
-                            for (int i = 0; i < columns.size(); i++) {
-                                Object val = rs.getObject(i + 1);
-                                row.put(columns.get(i), val);
-                            }
-                            rows.add(row);
+                    } finally {
+                        if (!isCached(ps)) {
+                            ps.close();
                         }
-                        return new SqlResult(true, columns, rows.size(), "OK", rows, columns);
+                    }
+                } else {
+                    PreparedStatement ps = getCachedPreparedStatement(sql);
+                    try {
+                        try (ResultSet rs = ps.executeQuery()) {
+                            return extractResultSet(rs);
+                        }
+                    } finally {
+                        if (!isCached(ps)) {
+                            ps.close();
+                        }
+                    }
+                }
+            } else if (hasParams && !isMultiStatement) {
+                // Use PreparedStatement for parameterized non-SELECT statements
+                PreparedStatement ps = getCachedPreparedStatement(originalSql);
+                try {
+                    bindParameters(ps, params);
+                    int affected = ps.executeUpdate();
+                    return new SqlResult(true, null, affected, affected + " row(s) affected");
+                } finally {
+                    if (!isCached(ps)) {
+                        ps.close();
                     }
                 }
             } else {
+                // Fallback to Statement for multi-statement or no-params SQL
                 int affected = 0;
-                if (trimmed.contains(";")) {
+                if (isMultiStatement) {
                     String[] statements = sql.split(";");
                     for (String stmt : statements) {
                         if (!stmt.trim().isEmpty()) {
@@ -582,8 +638,156 @@ public class H2StorageEngine implements StorageEngine {
         } catch (SQLException e) {
             return new SqlResult(false, null, 0, "SQL Error: " + e.getMessage());
         } finally {
-            lock.readLock().unlock();
+            if (isWriteQuery) {
+                lock.writeLock().unlock();
+            } else {
+                lock.readLock().unlock();
+            }
         }
+    }
+
+    /**
+     * Retrieves a PreparedStatement from cache or creates a new one.
+     * Implements LRU eviction when cache exceeds max size.
+     */
+    private PreparedStatement getCachedPreparedStatement(String sql) throws SQLException {
+        PreparedStatement ps = statementCache.get(sql);
+        if (ps == null || isStatementClosed(ps)) {
+            ps = connection.prepareStatement(sql);
+            ps.setQueryTimeout(queryTimeout);
+            
+            if (statementCache.size() >= STATEMENT_CACHE_MAX_SIZE) {
+                // Simple eviction: remove oldest 10% of entries
+                int toRemove = STATEMENT_CACHE_MAX_SIZE / 10;
+                statementCache.keySet().stream()
+                    .limit(toRemove)
+                    .forEach(key -> {
+                        try {
+                            PreparedStatement old = statementCache.remove(key);
+                            if (old != null && !isStatementClosed(old)) {
+                                old.close();
+                            }
+                        } catch (SQLException e) {
+                            // Ignore close errors during eviction
+                        }
+                    });
+            }
+            
+            statementCache.put(sql, ps);
+        }
+        return ps;
+    }
+
+    /**
+     * Binds parameters to PreparedStatement with type detection.
+     * Supports: String, Integer, Long, Double, Float, Boolean, Date, Time, Timestamp, byte[]
+     */
+    private void bindParameters(PreparedStatement ps, Object[] params) throws SQLException {
+        for (int i = 0; i < params.length; i++) {
+            Object param = params[i];
+            int paramIndex = i + 1;
+            
+            if (param == null) {
+                ps.setNull(paramIndex, Types.NULL);
+            } else if (param instanceof String) {
+                ps.setString(paramIndex, (String) param);
+            } else if (param instanceof Integer) {
+                ps.setInt(paramIndex, (Integer) param);
+            } else if (param instanceof Long) {
+                ps.setLong(paramIndex, (Long) param);
+            } else if (param instanceof Double) {
+                ps.setDouble(paramIndex, (Double) param);
+            } else if (param instanceof Float) {
+                ps.setFloat(paramIndex, (Float) param);
+            } else if (param instanceof Boolean) {
+                ps.setBoolean(paramIndex, (Boolean) param);
+            } else if (param instanceof java.util.Date) {
+                ps.setTimestamp(paramIndex, new java.sql.Timestamp(((java.util.Date) param).getTime()));
+            } else if (param instanceof java.sql.Date) {
+                ps.setDate(paramIndex, (java.sql.Date) param);
+            } else if (param instanceof java.sql.Time) {
+                ps.setTime(paramIndex, (java.sql.Time) param);
+            } else if (param instanceof java.sql.Timestamp) {
+                ps.setTimestamp(paramIndex, (java.sql.Timestamp) param);
+            } else if (param instanceof byte[]) {
+                ps.setBytes(paramIndex, (byte[]) param);
+            } else if (param instanceof java.io.Reader) {
+                ps.setCharacterStream(paramIndex, (java.io.Reader) param);
+            } else if (param instanceof java.io.InputStream) {
+                ps.setBinaryStream(paramIndex, (java.io.InputStream) param);
+            } else {
+                // Fallback: use toString() for unknown types
+                ps.setString(paramIndex, param.toString());
+            }
+        }
+    }
+
+    /**
+     * Extracts ResultSet metadata and rows into SqlResult.
+     * Column names are stored in uppercase for consistency.
+     */
+    private SqlResult extractResultSet(ResultSet rs) throws SQLException {
+        var columns = new java.util.ArrayList<String>();
+        var meta = rs.getMetaData();
+        for (int i = 1; i <= meta.getColumnCount(); i++) {
+            String colLabel = meta.getColumnLabel(i);
+            columns.add(colLabel != null ? colLabel.toUpperCase() : meta.getColumnName(i).toUpperCase());
+        }
+        var rows = new java.util.ArrayList<java.util.Map<String, Object>>();
+        while (rs.next()) {
+            var row = new java.util.LinkedHashMap<String, Object>();
+            for (int i = 0; i < columns.size(); i++) {
+                Object val = rs.getObject(i + 1);
+                row.put(columns.get(i), val);
+            }
+            rows.add(row);
+        }
+        return new SqlResult(true, columns, rows.size(), "OK", rows, columns);
+    }
+
+    /**
+     * Checks if a PreparedStatement is closed or invalid.
+     */
+    private boolean isStatementClosed(PreparedStatement ps) {
+        if (ps == null) return true;
+        try {
+            return ps.isClosed();
+        } catch (SQLException e) {
+            return true;
+        }
+    }
+
+    /**
+     * Checks if a PreparedStatement is in the cache.
+     */
+    private boolean isCached(PreparedStatement ps) {
+        return statementCache.containsValue(ps);
+    }
+
+    /**
+     * Clears all cached PreparedStatements.
+     * Call during maintenance windows or when schema changes.
+     */
+    public void clearStatementCache() {
+        lock.writeLock().lock();
+        try {
+            statementCache.forEach((sql, ps) -> {
+                try {
+                    if (!isStatementClosed(ps)) {
+                        ps.close();
+                    }
+                } catch (SQLException e) {
+                    // Ignore close errors
+                }
+            });
+            statementCache.clear();
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    public SqlResult executeSql(String sql, boolean analyze) {
+        return executeSql(sql, analyze, new Object[0]);
     }
 
     public record SqlResult(boolean success, java.util.List<String> columns, int affected, String message, java.util.List<java.util.Map<String, Object>> rows, java.util.List<String> allColumns) {

@@ -14,22 +14,36 @@ public class SchemaManager {
         this.engine = engine;
     }
 
+    /**
+     * Check if table exists.
+     * Note: H2 stores identifiers in lowercase when DATABASE_TO_LOWER=TRUE.
+     * Uses prepared statement to prevent SQL injection.
+     */
     public boolean tableExists(String tableName) {
         var result = engine.executeSql(
-            "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = UPPER('" + tableName + "')"
+            "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?",
+            tableName.toLowerCase()
         );
         return result.success() && result.rows() != null && !result.rows().isEmpty();
     }
 
+    /**
+     * Get all table names.
+     * Note: H2 uses TABLE_TYPE = 'BASE TABLE' for user tables.
+     * Note: With DATABASE_TO_LOWER=TRUE, schema names are stored lowercase.
+     * Uses prepared statement for consistent API (no user input in this query).
+     */
     public List<String> getTables() {
         var result = engine.executeSql(
-            "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'PUBLIC' AND TABLE_TYPE = 'TABLE'"
-        ); 
+            "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE LOWER(TABLE_SCHEMA) = ? AND TABLE_TYPE = ?",
+            "public", "BASE TABLE"
+        );
         if (!result.success() || result.rows() == null) {
             return List.of();
         }
         return result.rows().stream()
             .map(row -> (String) row.get("TABLE_NAME"))
+            .filter(name -> name != null)
             .collect(Collectors.toList());
     }
 
@@ -46,36 +60,61 @@ public class SchemaManager {
         return new SqlResult(true, List.of(), 0, "OK", List.of(), List.of());
     }
 
+    /**
+     * Get column names for a table.
+     * Note: Uses lowercase table name for H2 compatibility.
+     * Uses prepared statement to prevent SQL injection.
+     */
     public List<String> getColumns(String table) {
-        var sql = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = UPPER('" + table + "')";
-        var result = engine.executeSql(sql);
+        if (table == null) return List.of();
+        var sql = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? ORDER BY ORDINAL_POSITION";
+        var result = engine.executeSql(sql, table.toLowerCase());
         if (!result.success() || result.rows() == null) {
             return List.of();
         }
         return result.rows().stream()
-            .map(row -> (String) row.get("COLUMN_NAME"))
+            .map(row -> {
+                Object col = row.get("COLUMN_NAME");
+                return col != null ? col.toString() : null;
+            })
+            .filter(c -> c != null)
             .collect(Collectors.toList());
     }
 
+    /**
+     * Get column data type.
+     * Note: Uses lowercase table name for H2 compatibility.
+     * Uses prepared statement to prevent SQL injection.
+     */
     public String getColumnType(String table, String column) {
+        if (table == null || column == null) return "VARCHAR";
         var sql = "SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS " +
-                  "WHERE TABLE_NAME = UPPER('" + table + "') AND COLUMN_NAME = '" + column + "'";
-        var result = engine.executeSql(sql);
+                  "WHERE TABLE_NAME = ? AND COLUMN_NAME = ?";
+        var result = engine.executeSql(sql, table.toLowerCase(), column);
         if (!result.success() || result.rows() == null || result.rows().isEmpty()) {
             return "VARCHAR";
         }
-        return (String) result.rows().get(0).get("DATA_TYPE");
+        Object type = result.rows().get(0).get("DATA_TYPE");
+        return type != null ? type.toString() : "VARCHAR";
     }
 
+    /**
+     * Get column size.
+     * Note: Uses lowercase table name for H2 compatibility.
+     * Uses prepared statement to prevent SQL injection.
+     */
     public Integer getColumnSize(String table, String column) {
         var sql = "SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS " +
-                  "WHERE TABLE_NAME = UPPER('" + table + "') AND COLUMN_NAME = '" + column + "'";
-        var result = engine.executeSql(sql);
+                  "WHERE TABLE_NAME = ? AND COLUMN_NAME = ?";
+        var result = engine.executeSql(sql, table.toLowerCase(), column);
         if (!result.success() || result.rows() == null || result.rows().isEmpty()) {
             return null;
         }
         var val = result.rows().get(0).get("CHARACTER_MAXIMUM_LENGTH");
-        return val != null ? (Integer) val : null;
+        if (val == null) return null;
+        if (val instanceof Long) return ((Long) val).intValue();
+        if (val instanceof Integer) return (Integer) val;
+        return null;
     }
 
     public record TableInfo(String name, List<ColumnDef> columns) {}
