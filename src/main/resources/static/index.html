@@ -751,6 +751,14 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
                 SQL
             </button>
+            <button class="tab" onclick="showTab('hybrid')" id="tabBtn-hybrid">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
+                Hybrid Query
+            </button>
+            <button class="tab" onclick="showTab('schema')" id="tabBtn-schema">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M3 3h18v18H3zM9 9h6v6H9z"/></svg>
+                Schema
+            </button>
             <button class="tab" onclick="showTab('logs')" id="tabBtn-logs">Logs</button>
         </div>
 
@@ -1338,6 +1346,118 @@
                         </div>
                     </div>
                     <div id="vectorResults" class="empty-state"><p>No results</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hybrid Query Tab -->
+        <div id="tab-hybrid" class="tab-content">
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
+                            Hybrid Query Editor
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Query Mode</label>
+                        <select id="hybridMode" class="form-input" onchange="toggleHybridMode()">
+                            <option value="sql">SQL (H2 Engine)</option>
+                            <option value="nosql">NoSQL (Document)</option>
+                            <option value="vector">Vector Search</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Query</label>
+                        <textarea id="hybridQuery" class="form-input" style="min-height: 150px; font-family: 'JetBrains Mono', monospace;" placeholder="Enter your query..."></textarea>
+                    </div>
+                    <div style="display: flex; gap: 12px; margin-top: 16px;">
+                        <button class="btn btn-primary" onclick="executeHybridQuery()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            Execute
+                        </button>
+                        <button class="btn btn-ghost" onclick="clearHybridQuery()">Clear</button>
+                    </div>
+                    <div id="hybridMessage" style="margin-top: 16px;"></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                            Query Profiler
+                        </div>
+                    </div>
+                    <div id="hybridProfiler">
+                        <div class="metric-list">
+                            <div class="metric-item">
+                                <span class="metric-label">Execution Time</span>
+                                <span class="metric-value" id="profilerTime">-</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Rows Returned</span>
+                                <span class="metric-value" id="profilerRows">-</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Query Type</span>
+                                <span class="metric-value" id="profilerType">-</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Index Used</span>
+                                <span class="metric-value" id="profilerIndex">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card" style="margin-top: 24px;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3zM9 9h6v6H9z"/></svg>
+                        Results
+                    </div>
+                </div>
+                <div id="hybridResults" class="sql-table-wrapper"></div>
+            </div>
+        </div>
+
+        <!-- Schema Browser Tab -->
+        <div id="tab-schema" class="tab-content">
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3zM9 9h6v6H9z"/></svg>
+                            Collections
+                        </div>
+                        <button class="btn btn-sm btn-primary" onclick="refreshSchema()">Refresh</button>
+                    </div>
+                    <div id="schemaCollections" class="metric-list">
+                        <div class="empty-state">Loading collections...</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                            Tables (H2)
+                        </div>
+                        <button class="btn btn-sm btn-primary" onclick="refreshTables()">Refresh</button>
+                    </div>
+                    <div id="schemaTables" class="metric-list">
+                        <div class="empty-state">Loading tables...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card" style="margin-top: 24px;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                        Indexes
+                    </div>
+                </div>
+                <div id="schemaIndexes" class="metric-list">
+                    <div class="empty-state">Select a collection to view indexes</div>
                 </div>
             </div>
         </div>
@@ -2287,6 +2407,221 @@
         loadStats();
         loadCollections();
         setInterval(() => { checkHealth(); loadMetrics(); loadStats(); }, 5000);
+    </script>
+
+    <!-- PHASE 3: Hybrid Query & Schema Browser Functions -->
+    <script>
+        // Hybrid Query Editor
+        function toggleHybridMode() {
+            const mode = document.getElementById('hybridMode').value;
+            const queryEl = document.getElementById('hybridQuery');
+            const placeholders = {
+                sql: 'SELECT * FROM users WHERE age > 18',
+                nosql: '{"name": {"$eq": "Alice"}}',
+                vector: '{"vector": [0.1, 0.2, 0.3, 0.4], "k": 5}'
+            };
+            queryEl.placeholder = placeholders[mode] || '';
+        }
+
+        async function executeHybridQuery() {
+            const mode = document.getElementById('hybridMode').value;
+            const query = document.getElementById('hybridQuery').value.trim();
+            const messageEl = document.getElementById('hybridMessage');
+            const resultsEl = document.getElementById('hybridResults');
+            const startTime = performance.now();
+
+            if (!query) {
+                showMessage('hybridMessage', 'Please enter a query', 'error');
+                return;
+            }
+
+            try {
+                let result;
+                if (mode === 'sql') {
+                    result = await fetchJSON(`${API}/sql`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: query
+                    });
+                } else if (mode === 'nosql') {
+                    const collection = prompt('Enter collection name:');
+                    if (!collection) return;
+                    result = await fetchJSON(`${API}/collections/${collection}/query`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: query
+                    });
+                } else if (mode === 'vector') {
+                    const index = prompt('Enter vector index name:');
+                    if (!index) return;
+                    result = await fetchJSON(`${API}/vectors/${index}/search`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: query
+                    });
+                }
+
+                const elapsed = Math.round(performance.now() - startTime);
+                
+                // Update profiler
+                document.getElementById('profilerTime').textContent = elapsed + ' ms';
+                document.getElementById('profilerRows').textContent = Array.isArray(result) ? result.length : (result.rows ? result.rows.length : 1);
+                document.getElementById('profilerType').textContent = mode.toUpperCase();
+                document.getElementById('profilerIndex').textContent = mode === 'sql' ? 'Auto' : (mode === 'vector' ? 'HNSW' : 'Secondary');
+
+                // Display results
+                if (mode === 'sql' && result && result.rows) {
+                    renderSqlTable(result.columns, result.rows);
+                } else if (Array.isArray(result)) {
+                    renderResultsTable(result);
+                } else {
+                    resultsEl.innerHTML = '<pre style="padding: 16px; overflow: auto;">' + JSON.stringify(result, null, 2) + '</pre>';
+                }
+
+                showMessage('hybridMessage', `Query executed in ${elapsed}ms`, 'success');
+                log(`Hybrid query (${mode}) executed in ${elapsed}ms`, 'success');
+            } catch (e) {
+                showMessage('hybridMessage', 'Query failed: ' + e.message, 'error');
+                log('Hybrid query failed: ' + e.message, 'error');
+                document.getElementById('profilerTime').textContent = 'Error';
+            }
+        }
+
+        function clearHybridQuery() {
+            document.getElementById('hybridQuery').value = '';
+            document.getElementById('hybridResults').innerHTML = '';
+            document.getElementById('profilerTime').textContent = '-';
+            document.getElementById('profilerRows').textContent = '-';
+            document.getElementById('profilerType').textContent = '-';
+            document.getElementById('profilerIndex').textContent = '-';
+        }
+
+        function renderSqlTable(columns, rows) {
+            const resultsEl = document.getElementById('hybridResults');
+            if (!rows || rows.length === 0) {
+                resultsEl.innerHTML = '<div class="empty-state"><p>No results</p></div>';
+                return;
+            }
+            let html = '<table class="sql-table"><thead><tr>';
+            columns.forEach(col => { html += '<th>' + col + '</th>'; });
+            html += '</tr></thead><tbody>';
+            rows.forEach(row => {
+                html += '<tr>';
+                columns.forEach(col => { html += '<td>' + (row[col] !== null ? row[col] : '<span class="null">NULL</span>') + '</td>'; });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            resultsEl.innerHTML = html;
+        }
+
+        function renderResultsTable(results) {
+            const resultsEl = document.getElementById('hybridResults');
+            if (!results || results.length === 0) {
+                resultsEl.innerHTML = '<div class="empty-state"><p>No results</p></div>';
+                return;
+            }
+            const keys = Object.keys(results[0]);
+            let html = '<table class="sql-table"><thead><tr>';
+            keys.forEach(key => { html += '<th>' + key + '</th>'; });
+            html += '</tr></thead><tbody>';
+            results.forEach(row => {
+                html += '<tr>';
+                keys.forEach(key => { html += '<td>' + JSON.stringify(row[key]) + '</td>'; });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            resultsEl.innerHTML = html;
+        }
+
+        // Schema Browser
+        async function refreshSchema() {
+            const collectionsEl = document.getElementById('schemaCollections');
+            try {
+                const metrics = await fetchJSON(`${API}/metrics`);
+                if (metrics && metrics.collections) {
+                    const cols = Object.entries(metrics.collections);
+                    if (cols.length === 0) {
+                        collectionsEl.innerHTML = '<div class="empty-state"><p>No collections</p></div>';
+                    } else {
+                        collectionsEl.innerHTML = cols.map(([name, count]) => 
+                            `<div class="metric-item" style="cursor:pointer" onclick="showCollectionIndexes('${name}')">
+                                <span class="metric-label">${name}</span>
+                                <span class="badge badge-info">${count} docs</span>
+                            </div>`
+                        ).join('');
+                    }
+                }
+            } catch (e) {
+                collectionsEl.innerHTML = '<div class="empty-state"><p>Error loading collections</p></div>';
+            }
+        }
+
+        async function refreshTables() {
+            const tablesEl = document.getElementById('schemaTables');
+            try {
+                const result = await fetchJSON(`${API}/schema`);
+                if (result && result.tables) {
+                    tablesEl.innerHTML = result.tables.map(table => 
+                        `<div class="metric-item" style="cursor:pointer" onclick="showTableColumns('${table}')">
+                            <span class="metric-label">${table}</span>
+                            <span class="badge badge-info">Table</span>
+                        </div>`
+                    ).join('');
+                } else {
+                    tablesEl.innerHTML = '<div class="empty-state"><p>No tables (H2 engine required)</p></div>';
+                }
+            } catch (e) {
+                tablesEl.innerHTML = '<div class="empty-state"><p>H2 engine not available</p></div>';
+            }
+        }
+
+        async function showCollectionIndexes(name) {
+            const indexesEl = document.getElementById('schemaIndexes');
+            try {
+                const result = await fetchJSON(`${API}/indexes/${name}`);
+                if (result && result.indexes && Object.keys(result.indexes).length > 0) {
+                    indexesEl.innerHTML = Object.entries(result.indexes).map(([field, idx]) => 
+                        `<div class="metric-item">
+                            <span class="metric-label">${field}</span>
+                            <span class="badge badge-success">${idx.type || 'Secondary'}</span>
+                        </div>`
+                    ).join('');
+                } else {
+                    indexesEl.innerHTML = '<div class="empty-state"><p>No indexes for this collection</p></div>';
+                }
+            } catch (e) {
+                indexesEl.innerHTML = '<div class="empty-state"><p>Error loading indexes</p></div>';
+            }
+        }
+
+        async function showTableColumns(table) {
+            const indexesEl = document.getElementById('schemaIndexes');
+            try {
+                const result = await fetchJSON(`${API}/tables/${table}`);
+                if (result && result.columns) {
+                    indexesEl.innerHTML = result.columns.map(col => 
+                        `<div class="metric-item">
+                            <span class="metric-label">${col.name} (${col.type})</span>
+                            ${col.primaryKey ? '<span class="badge badge-warning">PK</span>' : ''}
+                        </div>`
+                    ).join('');
+                } else {
+                    indexesEl.innerHTML = '<div class="empty-state"><p>No columns found</p></div>';
+                }
+            } catch (e) {
+                indexesEl.innerHTML = '<div class="empty-state"><p>Error loading columns</p></div>';
+            }
+        }
+
+        // Add schema refresh to showTab
+        const originalShowTab = window.showTab;
+        window.showTab = function(name) {
+            originalShowTab(name);
+            if (name === 'schema') {
+                refreshSchema();
+                refreshTables();
+            }
+        };
     </script>
 </body>
 </html>

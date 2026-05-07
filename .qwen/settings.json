@@ -15,7 +15,20 @@
       "Bash(select-object *)",
       "Bash(java *)",
       "Bash(curl *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(tee-object *)",
+      "Bash($testoutput)",
+      "Bash(taskkill *)",
+      "Bash(tasklist *)",
+      "Bash(timeout *)",
+      "Bash(type *)",
+      "Bash(findstr *)",
+      "Bash(rmdir *)",
+      "Bash(netstat *)",
+      "Bash(del *)",
+      "Bash(python *)"
     ]
   },
   "$version": 3

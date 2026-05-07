@@ -207,22 +207,20 @@ public class JunifyDBServer {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
-            if ("GET".equals(exchange.getRequestMethod())) {
-                sendJson(exchange, 200, Map.of("collections", "use /api/collections/{name}"));
-            }
-        }
-    }
-
-    private class CollectionHandler implements HttpHandler {
-        @Override
-        public void handle(HttpExchange exchange) throws IOException {
-            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
-            if (parts.length < 4) {
-                sendJson(exchange, 400, Map.of("error", "Usage: /api/collections/{name}[/id]"));
+            
+            // /api/collections/ with no additional path - list info
+            if (parts.length < 4 || parts[3].isEmpty()) {
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    sendJson(exchange, 200, Map.of("collections", "use /api/collections/{name}"));
+                } else {
+                    sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                }
                 return;
             }
+            
+            // /api/collections/{name} - delegate to collection logic
             var name = parts[3];
             var collection = db.documentCollection(name);
 
@@ -232,17 +230,26 @@ public class JunifyDBServer {
                 } else if ("POST".equals(exchange.getRequestMethod())) {
                     try {
                         var body = readBody(exchange);
+                        System.out.println("[CollectionsHandler] POST body: " + body);
                         var doc = Document.fromJson(body);
+                        System.out.println("[CollectionsHandler] Parsed doc: " + doc);
                         var saved = collection.insert(doc);
+                        System.out.println("[CollectionsHandler] Saved doc: " + saved);
                         sendJson(exchange, 201, saved);
                     } catch (Exception e) {
+                        System.err.println("[CollectionsHandler] POST error: " + e.getMessage());
+                        e.printStackTrace();
                         sendJson(exchange, 500, Map.of("error", "Internal server error", "message", e.getMessage()));
                     }
+                } else {
+                    sendJson(exchange, 405, Map.of("error", "Method not allowed"));
                 }
-            } else {
+            } else if (parts.length >= 5) {
                 var id = parts[4];
+                System.out.println("[CollectionsHandler] " + exchange.getRequestMethod() + " /api/collections/" + name + "/" + id);
                 if ("GET".equals(exchange.getRequestMethod())) {
                     var doc = collection.findById(id);
+                    System.out.println("[CollectionsHandler] GET result: " + (doc != null ? "found" : "not found"));
                     if (doc != null) sendJson(exchange, 200, doc);
                     else sendJson(exchange, 404, Map.of("error", "Not found"));
                 } else if ("PUT".equals(exchange.getRequestMethod()) || "POST".equals(exchange.getRequestMethod())) {
@@ -258,11 +265,24 @@ public class JunifyDBServer {
                         var saved = collection.insert(doc);
                         sendJson(exchange, 201, saved);
                     } catch (Exception e) {
+                        System.err.println("[CollectionsHandler] PUT/POST error: " + e.getMessage());
+                        e.printStackTrace();
                         sendJson(exchange, 500, Map.of("error", "Internal server error", "message", e.getMessage()));
                     }
                 } else if ("DELETE".equals(exchange.getRequestMethod())) {
-                    collection.deleteById(id);
-                    sendJson(exchange, 204, null);
+                    try {
+                        System.out.println("[CollectionsHandler] DELETE starting for id: " + id);
+                        collection.deleteById(id);
+                        System.out.println("[CollectionsHandler] DELETE completed, sending 204");
+                        sendJson(exchange, 204, null);
+                        System.out.println("[CollectionsHandler] 204 response sent");
+                    } catch (Exception e) {
+                        System.err.println("[CollectionsHandler] DELETE error: " + e.getMessage());
+                        e.printStackTrace();
+                        sendJson(exchange, 500, Map.of("error", "Delete failed", "message", e.getMessage()));
+                    }
+                } else {
+                    sendJson(exchange, 405, Map.of("error", "Method not allowed"));
                 }
             }
         }
@@ -290,8 +310,9 @@ public class JunifyDBServer {
                 } else if ("PUT".equals(exchange.getRequestMethod()) || "POST".equals(exchange.getRequestMethod())) {
                     var body = readBody(exchange);
                     var data = JsonSerde.fromJson(body, Map.class);
-                    bucket.put(key, data.getOrDefault("value", "").toString());
-                    sendJson(exchange, 201, Map.of("key", key, "status", "created"));
+                    var value = data.getOrDefault("value", "").toString();
+                    bucket.put(key, value);
+                    sendJson(exchange, 201, Map.of("key", key, "value", value, "status", "created"));
                 } else if ("DELETE".equals(exchange.getRequestMethod())) {
                     bucket.delete(key);
                     sendJson(exchange, 204, null);
@@ -581,15 +602,23 @@ public class JunifyDBServer {
     }
 
     private void sendJson(HttpExchange exchange, int status, Object body) throws IOException {
+        // Handle 204 No Content separately
+        if (status == 204) {
+            addCorsHeaders(exchange);
+            exchange.getResponseHeaders().set("Content-Length", "0");
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
+        
         addCorsHeaders(exchange);
         exchange.getResponseHeaders().set("Content-Type", "application/json");
-        
+
         var json = body != null ? JsonSerde.toJson(body) : "";
         var bytes = json.getBytes(StandardCharsets.UTF_8);
-        
+
         var acceptEncoding = exchange.getRequestHeaders().getFirst("Accept-Encoding");
         boolean useGzip = compressionEnabled && acceptEncoding != null && acceptEncoding.contains("gzip");
-        
+
         if (useGzip && bytes.length > 1024) {
             exchange.getResponseHeaders().set("Content-Encoding", "gzip");
             var baos = new java.io.ByteArrayOutputStream();
@@ -598,7 +627,7 @@ public class JunifyDBServer {
             }
             bytes = baos.toByteArray();
         }
-        
+
         exchange.getResponseHeaders().set("Content-Length", String.valueOf(bytes.length));
         exchange.sendResponseHeaders(status, bytes.length);
         try (var os = exchange.getResponseBody()) {

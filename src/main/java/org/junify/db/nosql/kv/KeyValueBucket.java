@@ -6,7 +6,9 @@ import org.junify.db.storage.spi.StorageEngine;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class KeyValueBucket {
@@ -84,15 +86,67 @@ public class KeyValueBucket {
         return increment(key, -1);
     }
 
-    public void clear() {
-        expirations.clear();
-        for (var key : engine.scan(name)) {
-            try {
-                var doc = org.junify.db.nosql.document.Document.fromJson(key);
-                engine.delete(name, doc.id());
-            } catch (Exception ignored) {
+    /**
+     * PHASE 2: Batch put multiple key-value pairs.
+     */
+    public void putAll(Map<String, String> entries) {
+        engine.putAll(name, entries);
+        entries.forEach((k, v) -> metrics.recordInsert());
+    }
+
+    /**
+     * PHASE 2: Batch get multiple values.
+     */
+    public Map<String, String> getAll(Iterable<String> keys) {
+        var result = new LinkedHashMap<String, String>();
+        for (String key : keys) {
+            var value = get(key);
+            if (value != null) {
+                result.put(key, value);
             }
         }
+        return result;
+    }
+
+    /**
+     * PHASE 2: Get all keys in the bucket.
+     */
+    public Set<String> keys() {
+        return engine.keys(name);
+    }
+
+    /**
+     * PHASE 2: Get the count of non-expired keys.
+     */
+    public long count() {
+        return keys().stream().filter(k -> !isExpired(k)).count();
+    }
+
+    /**
+     * PHASE 2: Clear all keys in the bucket.
+     */
+    public void clear() {
+        for (String key : keys()) {
+            delete(key);
+        }
+        expirations.clear();
+    }
+
+    /**
+     * PHASE 2: Get bucket statistics.
+     */
+    public Map<String, Object> stats() {
+        long total = keys().size();
+        long expired = expirations.entrySet().stream()
+            .filter(e -> e.getValue().isBefore(Instant.now()))
+            .count();
+        return Map.of(
+            "name", name,
+            "totalKeys", total,
+            "expiredKeys", expired,
+            "activeKeys", total - expired,
+            "memoryEntries", expirations.size()
+        );
     }
 
     private boolean isExpired(String key) {

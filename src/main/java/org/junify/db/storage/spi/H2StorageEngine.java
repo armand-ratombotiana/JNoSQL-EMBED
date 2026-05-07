@@ -369,10 +369,15 @@ public class H2StorageEngine implements StorageEngine {
         }
     }
 
-    public void beginTransaction() throws SQLException {
-        checkOpen();
-        connection.setAutoCommit(false);
-        autoCommit = false;
+    @Override
+    public void beginTransaction() {
+        try {
+            checkOpen();
+            connection.setAutoCommit(false);
+            autoCommit = false;
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to begin transaction", e);
+        }
     }
 
     public void commit() throws SQLException {

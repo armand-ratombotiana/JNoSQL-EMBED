@@ -6,11 +6,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+/**
+ * Storage Engine SPI — Unified interface for dual-engine (SQL + NoSQL) routing.
+ * 
+ * Features:
+ * - Default methods for zero-copy record I/O
+ * - Reactive batch operations
+ * - UnifiedRecord native support
+ */
 public interface StorageEngine {
 
+    /**
+     * Engine name for identification and routing.
+     */
     String name();
 
+    // === Basic Key-Value Operations ===
+    
     void put(String collection, String key, String value);
 
     void putAll(String collection, Map<String, String> entries);
@@ -39,21 +54,140 @@ public interface StorageEngine {
 
     void close();
 
+    // === UnifiedRecord Native Support ===
+
     /**
-     * Java 25: Store a UnifiedRecord directly.
+     * Store a UnifiedRecord directly.
      * Default implementation serializes to JSON and delegates to put().
+     * Implementations should override for efficient binary storage.
      */
     default void putRecord(String collection, UnifiedRecord record) {
         put(collection, record.id(), record.toJson());
     }
 
     /**
-     * Java 25: Retrieve a UnifiedRecord by ID.
+     * Retrieve a UnifiedRecord by ID.
      * Default implementation delegates to get() and deserializes.
      * Implementations should override for efficient binary retrieval.
      */
-    default UnifiedRecord getRecord(String collection, String id, java.util.function.Function<String, ? extends UnifiedRecord> factory) {
+    default UnifiedRecord getRecord(String collection, String id, 
+                                     Function<String, ? extends UnifiedRecord> factory) {
         var json = get(collection, id);
         return json != null ? factory.apply(json) : null;
+    }
+
+    /**
+     * Batch store UnifiedRecords.
+     * Default implementation iterates putRecord().
+     */
+    default void putAllRecords(String collection, List<UnifiedRecord> records) {
+        for (var record : records) {
+            putRecord(collection, record);
+        }
+    }
+
+    /**
+     * Batch retrieve UnifiedRecords.
+     * Default implementation iterates getRecord().
+     */
+    default List<UnifiedRecord> getAllRecords(String collection, List<String> ids,
+                                               Function<String, ? extends UnifiedRecord> factory) {
+        return getAll(collection, ids).stream()
+            .map(factory)
+            .collect(Collectors.toList());
+    }
+
+    // === Query Operations ===
+
+    /**
+     * Query with predicate filter.
+     * Default implementation scans and filters.
+     */
+    default List<UnifiedRecord> queryRecords(String collection, 
+                                              Predicate<UnifiedRecord> filter,
+                                              Function<String, ? extends UnifiedRecord> factory) {
+        return scan(collection).stream()
+            .map(id -> getRecord(collection, id, factory))
+            .filter(record -> record != null && filter.test(record))
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Count records matching predicate.
+     */
+    default long countRecords(String collection, 
+                               Predicate<UnifiedRecord> filter,
+                               Function<String, ? extends UnifiedRecord> factory) {
+        return queryRecords(collection, filter, factory).size();
+    }
+
+    // === Transaction Support ===
+
+    /**
+     * Begin a transaction (if supported).
+     * Default implementation is a no-op.
+     */
+    default void beginTransaction() {
+        // No-op for engines that don't support transactions
+    }
+
+    /**
+     * Commit a transaction (if supported).
+     */
+    default void commitTransaction() {
+        throw new UnsupportedOperationException("Transactions not supported by " + name());
+    }
+
+    /**
+     * Rollback a transaction (if supported).
+     */
+    default void rollbackTransaction() {
+        throw new UnsupportedOperationException("Transactions not supported by " + name());
+    }
+
+    // === Index Support ===
+
+    /**
+     * Create an index (if supported).
+     */
+    default void createIndex(String collection, String field, String indexType) {
+        throw new UnsupportedOperationException("Indexes not supported by " + name());
+    }
+
+    /**
+     * Drop an index (if supported).
+     */
+    default void dropIndex(String collection, String field) {
+        throw new UnsupportedOperationException("Indexes not supported by " + name());
+    }
+
+    // === Engine Capabilities ===
+
+    /**
+     * Check if engine supports transactions.
+     */
+    default boolean supportsTransactions() {
+        return false;
+    }
+
+    /**
+     * Check if engine supports indexes.
+     */
+    default boolean supportsIndexes() {
+        return false;
+    }
+
+    /**
+     * Check if engine supports SQL.
+     */
+    default boolean supportsSQL() {
+        return false;
+    }
+
+    /**
+     * Check if engine is persistent (vs in-memory).
+     */
+    default boolean isPersistent() {
+        return false;
     }
 }
