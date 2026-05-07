@@ -28,6 +28,7 @@ class JunifyDBServerTest {
         db = JunifyDB.embed()
             .build();
         server = db.startServer(0);
+        server.setApiKey(null);  // Disable auth for tests
         // Give server time to start
         Thread.sleep(100);
     }

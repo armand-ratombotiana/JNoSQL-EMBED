@@ -34,11 +34,13 @@ public class JunifyDBServer {
     private final JunifyDB db;
     private HttpServer server;
     private long startTime;
-    private String apiKey;
-    private boolean authEnabled = false;
+    private String apiKey = "hYXuECpj4dM28vf3En47ar2KaA1FPMLVNrmAYYSAoFM";  // Default API key - change in production!
+    private boolean authEnabled = true;  // Authentication enabled by default for security
     private boolean corsEnabled = true;
     private boolean compressionEnabled = true;
     private int rateLimit = 1000;
+    private long maxRequestSizeBytes = 10 * 1024 * 1024; // 10MB default max request size
+    private int queryTimeoutSeconds = 30; // Default query timeout
     private Map<String, RateLimitEntry> rateLimitMap = new ConcurrentHashMap<>();
     
     private static class RateLimitEntry {
@@ -54,7 +56,36 @@ public class JunifyDBServer {
         if (apiKey != null && !apiKey.isEmpty()) {
             this.apiKey = apiKey;
             this.authEnabled = true;
+        } else {
+            // Explicitly disable auth if null/empty is passed (not recommended)
+            this.authEnabled = false;
+            this.apiKey = null;
         }
+    }
+
+    /**
+     * Disable authentication (NOT RECOMMENDED for production).
+     * Only use in trusted environments.
+     */
+    public void disableAuthentication() {
+        this.authEnabled = false;
+        System.err.println("WARNING: Authentication disabled. This is unsafe in production!");
+    }
+
+    /**
+     * Set maximum request size in bytes.
+     * Default is 10MB to prevent OOM attacks.
+     */
+    public void setMaxRequestSize(long bytes) {
+        this.maxRequestSizeBytes = bytes;
+    }
+
+    /**
+     * Set query timeout in seconds.
+     * Default is 30 seconds to prevent hanging queries.
+     */
+    public void setQueryTimeout(int seconds) {
+        this.queryTimeoutSeconds = seconds;
     }
 
     private boolean isAuthValid(HttpExchange exchange) {
@@ -101,6 +132,19 @@ public class JunifyDBServer {
     public void start(int port) throws IOException {
         server = HttpServer.create(new InetSocketAddress(port), 0);
         startTime = System.currentTimeMillis();
+        
+        // Log security configuration
+        if (authEnabled) {
+            System.out.println("[JunifyDBServer] Authentication ENABLED with API key");
+            System.out.println("[JunifyDBServer] Include header: X-API-Key: <your-key>");
+            if (apiKey != null && !apiKey.isEmpty()) {
+                // Don't log full key in production - truncated for security
+                String maskedKey = apiKey.length() > 8 ? apiKey.substring(0, 8) + "..." : "***";
+                System.out.println("[JunifyDBServer] API key prefix: " + maskedKey);
+            }
+        } else {
+            System.err.println("[JunifyDBServer] WARNING: Authentication DISABLED - insecure!");
+        }
 
         server.createContext("/", new StaticHandler());
         server.createContext("/api/collections/", new CollectionsHandler());
@@ -241,16 +285,17 @@ public class JunifyDBServer {
                 } else if ("POST".equals(exchange.getRequestMethod())) {
                     try {
                         var body = readBody(exchange);
-                        System.out.println("[CollectionsHandler] POST body: " + body);
                         var doc = Document.fromJson(body);
-                        System.out.println("[CollectionsHandler] Parsed doc: " + doc);
                         var saved = collection.insert(doc);
-                        System.out.println("[CollectionsHandler] Saved doc: " + saved);
                         sendJson(exchange, 201, saved);
                     } catch (Exception e) {
                         System.err.println("[CollectionsHandler] POST error: " + e.getMessage());
                         e.printStackTrace();
-                        sendJson(exchange, 500, Map.of("error", "Internal server error", "message", e.getMessage()));
+                        try {
+                            sendJson(exchange, 500, Map.of("error", "Internal server error", "message", e.getMessage()));
+                        } catch (Exception ex) {
+                            // Response already sent or connection closed
+                        }
                     }
                 } else {
                     sendJson(exchange, 405, Map.of("error", "Method not allowed"));
@@ -385,19 +430,28 @@ public class JunifyDBServer {
                     } catch (Exception e) {
                         System.err.println("[CollectionsHandler] PUT/POST error: " + e.getMessage());
                         e.printStackTrace();
-                        sendJson(exchange, 500, Map.of("error", "Internal server error", "message", e.getMessage()));
+                        try {
+                            sendJson(exchange, 500, Map.of("error", "Internal server error", "message", e.getMessage()));
+                        } catch (Exception ex) {
+                            // Response already sent or connection closed
+                        }
                     }
                 } else if ("DELETE".equals(exchange.getRequestMethod())) {
                     try {
-                        System.out.println("[CollectionsHandler] DELETE starting for id: " + id);
-                        collection.deleteById(id);
-                        System.out.println("[CollectionsHandler] DELETE completed, sending 204");
-                        sendJson(exchange, 204, null);
-                        System.out.println("[CollectionsHandler] 204 response sent");
+                        boolean deleted = collection.deleteById(id);
+                        if (deleted) {
+                            sendJson(exchange, 204, null);
+                        } else {
+                            sendJson(exchange, 404, Map.of("error", "Not found", "id", id));
+                        }
                     } catch (Exception e) {
                         System.err.println("[CollectionsHandler] DELETE error: " + e.getMessage());
                         e.printStackTrace();
-                        sendJson(exchange, 500, Map.of("error", "Delete failed", "message", e.getMessage()));
+                        try {
+                            sendJson(exchange, 500, Map.of("error", "Delete failed", "message", e.getMessage()));
+                        } catch (Exception ex) {
+                            // Response already sent or connection closed
+                        }
                     }
                 } else {
                     sendJson(exchange, 405, Map.of("error", "Method not allowed"));
@@ -1382,19 +1436,44 @@ public class JunifyDBServer {
             if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
-            if (parts.length < 4) {
-                sendJson(exchange, 400, Map.of("error", "Usage: /api/schema/{collection}"));
+            // /api/schema/ with no collection - return full schema info
+            if (parts.length < 4 || parts[3].isEmpty()) {
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    var h2Engine = db.h2Engine();
+                    if (h2Engine != null) {
+                        var schemaInfo = h2Engine.schemaManager().getSchemaInfo();
+                        sendJson(exchange, 200, schemaInfo);
+                    } else {
+                        sendJson(exchange, 500, Map.of("error", "H2 engine not available"));
+                    }
+                } else {
+                    sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                }
                 return;
             }
-            var collectionName = parts[3];
             
+            var collectionName = parts[3];
+
             if ("GET".equals(exchange.getRequestMethod())) {
-                var schema = schemaValidator.getSchema(collectionName);
-                sendJson(exchange, 200, Map.of(
-                    "collection", collectionName,
-                    "hasSchema", schema != null,
-                    "schema", schema != null ? schema.getFields() : java.util.List.of()
-                ));
+                // Check if it's a specific table schema request
+                var h2Engine = db.h2Engine();
+                if (h2Engine == null) {
+                    sendJson(exchange, 500, Map.of("error", "H2 engine not available"));
+                    return;
+                }
+                var schemaInfo = h2Engine.schemaManager().getSchemaInfo();
+                @SuppressWarnings("unchecked")
+                var tables = (java.util.List<Map<String, Object>>) schemaInfo.get("tables");
+                var tableInfo = tables.stream()
+                    .filter(t -> collectionName.equals(t.get("name")))
+                    .findFirst()
+                    .orElse(null);
+                
+                if (tableInfo != null) {
+                    sendJson(exchange, 200, tableInfo);
+                } else {
+                    sendJson(exchange, 404, Map.of("error", "Table not found: " + collectionName));
+                }
             } else if ("POST".equals(exchange.getRequestMethod())) {
                 var body = readBody(exchange);
                 var data = JsonSerde.fromJson(body, Map.class);
@@ -1586,8 +1665,22 @@ public class JunifyDBServer {
     }
 
     private String readBody(HttpExchange exchange) throws IOException {
+        // Check Content-Length header first
+        var contentLength = exchange.getRequestHeaders().getFirst("Content-Length");
+        if (contentLength != null) {
+            var length = Long.parseLong(contentLength);
+            if (length > maxRequestSizeBytes) {
+                throw new IOException("Request size " + length + " exceeds maximum allowed size " + maxRequestSizeBytes);
+            }
+        }
+        
+        // Read body with size limit enforcement
         try (InputStream is = exchange.getRequestBody()) {
-            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            var bytes = is.readAllBytes();
+            if (bytes.length > maxRequestSizeBytes) {
+                throw new IOException("Request body size " + bytes.length + " exceeds maximum allowed size " + maxRequestSizeBytes);
+            }
+            return new String(bytes, StandardCharsets.UTF_8);
         }
     }
 
@@ -1660,6 +1753,8 @@ public class JunifyDBServer {
             }
             try {
                 var sql = readBody(exchange);
+                // Set query timeout before execution
+                db.h2Engine().setQueryTimeout(queryTimeoutSeconds);
                 var result = db.h2Engine().executeSql(sql);
                 if (result.success()) {
                     if (result.rows() != null) {

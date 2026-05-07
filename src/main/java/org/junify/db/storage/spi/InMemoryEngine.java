@@ -1,5 +1,6 @@
 package org.junify.db.storage.spi;
 
+import org.junify.db.core.util.ChecksumUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -12,9 +13,11 @@ import java.util.stream.Collectors;
 public class InMemoryEngine implements StorageEngine {
 
     private final ConcurrentMap<String, ConcurrentMap<String, String>> store;
+    private final ConcurrentMap<String, ConcurrentMap<String, Long>> checksums;
 
     public InMemoryEngine() {
         this.store = new ConcurrentHashMap<>();
+        this.checksums = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -25,18 +28,41 @@ public class InMemoryEngine implements StorageEngine {
     @Override
     public void put(String collection, String key, String value) {
         store.computeIfAbsent(collection, k -> new ConcurrentHashMap<>()).put(key, value);
+        // Calculate and store checksum for data integrity
+        checksums.computeIfAbsent(collection, k -> new ConcurrentHashMap<>())
+                 .put(key, ChecksumUtil.calculate(value));
     }
 
     @Override
     public void putAll(String collection, Map<String, String> entries) {
         var col = store.computeIfAbsent(collection, k -> new ConcurrentHashMap<>());
+        var checksumCol = checksums.computeIfAbsent(collection, k -> new ConcurrentHashMap<>());
         col.putAll(entries);
+        // Calculate checksums for all entries
+        for (var entry : entries.entrySet()) {
+            checksumCol.put(entry.getKey(), ChecksumUtil.calculate(entry.getValue()));
+        }
     }
 
     @Override
     public String get(String collection, String key) {
         var col = store.get(collection);
-        return col != null ? col.get(key) : null;
+        if (col == null) return null;
+        
+        String value = col.get(key);
+        if (value == null) return null;
+        
+        // Verify checksum on read
+        var checksumCol = checksums.get(collection);
+        if (checksumCol != null) {
+            Long expectedChecksum = checksumCol.get(key);
+            if (expectedChecksum != null && !ChecksumUtil.verify(value, expectedChecksum)) {
+                System.err.println("Checksum mismatch for " + collection + ":" + key);
+                throw new RuntimeException("Data corruption detected: checksum mismatch");
+            }
+        }
+        
+        return value;
     }
 
     @Override
@@ -57,6 +83,11 @@ public class InMemoryEngine implements StorageEngine {
         if (col != null) {
             col.remove(key);
         }
+        // Remove checksum as well
+        var checksumCol = checksums.get(collection);
+        if (checksumCol != null) {
+            checksumCol.remove(key);
+        }
     }
 
     @Override
@@ -65,6 +96,13 @@ public class InMemoryEngine implements StorageEngine {
         if (col != null) {
             for (var key : keys) {
                 col.remove(key);
+            }
+        }
+        // Remove checksums as well
+        var checksumCol = checksums.get(collection);
+        if (checksumCol != null) {
+            for (var key : keys) {
+                checksumCol.remove(key);
             }
         }
     }
@@ -99,6 +137,7 @@ public class InMemoryEngine implements StorageEngine {
     @Override
     public void close() {
         store.clear();
+        checksums.clear();
     }
 
     @Override
@@ -108,11 +147,16 @@ public class InMemoryEngine implements StorageEngine {
 
     @Override
     public Map<String, Object> stats() {
+        long totalChecksums = checksums.values().stream()
+            .mapToLong(ConcurrentMap::size)
+            .sum();
         return Map.of(
             "engine", name(),
             "collections", store.size(),
             "totalEntries", size(),
-            "type", "in-memory"
+            "type", "in-memory",
+            "checksumEnabled", true,
+            "checksumCount", totalChecksums
         );
     }
 

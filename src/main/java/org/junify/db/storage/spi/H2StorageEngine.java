@@ -6,6 +6,7 @@ import java.nio.file.*;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -16,6 +17,7 @@ public class H2StorageEngine implements StorageEngine {
     private final String dbName;
     private Connection connection;
     private final ReentrantReadWriteLock lock;
+    private int lockTimeoutSeconds = 30;
     private final Map<String, byte[]> cache;
     private final Map<String, PreparedStatement> statementCache;
     private volatile boolean closed;
@@ -43,7 +45,8 @@ public class H2StorageEngine implements StorageEngine {
         this.dataDir = dataDir;
         this.dbName = dbName;
         this.queryTimeout = queryTimeoutSeconds;
-        this.lock = new ReentrantReadWriteLock();
+        this.lock = new ReentrantReadWriteLock(true); // fair lock to prevent starvation
+        this.lockTimeoutSeconds = 30;
         this.cache = new ConcurrentHashMap<>();
         this.statementCache = new ConcurrentHashMap<>(50);
         this.savepoints = new ArrayList<>();
@@ -121,7 +124,7 @@ public class H2StorageEngine implements StorageEngine {
     @Override
     public void put(String collection, String key, String value) {
         checkOpen();
-        lock.writeLock().lock();
+        tryAcquireWriteLock();
         try {
             String sql = "MERGE INTO kv_store (collection, key_name, kv_value, expires_at) KEY(collection, key_name) VALUES (?, ?, ?, NULL)";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -140,7 +143,7 @@ public class H2StorageEngine implements StorageEngine {
 
     @Override
     public void putAll(String collection, Map<String, String> entries) {
-        lock.writeLock().lock();
+        tryAcquireWriteLock();
         try {
             String sql = "MERGE INTO kv_store (collection, key_name, kv_value, expires_at) KEY(collection, key_name) VALUES (?, ?, ?, NULL)";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -171,7 +174,7 @@ public class H2StorageEngine implements StorageEngine {
             return new String(cache.get(cacheKey));
         }
         
-        lock.readLock().lock();
+        tryAcquireReadLock();
         try {
             String sql = "SELECT kv_value FROM kv_store WHERE collection = ? AND key_name = ?";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -201,7 +204,7 @@ public class H2StorageEngine implements StorageEngine {
     @Override
     public void delete(String collection, String key) {
         checkOpen();
-        lock.writeLock().lock();
+        tryAcquireWriteLock();
         try {
             String sql = "DELETE FROM kv_store WHERE collection = ? AND key_name = ?";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -233,7 +236,7 @@ public class H2StorageEngine implements StorageEngine {
     public List<String> scan(String collection) {
         checkOpen();
         List<String> results = new ArrayList<>();
-        lock.readLock().lock();
+        tryAcquireReadLock();
         try {
             String sql = "SELECT kv_value FROM kv_store WHERE collection = ?";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -264,7 +267,7 @@ public class H2StorageEngine implements StorageEngine {
 
     public void putDocument(String collection, String docId, String content) {
         checkOpen();
-        lock.writeLock().lock();
+        tryAcquireWriteLock();
         try {
             String sql = "MERGE INTO doc_store (collection, doc_id, content, expires_at) KEY(collection, doc_id) VALUES (?, ?, ?, NULL)";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -282,7 +285,7 @@ public class H2StorageEngine implements StorageEngine {
 
     public String getDocument(String collection, String docId) {
         checkOpen();
-        lock.readLock().lock();
+        tryAcquireReadLock();
         try {
             String sql = "SELECT content FROM doc_store WHERE collection = ? AND doc_id = ?";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -305,7 +308,7 @@ public class H2StorageEngine implements StorageEngine {
     public List<String> getAllDocuments(String collection) {
         checkOpen();
         List<String> results = new ArrayList<>();
-        lock.readLock().lock();
+        tryAcquireReadLock();
         try {
             String sql = "SELECT content FROM doc_store WHERE collection = ?";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -326,7 +329,7 @@ public class H2StorageEngine implements StorageEngine {
 
     public void deleteDocument(String collection, String docId) {
         checkOpen();
-        lock.writeLock().lock();
+        tryAcquireWriteLock();
         try {
             String sql = "DELETE FROM doc_store WHERE collection = ? AND doc_id = ?";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -343,7 +346,7 @@ public class H2StorageEngine implements StorageEngine {
 
     public long countDocuments(String collection) {
         checkOpen();
-        lock.readLock().lock();
+        tryAcquireReadLock();
         try {
             String sql = "SELECT COUNT(*) FROM doc_store WHERE collection = ?";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -364,7 +367,7 @@ public class H2StorageEngine implements StorageEngine {
 
     @Override
     public void flush() {
-        lock.writeLock().lock();
+        tryAcquireWriteLock();
         try {
             cache.clear();
             if (statementCache.size() > 100) {
@@ -494,7 +497,7 @@ public class H2StorageEngine implements StorageEngine {
         } catch (Exception e) {
             System.err.println("Warning: Failed to flush H2 storage engine: " + e.getMessage());
         }
-        lock.writeLock().lock();
+        tryAcquireWriteLock();
         try {
             if (connection != null && !connection.isClosed()) {
                 try {
@@ -515,7 +518,64 @@ public class H2StorageEngine implements StorageEngine {
         }
     }
 
-    private void checkOpen() {
+    
+    /**
+     * Acquire write lock with timeout to detect potential deadlocks.
+     * @throws RuntimeException if lock cannot be acquired within timeout
+     */
+    private boolean tryAcquireWriteLock() {
+        try {
+            if (!lock.writeLock().tryLock(lockTimeoutSeconds, TimeUnit.SECONDS)) {
+                System.err.println("[H2StorageEngine] Write lock timeout - potential deadlock detected");
+                logLockState();
+                throw new LockTimeoutException("Write lock timeout after " + lockTimeoutSeconds + "s - potential deadlock");
+            }
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Lock acquisition interrupted", e);
+        }
+    }
+
+    /**
+     * Acquire read lock with timeout to detect potential deadlocks.
+     * @throws RuntimeException if lock cannot be acquired within timeout
+     */
+    private boolean tryAcquireReadLock() {
+        try {
+            if (!lock.readLock().tryLock(lockTimeoutSeconds, TimeUnit.SECONDS)) {
+                System.err.println("[H2StorageEngine] Read lock timeout - potential deadlock detected");
+                logLockState();
+                throw new LockTimeoutException("Read lock timeout after " + lockTimeoutSeconds + "s - potential deadlock");
+            }
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Lock acquisition interrupted", e);
+        }
+    }
+
+    /**
+     * Log current lock state for debugging.
+     */
+    private void logLockState() {
+        System.err.println("[H2StorageEngine] Lock state: " +
+            "WriteLocked=" + lock.isWriteLocked() +
+            ", WriteHoldCount=" + lock.getWriteHoldCount() +
+            ", ReadHoldCount=" + lock.getReadHoldCount() +
+            ", HasQueuedThreads=" + lock.hasQueuedThreads());
+    }
+
+    /**
+     * Custom exception for lock timeouts.
+     */
+    public static class LockTimeoutException extends RuntimeException {
+        public LockTimeoutException(String message) {
+            super(message);
+        }
+    }
+
+private void checkOpen() {
         if (closed) {
             throw new IllegalStateException("H2 storage engine is closed");
         }
@@ -584,9 +644,9 @@ public class H2StorageEngine implements StorageEngine {
 
         // Use write lock for write operations, read lock for reads
         if (isWriteQuery) {
-            lock.writeLock().lock();
+            tryAcquireWriteLock();
         } else {
-            lock.readLock().lock();
+            tryAcquireReadLock();
         }
         
         try {
@@ -858,7 +918,7 @@ public class H2StorageEngine implements StorageEngine {
      * Call during maintenance windows or when schema changes.
      */
     public void clearStatementCache() {
-        lock.writeLock().lock();
+        tryAcquireWriteLock();
         try {
             statementCache.forEach((sql, ps) -> {
                 try {
@@ -979,7 +1039,7 @@ public class H2StorageEngine implements StorageEngine {
         long docCount = 0;
         long kvCount = 0;
         long colCount = 0;
-        lock.readLock().lock();
+        tryAcquireReadLock();
         try {
             if (connection != null && !connection.isClosed()) {
                 try (Statement s = connection.createStatement()) {

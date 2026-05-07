@@ -35,7 +35,7 @@ public class SchemaManager {
      */
     public List<String> getTables() {
         var result = engine.executeSql(
-            "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE LOWER(TABLE_SCHEMA) = ? AND TABLE_TYPE = ?",
+            "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = ?",
             "public", "BASE TABLE"
         );
         if (!result.success() || result.rows() == null) {
@@ -45,6 +45,35 @@ public class SchemaManager {
             .map(row -> (String) row.get("TABLE_NAME"))
             .filter(name -> name != null)
             .collect(Collectors.toList());
+    }
+
+    /**
+     * Get full schema information for API response.
+     * @return Map with tables array containing table info
+     */
+    public Map<String, Object> getSchemaInfo() {
+        var tables = getTables();
+        var tableList = tables.stream()
+            .map(t -> {
+                var tableMap = new java.util.HashMap<String, Object>();
+                tableMap.put("name", t);
+                var cols = getColumns(t).stream()
+                    .map(c -> {
+                        var colMap = new java.util.HashMap<String, Object>();
+                        colMap.put("name", c);
+                        colMap.put("type", getColumnType(t, c));
+                        var size = getColumnSize(t, c);
+                        if (size != null) colMap.put("size", size);
+                        return colMap;
+                    })
+                    .collect(Collectors.toList());
+                tableMap.put("columns", cols);
+                return tableMap;
+            })
+            .collect(Collectors.toList());
+        var result = new java.util.HashMap<String, Object>();
+        result.put("tables", tableList);
+        return result;
     }
 
     public SqlResult getSchema() {

@@ -2,6 +2,7 @@ package org.junify.db.storage.spi;
 
 import java.io.*;
 import java.nio.channels.FileChannel;
+import java.nio.file.StandardOpenOption;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.concurrent.*;
@@ -78,13 +79,17 @@ public class WriteAheadLog {
         this.recoveryCallback = callback;
     }
 
+    private FileOutputStream logFileOutputStream;
+
     private void initWriter() throws IOException {
         var fileWriter = new FileWriter(walFile.toFile(), true);
         logWriter = new BufferedWriter(fileWriter);
+        // Keep FileOutputStream for fsync
+        this.logFileOutputStream = new FileOutputStream(walFile.toFile(), true);
     }
 
     /**
-     * Log a write operation.
+     * Log a write operation with fsync for durability guarantee.
      */
     public synchronized void log(String type, String collection, String key, String value) {
         if (closed.get()) return;
@@ -105,11 +110,24 @@ public class WriteAheadLog {
             logWriter.newLine();
             logWriter.flush();
 
+            // Fsync to ensure data is persisted to disk
+            fsync();
+
             if (shouldRotate()) {
                 rotateWalFile();
             }
         } catch (IOException e) {
             System.err.println("WAL write failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Force sync WAL to disk for durability guarantee.
+     */
+    public synchronized void fsync() throws IOException {
+        if (logFileOutputStream != null) {
+            logFileOutputStream.flush();
+            logFileOutputStream.getFD().sync();
         }
     }
 
@@ -125,7 +143,14 @@ public class WriteAheadLog {
      * Rotate WAL file and archive with compression.
      */
     private void rotateWalFile() throws IOException {
+        // Fsync before rotation to ensure all data is persisted
+        fsync();
+        
         logWriter.close();
+        if (logFileOutputStream != null) {
+            logFileOutputStream.close();
+        }
+        
         var timestamp = System.currentTimeMillis();
         var archivedFile = archiveDir.resolve("wal-" + timestamp + ".log.gz");
 

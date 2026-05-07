@@ -10,6 +10,10 @@ import static org.junify.db.storage.spi.H2StorageEngine.SqlResult;
 
 public class UserManager {
 
+    public enum Role {
+        ADMIN, USER, READONLY
+    }
+    
     private final H2StorageEngine engine;
     private final Map<String, UserSession> sessions;
     private final Map<String, AtomicInteger> loginAttempts;
@@ -50,7 +54,7 @@ public class UserManager {
         String hash = hashPassword(password, salt);
         
         var sql = "INSERT INTO db_users (username, password_hash, salt, role, created_at) VALUES (?, ?, ?, ?, ?)";
-        return engine.executeSql(sql);
+        return engine.executeSql(sql, username, hash, salt, role, System.currentTimeMillis());
     }
 
     private String hashPassword(String password, String salt) {
@@ -70,7 +74,8 @@ public class UserManager {
 
     public boolean userExists(String username) {
         var result = engine.executeSql(
-            "SELECT * FROM db_users WHERE username = '" + username + "'"
+            "SELECT * FROM db_users WHERE username = ?",
+            username
         );
         return result.success() && result.rows() != null && !result.rows().isEmpty();
     }
@@ -85,9 +90,27 @@ public class UserManager {
             .toList();
     }
 
+    /**
+     * Drop a user (admin only operation).
+     * @param username the username to drop
+     * @param requestedBy the user requesting the deletion (must be admin)
+     * @return SqlResult of the operation
+     */
+    public SqlResult dropUser(String username, String requestedBy) {
+        requireAdmin(requestedBy);
+        engine.executeSql("DELETE FROM db_sessions WHERE username = ?", username);
+        return engine.executeSql("DELETE FROM db_users WHERE username = ?", username);
+    }
+    
+    /**
+     * Drop a user (legacy method, kept for backward compatibility).
+     * @param username the username to drop
+     * @return SqlResult of the operation
+     * @deprecated Use dropUser(username, requestedBy) for RBAC enforcement
+     */
+    @Deprecated
     public SqlResult dropUser(String username) {
-        engine.executeSql("DELETE FROM db_sessions WHERE username = '" + username + "'");
-        return engine.executeSql("DELETE FROM db_users WHERE username = '" + username + "'");
+        return dropUser(username, "sa"); // Default to admin for legacy calls
     }
 
     public boolean validatePassword(String username, String password) {
@@ -143,6 +166,64 @@ public class UserManager {
                 row.get("ENABLED") != null && (Boolean) row.get("ENABLED")
             ))
             .toList();
+    }
+
+    /**
+     * Get the role of a user.
+     * @param username the username to check
+     * @return the user's role, or Role.USER if not found
+     */
+    public Role getUserRole(String username) {
+        var result = engine.executeSql(
+            "SELECT role FROM db_users WHERE username = ?",
+            username
+        );
+        if (!result.success() || result.rows() == null || result.rows().isEmpty()) {
+            return Role.USER; // Default to USER if not found
+        }
+        var row = result.rows().get(0);
+        var roleName = (String) row.get("ROLE");
+        try {
+            return Role.valueOf(roleName != null ? roleName.toUpperCase() : "USER");
+        } catch (IllegalArgumentException e) {
+            return Role.USER;
+        }
+    }
+
+    /**
+     * Check if user has ADMIN role.
+     * @param username the username to check
+     * @return true if user is an admin
+     */
+    public boolean isAdmin(String username) {
+        return getUserRole(username) == Role.ADMIN;
+    }
+
+    /**
+     * Require admin role, throws exception if not admin.
+     * @param username the username to check
+     * @throws SecurityException if user is not an admin
+     */
+    public void requireAdmin(String username) {
+        if (!isAdmin(username)) {
+            throw new SecurityException("User '" + username + "' does not have ADMIN role");
+        }
+    }
+
+    /**
+     * Update user role (admin only operation).
+     * @param username the username to update
+     * @param newRole the new role
+     * @param requestedBy the user requesting the change (must be admin)
+     * @return SqlResult of the operation
+     */
+    public SqlResult updateUserRole(String username, String newRole, String requestedBy) {
+        requireAdmin(requestedBy);
+        var result = engine.executeSql(
+            "UPDATE db_users SET role = ? WHERE username = ?",
+            newRole.toUpperCase(), username
+        );
+        return result;
     }
 
     public record UserInfo(String username, String role, long createdAt, Long lastLogin, boolean enabled) {}
