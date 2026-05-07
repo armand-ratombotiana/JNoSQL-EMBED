@@ -9,6 +9,9 @@ import org.junify.db.nosql.document.DocumentCollection;
 import org.junify.db.nosql.document.Query;
 import org.junify.db.nosql.document.QueryParser;
 import org.junify.db.core.util.JsonSerde;
+import org.junify.db.nosql.kv.HashBucket;
+import org.junify.db.nosql.kv.ListBucket;
+import org.junify.db.nosql.kv.SetBucket;
 import org.junify.db.storage.spi.SchemaManager;
 
 import java.io.IOException;
@@ -16,7 +19,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -98,6 +105,9 @@ public class JunifyDBServer {
         server.createContext("/", new StaticHandler());
         server.createContext("/api/collections/", new CollectionsHandler());
         server.createContext("/api/kv/", new KeyValueHandler());
+        server.createContext("/api/kv/lists/", new ListHandler());
+        server.createContext("/api/kv/sets/", new SetHandler());
+        server.createContext("/api/kv/hashes/", new HashHandler());
         server.createContext("/api/columns/", new ColumnHandler());
         server.createContext("/api/health", new HealthHandler());
         server.createContext("/api/metrics", new MetricsHandler());
@@ -431,40 +441,808 @@ public class JunifyDBServer {
         }
     }
 
+    private class ListHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
+            var path = exchange.getRequestURI().getPath();
+            var parts = path.split("/");
+            
+            // Context path /api/kv/lists/ is stripped by HttpServer
+            // Remaining path: /{bucket}/{key}[/{operation}]
+            // parts[0]="", [1]="bucket", [2]="key", [3]="operation"
+            if (parts.length < 3) {
+                sendJson(exchange, 400, Map.of("error", "Usage: /api/kv/lists/{bucket}/{key}[/{operation}]"));
+                return;
+            }
+            
+            var bucketName = parts[1];
+            var bucket = db.listBucket(bucketName);
+            var key = parts[2];
+            
+            // If only bucket and key (no operation), return full list
+            if (parts.length == 3 || (parts.length == 4 && parts[3].isEmpty())) {
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    var result = bucket.lrange(key, 0, -1);
+                    sendJson(exchange, 200, Map.of("key", key, "values", result, "length", result.size()));
+                } else if ("DELETE".equals(exchange.getRequestMethod())) {
+                    boolean deleted = bucket.delete(key);
+                    sendJson(exchange, deleted ? 204 : 404, Map.of("deleted", deleted));
+                } else {
+                    sendJson(exchange, 400, Map.of("error", "Usage: GET or DELETE /api/kv/lists/{bucket}/{key}"));
+                }
+                return;
+            }
+            
+            // /api/kv/lists/{bucket}/{key}/{operation}
+            var operation = parts[3];
+            
+            switch (operation.toLowerCase()) {
+                case "lpush" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    var values = parseStringArray(data.get("values"));
+                    long len = bucket.lpush(key, values);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "lpush", "length", len));
+                }
+                case "rpush" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    var values = parseStringArray(data.get("values"));
+                    long len = bucket.rpush(key, values);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "rpush", "length", len));
+                }
+                case "lpop" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    String value = bucket.lpop(key);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "lpop", "value", value));
+                }
+                case "rpop" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    String value = bucket.rpop(key);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "rpop", "value", value));
+                }
+                case "range", "lrange" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    var query = exchange.getRequestURI().getQuery();
+                    int start = 0, end = -1;
+                    if (query != null) {
+                        for (String param : query.split("&")) {
+                            var kv = param.split("=");
+                            if (kv.length == 2) {
+                                if ("start".equals(kv[0])) start = Integer.parseInt(kv[1]);
+                                if ("end".equals(kv[0])) end = Integer.parseInt(kv[1]);
+                            }
+                        }
+                    }
+                    var result = bucket.lrange(key, start, end);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "lrange", "start", start, "end", end, "values", result));
+                }
+                case "len", "llen" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    long len = bucket.llen(key);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "llen", "length", len));
+                }
+                case "lrem" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    long count = data.containsKey("count") ? ((Number) data.get("count")).longValue() : 0;
+                    String value = data.get("value").toString();
+                    long removed = bucket.lrem(key, count, value);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "lrem", "removed", removed));
+                }
+                case "lindex" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    var query = exchange.getRequestURI().getQuery();
+                    int index = 0;
+                    if (query != null) {
+                        for (String param : query.split("&")) {
+                            var kv = param.split("=");
+                            if (kv.length == 2 && "index".equals(kv[0])) {
+                                index = Integer.parseInt(kv[1]);
+                            }
+                        }
+                    }
+                    String value = bucket.lindex(key, index);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "lindex", "index", index, "value", value));
+                }
+                case "ltrim" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    int start = ((Number) data.get("start")).intValue();
+                    int end = ((Number) data.get("end")).intValue();
+                    bucket.ltrim(key, start, end);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "ltrim", "start", start, "end", end));
+                }
+                case "stats" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    sendJson(exchange, 200, bucket.stats());
+                }
+                default -> sendJson(exchange, 400, Map.of("error", "Unknown operation: " + operation, 
+                    "supported", "lpush, rpush, lpop, rpop, range, len, lrem, lindex, ltrim, stats"));
+            }
+        }
+    }
+
+    private class SetHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
+            var path = exchange.getRequestURI().getPath();
+            var parts = path.split("/");
+            
+            // Context path /api/kv/sets/ is stripped by HttpServer
+            // Remaining path: /{bucket}/{key}[/{operation}]
+            // parts[0]="", [1]="bucket", [2]="key", [3]="operation"
+            if (parts.length < 3) {
+                sendJson(exchange, 400, Map.of("error", "Usage: /api/kv/sets/{bucket}/{key}[/{operation}]"));
+                return;
+            }
+            
+            var bucketName = parts[1];
+            var bucket = db.setBucket(bucketName);
+            var key = parts[2];
+            
+            // If only bucket and key (no operation), return all members
+            if (parts.length == 3 || (parts.length == 4 && parts[3].isEmpty())) {
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    var members = bucket.smembers(key);
+                    sendJson(exchange, 200, Map.of("key", key, "members", members, "cardinality", members.size()));
+                } else if ("DELETE".equals(exchange.getRequestMethod())) {
+                    boolean deleted = bucket.delete(key);
+                    sendJson(exchange, deleted ? 204 : 404, Map.of("deleted", deleted));
+                } else {
+                    sendJson(exchange, 400, Map.of("error", "Usage: GET or DELETE /api/kv/sets/{bucket}/{key}"));
+                }
+                return;
+            }
+            
+            // /api/kv/sets/{bucket}/{key}/{operation}
+            var operation = parts[3];
+            
+            switch (operation.toLowerCase()) {
+                case "sadd" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    var members = parseStringArray(data.get("members"));
+                    long added = bucket.sadd(key, members);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "sadd", "added", added));
+                }
+                case "srem" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    var members = parseStringArray(data.get("members"));
+                    long removed = bucket.srem(key, members);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "srem", "removed", removed));
+                }
+                case "smembers" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    var members = bucket.smembers(key);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "smembers", "members", members));
+                }
+                case "sismember", "contains" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    var query = exchange.getRequestURI().getQuery();
+                    String member = null;
+                    if (query != null) {
+                        for (String param : query.split("&")) {
+                            var kv = param.split("=");
+                            if (kv.length == 2 && "member".equals(kv[0])) {
+                                member = java.net.URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
+                            }
+                        }
+                    }
+                    if (member == null) {
+                        sendJson(exchange, 400, Map.of("error", "Missing 'member' query parameter"));
+                        return;
+                    }
+                    boolean exists = bucket.sismember(key, member);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "sismember", "member", member, "exists", exists));
+                }
+                case "scard", "card" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    long card = bucket.scard(key);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "scard", "cardinality", card));
+                }
+                case "spop" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    int count = data.containsKey("count") ? ((Number) data.get("count")).intValue() : 1;
+                    if (count == 1) {
+                        String member = bucket.spop(key);
+                        sendJson(exchange, 200, Map.of("key", key, "operation", "spop", "member", member));
+                    } else {
+                        var members = bucket.spop(key, count);
+                        sendJson(exchange, 200, Map.of("key", key, "operation", "spop", "members", members, "count", members.size()));
+                    }
+                }
+                case "srandmember", "randmember" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    var query = exchange.getRequestURI().getQuery();
+                    int count = 1;
+                    if (query != null) {
+                        for (String param : query.split("&")) {
+                            var kv = param.split("=");
+                            if (kv.length == 2 && "count".equals(kv[0])) {
+                                count = Integer.parseInt(kv[1]);
+                            }
+                        }
+                    }
+                    if (count == 1) {
+                        String member = bucket.srandmember(key);
+                        sendJson(exchange, 200, Map.of("key", key, "operation", "srandmember", "member", member));
+                    } else {
+                        var members = bucket.srandmember(key, count);
+                        sendJson(exchange, 200, Map.of("key", key, "operation", "srandmember", "members", members));
+                    }
+                }
+                case "sinter", "inter" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    var keys = parseStringArray(data.get("keys"));
+                    var result = bucket.sinter(keys);
+                    sendJson(exchange, 200, Map.of("operation", "sinter", "keys", java.util.Arrays.toString(keys), "intersection", result));
+                }
+                case "sunion", "union" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    var keys = parseStringArray(data.get("keys"));
+                    var result = bucket.sunion(keys);
+                    sendJson(exchange, 200, Map.of("operation", "sunion", "keys", java.util.Arrays.toString(keys), "union", result));
+                }
+                case "sdiff", "diff" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    var keys = parseStringArray(data.get("keys"));
+                    var result = bucket.sdiff(keys);
+                    sendJson(exchange, 200, Map.of("operation", "sdiff", "keys", java.util.Arrays.toString(keys), "difference", result));
+                }
+                case "stats" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    sendJson(exchange, 200, bucket.stats());
+                }
+                default -> sendJson(exchange, 400, Map.of("error", "Unknown operation: " + operation,
+                    "supported", "sadd, srem, smembers, sismember, scard, spop, srandmember, sinter, sunion, sdiff, stats"));
+            }
+        }
+    }
+
+    private class HashHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
+            var path = exchange.getRequestURI().getPath();
+            var parts = path.split("/");
+            
+            // Context path /api/kv/hashes/ is stripped by HttpServer
+            // Remaining path: /{bucket}/{key}[/{operation}]
+            // parts[0]="", [1]="bucket", [2]="key", [3]="operation"
+            if (parts.length < 3) {
+                sendJson(exchange, 400, Map.of("error", "Usage: /api/kv/hashes/{bucket}/{key}[/{operation}]"));
+                return;
+            }
+            
+            var bucketName = parts[1];
+            var bucket = db.hashBucket(bucketName);
+            var key = parts[2];
+            
+            // If only bucket and key (no operation), return all fields
+            if (parts.length == 3 || (parts.length == 4 && parts[3].isEmpty())) {
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    var fields = bucket.hgetall(key);
+                    sendJson(exchange, 200, Map.of("key", key, "fields", fields, "length", fields.size()));
+                } else if ("DELETE".equals(exchange.getRequestMethod())) {
+                    boolean deleted = bucket.delete(key);
+                    sendJson(exchange, deleted ? 204 : 404, Map.of("deleted", deleted));
+                } else {
+                    sendJson(exchange, 400, Map.of("error", "Usage: GET or DELETE /api/kv/hashes/{bucket}/{key}"));
+                }
+                return;
+            }
+            
+            // /api/kv/hashes/{bucket}/{key}/{operation}
+            var operation = parts[3];
+            
+            switch (operation.toLowerCase()) {
+                case "hset", "set" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    if (data.containsKey("field") && data.containsKey("value")) {
+                        int result = bucket.hset(key, data.get("field").toString(), data.get("value").toString());
+                        sendJson(exchange, 200, Map.of("key", key, "operation", "hset", "field", data.get("field"), "added", result == 1));
+                    } else if (data.containsKey("fields")) {
+                        @SuppressWarnings("unchecked")
+                        var fields = (Map<String, String>) data.get("fields");
+                        int added = bucket.hset(key, fields);
+                        sendJson(exchange, 200, Map.of("key", key, "operation", "hset", "fieldsAdded", added));
+                    } else {
+                        sendJson(exchange, 400, Map.of("error", "Missing 'field'/'value' or 'fields' in body"));
+                    }
+                }
+                case "hget", "get" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    var query = exchange.getRequestURI().getQuery();
+                    String field = null;
+                    if (query != null) {
+                        for (String param : query.split("&")) {
+                            var kv = param.split("=");
+                            if (kv.length == 2 && "field".equals(kv[0])) {
+                                field = java.net.URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
+                            }
+                        }
+                    }
+                    if (field == null) {
+                        sendJson(exchange, 400, Map.of("error", "Missing 'field' query parameter"));
+                        return;
+                    }
+                    String value = bucket.hget(key, field);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "hget", "field", field, "value", value));
+                }
+                case "hgetall", "getall" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    var fields = bucket.hgetall(key);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "hgetall", "fields", fields));
+                }
+                case "hdel", "del" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    var fields = parseStringArray(data.get("fields"));
+                    int deleted = bucket.hdel(key, fields);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "hdel", "deleted", deleted));
+                }
+                case "hlen", "len" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    long len = bucket.hlen(key);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "hlen", "length", len));
+                }
+                case "hexists", "exists" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    var query = exchange.getRequestURI().getQuery();
+                    String field = null;
+                    if (query != null) {
+                        for (String param : query.split("&")) {
+                            var kv = param.split("=");
+                            if (kv.length == 2 && "field".equals(kv[0])) {
+                                field = java.net.URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
+                            }
+                        }
+                    }
+                    if (field == null) {
+                        sendJson(exchange, 400, Map.of("error", "Missing 'field' query parameter"));
+                        return;
+                    }
+                    boolean exists = bucket.hexists(key, field);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "hexists", "field", field, "exists", exists));
+                }
+                case "hkeys", "keys" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    var fields = bucket.hkeys(key);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "hkeys", "fields", fields));
+                }
+                case "hvals", "vals" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    var values = bucket.hvals(key);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "hvals", "values", values));
+                }
+                case "hmget", "mget" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    var fields = parseStringArray(data.get("fields"));
+                    var result = bucket.hmget(key, fields);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "hmget", "fields", result));
+                }
+                case "hincrby", "incrby" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    String field = data.get("field").toString();
+                    long delta = data.containsKey("delta") ? ((Number) data.get("delta")).longValue() : 1;
+                    long newValue = bucket.hincrby(key, field, delta);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "hincrby", "field", field, "newValue", newValue));
+                }
+                case "hincrbyfloat", "incrbyfloat" -> {
+                    if (!"POST".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "POST required"));
+                        return;
+                    }
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    String field = data.get("field").toString();
+                    double delta = data.containsKey("delta") ? ((Number) data.get("delta")).doubleValue() : 1.0;
+                    String newValue = bucket.hincrbyfloat(key, field, delta);
+                    sendJson(exchange, 200, Map.of("key", key, "operation", "hincrbyfloat", "field", field, "newValue", newValue));
+                }
+                case "stats" -> {
+                    if (!"GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 405, Map.of("error", "GET required"));
+                        return;
+                    }
+                    sendJson(exchange, 200, bucket.stats());
+                }
+                default -> sendJson(exchange, 400, Map.of("error", "Unknown operation: " + operation,
+                    "supported", "hset, hget, hgetall, hdel, hlen, hexists, hkeys, hvals, hmget, hincrby, hincrbyfloat, stats"));
+            }
+        }
+    }
+
+    private String[] parseStringArray(Object obj) {
+        if (obj == null) return new String[0];
+        if (obj instanceof String str) {
+            return new String[]{str};
+        }
+        if (obj instanceof java.util.List<?> list) {
+            return list.stream().map(Object::toString).toArray(String[]::new);
+        }
+        return new String[0];
+    }
+
     private class ColumnHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
-            if (parts.length < 4) {
-                sendJson(exchange, 400, Map.of("error", "Usage: /api/columns/{name}/{key}"));
+            var query = exchange.getRequestURI().getQuery();
+
+            // /api/columns/{family}
+            if (parts.length < 4 || parts[3].isEmpty()) {
+                sendJson(exchange, 400, Map.of("error", "Usage: /api/columns/{family}[/{row}][/operation]"));
                 return;
             }
-            var name = parts[3];
-            var cf = db.columnFamily(name);
 
-            if (parts.length >= 5) {
-                var key = parts[4];
+            var familyName = parts[3];
+            var cf = db.columnFamily(familyName);
+
+            // /api/columns/{family}/stats
+            if (parts.length == 4 && "stats".equals(parts[3])) {
+                // This case won't happen due to above check, handled below
+            }
+
+            // /api/columns/{family}/stats - Family-level stats
+            if (parts.length >= 5 && "stats".equals(parts[4])) {
                 if ("GET".equals(exchange.getRequestMethod())) {
-                    var row = cf.getRow(key);
-                    if (row != null && !row.isEmpty()) sendJson(exchange, 200, Map.of("key", key, "columns", row));
-                    else sendJson(exchange, 404, Map.of("error", "Not found"));
+                    sendJson(exchange, 200, cf.getColumnStats());
+                } else {
+                    sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                }
+                return;
+            }
+
+            // /api/columns/{family}/cleanup - Cleanup expired columns
+            if (parts.length >= 5 && "cleanup".equals(parts[4])) {
+                if ("POST".equals(exchange.getRequestMethod())) {
+                    var deleted = cf.cleanupAllExpired();
+                    sendJson(exchange, 200, Map.of("deleted", deleted));
+                } else {
+                    sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                }
+                return;
+            }
+
+            // /api/columns/{family}/{row}
+            if (parts.length >= 5) {
+                var rowKey = parts[4];
+
+                // /api/columns/{family}/{row}/stats - Row-level stats
+                if (parts.length >= 6 && "stats".equals(parts[5])) {
+                    if ("GET".equals(exchange.getRequestMethod())) {
+                        sendJson(exchange, 200, cf.getRowStats(rowKey));
+                    } else {
+                        sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                    }
+                    return;
+                }
+
+                // /api/columns/{family}/{row}/get-range - Paginated row retrieval
+                if (parts.length >= 6 && "get-range".equals(parts[5])) {
+                    if ("GET".equals(exchange.getRequestMethod())) {
+                        var params = parseQueryParams(query);
+                        int limit = params.containsKey("limit") ? Integer.parseInt(params.get("limit")) : 100;
+                        int offset = params.containsKey("offset") ? Integer.parseInt(params.get("offset")) : 0;
+                        var columnsParam = params.get("columns");
+                        Set<String> columns = null;
+                        if (columnsParam != null && !columnsParam.isEmpty()) {
+                            columns = new HashSet<>(Arrays.asList(columnsParam.split(",")));
+                        }
+                        var data = cf.getRow(rowKey, limit, offset, columns);
+                        sendJson(exchange, 200, Map.of(
+                            "rowKey", rowKey,
+                            "limit", limit,
+                            "offset", offset,
+                            "columnsReturned", data.size(),
+                            "data", data
+                        ));
+                    } else {
+                        sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                    }
+                    return;
+                }
+
+                // /api/columns/{family}/{row}/filter - Filter columns by name
+                if (parts.length >= 6 && "filter".equals(parts[5])) {
+                    if ("GET".equals(exchange.getRequestMethod())) {
+                        var params = parseQueryParams(query);
+                        var columnsParam = params.get("columns");
+                        if (columnsParam != null && !columnsParam.isEmpty()) {
+                            var columns = new HashSet<String>(Arrays.asList(columnsParam.split(",")));
+                            var data = cf.getRow(rowKey, columns);
+                            sendJson(exchange, 200, Map.of("rowKey", rowKey, "data", data));
+                        } else {
+                            sendJson(exchange, 400, Map.of("error", "Missing 'columns' query parameter"));
+                        }
+                    } else {
+                        sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                    }
+                    return;
+                }
+
+                // /api/columns/{family}/{row}/filter-pattern - Filter by regex pattern
+                if (parts.length >= 6 && "filter-pattern".equals(parts[5])) {
+                    if ("GET".equals(exchange.getRequestMethod())) {
+                        var params = parseQueryParams(query);
+                        var pattern = params.get("pattern");
+                        if (pattern != null && !pattern.isEmpty()) {
+                            var data = cf.getRowByPattern(rowKey, pattern);
+                            sendJson(exchange, 200, Map.of("rowKey", rowKey, "pattern", pattern, "data", data));
+                        } else {
+                            sendJson(exchange, 400, Map.of("error", "Missing 'pattern' query parameter"));
+                        }
+                    } else {
+                        sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                    }
+                    return;
+                }
+
+                // /api/columns/{family}/{row}/filter-prefix - Filter by prefix
+                if (parts.length >= 6 && "filter-prefix".equals(parts[5])) {
+                    if ("GET".equals(exchange.getRequestMethod())) {
+                        var params = parseQueryParams(query);
+                        var prefix = params.get("prefix");
+                        if (prefix != null && !prefix.isEmpty()) {
+                            var data = cf.getRowByPrefix(rowKey, prefix);
+                            sendJson(exchange, 200, Map.of("rowKey", rowKey, "prefix", prefix, "data", data));
+                        } else {
+                            sendJson(exchange, 400, Map.of("error", "Missing 'prefix' query parameter"));
+                        }
+                    } else {
+                        sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                    }
+                    return;
+                }
+
+                // /api/columns/{family}/{row}/ttl/{column} - Get TTL for a column
+                if (parts.length >= 7 && "ttl".equals(parts[5])) {
+                    var column = parts[6];
+                    if ("GET".equals(exchange.getRequestMethod())) {
+                        var remainingTtl = cf.getRemainingTtl(rowKey, column);
+                        var columnData = cf.getColumnData(rowKey, column);
+                        if (columnData == null) {
+                            sendJson(exchange, 404, Map.of("error", "Column not found"));
+                        } else {
+                            sendJson(exchange, 200, Map.of(
+                                "rowKey", rowKey,
+                                "column", column,
+                                "remainingTtlSeconds", remainingTtl,
+                                "hasTtl", columnData.hasTtl(),
+                                "expiresAt", columnData.getExpiresAt()
+                            ));
+                        }
+                    } else {
+                        sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                    }
+                    return;
+                }
+
+                // /api/columns/{family}/{row}/column/{column} - Single column operations
+                if (parts.length >= 7 && "column".equals(parts[5])) {
+                    var column = parts[6];
+                    if ("GET".equals(exchange.getRequestMethod())) {
+                        var value = cf.get(rowKey, column);
+                        if (value != null) {
+                            var columnData = cf.getColumnData(rowKey, column);
+                            sendJson(exchange, 200, Map.of(
+                                "rowKey", rowKey,
+                                "column", column,
+                                "value", value,
+                                "hasTtl", columnData != null && columnData.hasTtl(),
+                                "remainingTtlSeconds", columnData != null ? columnData.getRemainingTtlSeconds() : -1
+                            ));
+                        } else {
+                            sendJson(exchange, 404, Map.of("error", "Column not found"));
+                        }
+                    } else if ("PUT".equals(exchange.getRequestMethod()) || "POST".equals(exchange.getRequestMethod())) {
+                        var body = readBody(exchange);
+                        var data = JsonSerde.fromJson(body, Map.class);
+                        var value = data.get("value");
+                        Integer ttl = data.containsKey("ttlSeconds") ? ((Number) data.get("ttlSeconds")).intValue() : null;
+                        cf.put(rowKey, column, value, ttl);
+                        sendJson(exchange, 201, Map.of("rowKey", rowKey, "column", column, "status", "created"));
+                    } else if ("DELETE".equals(exchange.getRequestMethod())) {
+                        cf.deleteColumn(rowKey, column);
+                        sendJson(exchange, 204, null);
+                    } else {
+                        sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                    }
+                    return;
+                }
+
+                // /api/columns/{family}/{row}/cleanup - Cleanup expired columns in row
+                if (parts.length >= 6 && "cleanup".equals(parts[5])) {
+                    if ("POST".equals(exchange.getRequestMethod())) {
+                        var deleted = cf.cleanupExpiredColumns(rowKey);
+                        sendJson(exchange, 200, Map.of("deleted", deleted));
+                    } else {
+                        sendJson(exchange, 405, Map.of("error", "Method not allowed"));
+                    }
+                    return;
+                }
+
+                // Default: Full row operations
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    var row = cf.getRow(rowKey);
+                    if (row != null && !row.isEmpty()) {
+                        sendJson(exchange, 200, Map.of("rowKey", rowKey, "columns", row));
+                    } else {
+                        sendJson(exchange, 404, Map.of("error", "Row not found"));
+                    }
                 } else if ("PUT".equals(exchange.getRequestMethod()) || "POST".equals(exchange.getRequestMethod())) {
                     var body = readBody(exchange);
                     var data = JsonSerde.fromJson(body, Map.class);
                     for (Object o : data.entrySet()) {
                         var entry = (java.util.Map.Entry<?, ?>) o;
-                        cf.put(key, entry.getKey().toString(), entry.getValue());
+                        var value = entry.getValue();
+                        Integer ttl = null;
+                        // Support nested TTL format: {"column": {"value": "x", "ttlSeconds": 60}}
+                        if (value instanceof Map) {
+                            var valueMap = (Map<?, ?>) value;
+                            value = valueMap.get("value");
+                            if (valueMap.containsKey("ttlSeconds")) {
+                                ttl = ((Number) valueMap.get("ttlSeconds")).intValue();
+                            }
+                        }
+                        cf.put(rowKey, entry.getKey().toString(), value, ttl);
                     }
-                    sendJson(exchange, 201, Map.of("key", key, "status", "created"));
+                    sendJson(exchange, 201, Map.of("rowKey", rowKey, "status", "created"));
                 } else if ("DELETE".equals(exchange.getRequestMethod())) {
-                    cf.deleteRow(key);
+                    cf.deleteRow(rowKey);
                     sendJson(exchange, 204, null);
+                } else {
+                    sendJson(exchange, 405, Map.of("error", "Method not allowed"));
                 }
             } else {
-                sendJson(exchange, 400, Map.of("error", "Usage: /api/columns/{name}/{key}"));
+                // /api/columns/{family} - List all row keys
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    var rowKeys = cf.getRowKeys();
+                    sendJson(exchange, 200, Map.of(
+                        "family", familyName,
+                        "rowCount", rowKeys.size(),
+                        "rowKeys", rowKeys
+                    ));
+                } else {
+                    sendJson(exchange, 400, Map.of("error", "Usage: /api/columns/{family}[/{row}][/operation]"));
+                }
             }
+        }
+
+        private Map<String, String> parseQueryParams(String query) {
+            var params = new LinkedHashMap<String, String>();
+            if (query != null) {
+                for (var param : query.split("&")) {
+                    var kv = param.split("=", 2);
+                    if (kv.length == 2) {
+                        params.put(kv[0], java.net.URLDecoder.decode(kv[1], java.nio.charset.StandardCharsets.UTF_8));
+                    } else if (kv.length == 1) {
+                        params.put(kv[0], "");
+                    }
+                }
+            }
+            return params;
         }
     }
 

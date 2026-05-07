@@ -30,15 +30,26 @@ public class H2StorageEngine implements StorageEngine {
     }
 
     public H2StorageEngine(Path dataDir, String dbName) {
+        this(dataDir, dbName, 30);
+    }
+
+    /**
+     * Creates H2StorageEngine with custom query timeout.
+     * @param dataDir directory for database files
+     * @param dbName database name
+     * @param queryTimeoutSeconds query timeout in seconds (default: 30)
+     */
+    public H2StorageEngine(Path dataDir, String dbName, int queryTimeoutSeconds) {
         this.dataDir = dataDir;
         this.dbName = dbName;
+        this.queryTimeout = queryTimeoutSeconds;
         this.lock = new ReentrantReadWriteLock();
         this.cache = new ConcurrentHashMap<>();
         this.statementCache = new ConcurrentHashMap<>(50);
         this.savepoints = new ArrayList<>();
         this.closed = false;
         this.autoCommit = true;
-        
+
         try {
             Files.createDirectories(dataDir);
             initializeDatabase();
@@ -624,19 +635,21 @@ public class H2StorageEngine implements StorageEngine {
                     for (String stmt : statements) {
                         if (!stmt.trim().isEmpty()) {
                             try (Statement s = connection.createStatement()) {
+                                s.setQueryTimeout(queryTimeout);
                                 affected += s.executeUpdate(stmt.trim());
                             }
                         }
                     }
                 } else {
                     try (Statement s = connection.createStatement()) {
+                        s.setQueryTimeout(queryTimeout);
                         affected = s.executeUpdate(sql);
                     }
                 }
                 return new SqlResult(true, null, affected, affected + " row(s) affected");
             }
         } catch (SQLException e) {
-            return new SqlResult(false, null, 0, "SQL Error: " + e.getMessage());
+            return handleSqlException(e, originalSql);
         } finally {
             if (isWriteQuery) {
                 lock.writeLock().unlock();
@@ -765,6 +778,82 @@ public class H2StorageEngine implements StorageEngine {
     }
 
     /**
+     * Handles SQLException by classifying it and returning structured error result.
+     *
+     * @param e the SQLException to handle
+     * @param originalSql the SQL statement that caused the error
+     * @return SqlResult with classified error information
+     */
+    private SqlResult handleSqlException(SQLException e, String originalSql) {
+        String sqlState = e.getSQLState() != null ? e.getSQLState() : "";
+        SqlErrorCode errorCode = SqlErrorCode.fromSqlState(sqlState);
+        String suggestion = buildSuggestion(errorCode, e.getMessage(), originalSql);
+
+        // Log detailed error for debugging
+        System.err.println("[SQL Error] Code: " + errorCode.getCode() +
+                          ", State: " + sqlState +
+                          ", Message: " + e.getMessage());
+
+        return new SqlResult(false, null, 0, e.getMessage(),
+                            errorCode.getCode(), sqlState, suggestion, originalSql);
+    }
+
+    /**
+     * Builds actionable suggestion based on error code and message.
+     *
+     * @param errorCode the classified error code
+     * @param message the error message from database
+     * @param originalSql the SQL statement that failed
+     * @return actionable suggestion string
+     */
+    private String buildSuggestion(SqlErrorCode errorCode, String message, String originalSql) {
+        StringBuilder suggestion = new StringBuilder(errorCode.getSuggestion());
+
+        // Add specific details based on error type
+        if (errorCode == SqlErrorCode.SYNTAX_ERROR && message != null) {
+            // Extract position information if available
+            if (message.contains("line")) {
+                suggestion.append(" Error location: ").append(extractLineInfo(message));
+            }
+        } else if (errorCode == SqlErrorCode.NOT_FOUND && message != null) {
+            // Suggest available tables/columns
+            if (message.toLowerCase().contains("table")) {
+                suggestion.append(" Available tables: " + String.join(", ", schemaManager().getTables()));
+            }
+        } else if (errorCode == SqlErrorCode.CONSTRAINT_VIOLATION && message != null) {
+            // Extract constraint name if present
+            if (message.contains("PRIMARY_KEY") || message.contains("unique constraint")) {
+                suggestion.append(" A record with this key already exists.");
+            } else if (message.contains("FOREIGN_KEY") || message.contains("referential")) {
+                suggestion.append(" Referenced record does not exist.");
+            }
+        } else if (errorCode == SqlErrorCode.TIMEOUT) {
+            suggestion.append(" Current timeout: " + queryTimeout + " seconds.");
+        }
+
+        return suggestion.toString();
+    }
+
+    /**
+     * Extract line information from error message.
+     */
+    private String extractLineInfo(String message) {
+        // Try to extract "line X" or "position X" from message
+        int lineIdx = message.toLowerCase().indexOf("line");
+        if (lineIdx >= 0 && lineIdx + 4 < message.length()) {
+            int start = lineIdx + 5;
+            int end = start;
+            while (end < message.length() && Character.isDigit(message.charAt(end))) {
+                end++;
+            }
+            if (end > start) {
+                return message.substring(lineIdx, end);
+            }
+        }
+        return "";
+    }
+
+    /**
      * Clears all cached PreparedStatements.
      * Call during maintenance windows or when schema changes.
      */
@@ -790,9 +879,93 @@ public class H2StorageEngine implements StorageEngine {
         return executeSql(sql, analyze, new Object[0]);
     }
 
-    public record SqlResult(boolean success, java.util.List<String> columns, int affected, String message, java.util.List<java.util.Map<String, Object>> rows, java.util.List<String> allColumns) {
+    /**
+     * SqlResult with enhanced error information.
+     * Contains error code, SQL state, suggestion, and original SQL for structured error responses.
+     */
+    public record SqlResult(
+        boolean success,
+        java.util.List<String> columns,
+        int affected,
+        String message,
+        java.util.List<java.util.Map<String, Object>> rows,
+        java.util.List<String> allColumns,
+        String errorCode,
+        String sqlState,
+        String suggestion,
+        String originalSql
+    ) {
         public SqlResult(boolean success, java.util.List<String> columns, int affected, String message) {
-            this(success, columns, affected, message, null, columns);
+            this(success, columns, affected, message, null, columns, null, null, null, null);
+        }
+
+        public SqlResult(boolean success, java.util.List<String> columns, int affected, String message,
+                        String errorCode, String sqlState, String suggestion, String originalSql) {
+            this(success, columns, affected, message, null, columns, errorCode, sqlState, suggestion, originalSql);
+        }
+
+        public SqlResult(boolean success, java.util.List<String> columns, int affected, String message,
+                        java.util.List<java.util.Map<String, Object>> rows, java.util.List<String> allColumns) {
+            this(success, columns, affected, message, rows, allColumns, null, null, null, null);
+        }
+
+        /**
+         * Convert to JSON error response.
+         * Returns null if operation was successful.
+         */
+        public String toJsonError() {
+            if (success || errorCode == null) {
+                return null;
+            }
+            StringBuilder json = new StringBuilder("{\n  \"error\": {\n");
+            json.append("    \"code\": \"").append(escapeJson(errorCode)).append("\",\n");
+            json.append("    \"message\": \"").append(escapeJson(message)).append("\",\n");
+            if (sqlState != null) {
+                json.append("    \"sqlState\": \"").append(escapeJson(sqlState)).append("\",\n");
+            }
+            if (suggestion != null) {
+                json.append("    \"suggestion\": \"").append(escapeJson(suggestion)).append("\",\n");
+            }
+            if (originalSql != null) {
+                json.append("    \"originalSql\": \"").append(escapeJson(originalSql)).append("\"\n");
+            } else {
+                json.append("    \"originalSql\": null\n");
+            }
+            json.append("  }\n}");
+            return json.toString();
+        }
+
+        /**
+         * Convert to structured error map for API responses.
+         * Returns null if operation was successful.
+         */
+        public java.util.Map<String, Object> toErrorMap() {
+            if (success || errorCode == null) {
+                return null;
+            }
+            java.util.Map<String, Object> error = new java.util.HashMap<>();
+            error.put("code", errorCode);
+            error.put("message", message);
+            if (sqlState != null) {
+                error.put("sqlState", sqlState);
+            }
+            if (suggestion != null) {
+                error.put("suggestion", suggestion);
+            }
+            if (originalSql != null) {
+                error.put("originalSql", originalSql);
+            }
+            return error;
+        }
+
+        private String escapeJson(String value) {
+            if (value == null) return "";
+            return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
         }
     }
 

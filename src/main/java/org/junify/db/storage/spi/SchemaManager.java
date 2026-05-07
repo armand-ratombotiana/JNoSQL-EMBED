@@ -121,12 +121,66 @@ public class SchemaManager {
 
     public record ColumnDef(String name, String type, Integer size) {}
 
-    public record SqlResult(boolean success, List<String> columns, int affected, String message, 
+    public record SqlResult(boolean success, List<String> columns, int affected, String message,
         List<Map<String, Object>> rows, List<String> allColumns) {}
 
-    public record CreateResult(boolean success, String message) {}
+    /**
+     * CreateResult with error code for programmatic handling.
+     */
+    public record CreateResult(boolean success, String message, String errorCode, String sqlState, String suggestion) {
+        public CreateResult(boolean success, String message) {
+            this(success, message, success ? null : "INTERNAL_ERROR", null, null);
+        }
 
-    public record DropResult(boolean success, String message) {}
+        public CreateResult(boolean success, String message, H2StorageEngine.SqlResult sqlResult) {
+            this(success, message,
+                 sqlResult != null ? sqlResult.errorCode() : null,
+                 sqlResult != null ? sqlResult.sqlState() : null,
+                 sqlResult != null ? sqlResult.suggestion() : null);
+        }
+
+        /**
+         * Convert to error map if operation failed.
+         */
+        public Map<String, Object> toErrorMap() {
+            if (success) return null;
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", errorCode != null ? errorCode : "INTERNAL_ERROR");
+            error.put("message", message);
+            if (sqlState != null) error.put("sqlState", sqlState);
+            if (suggestion != null) error.put("suggestion", suggestion);
+            return error;
+        }
+    }
+
+    /**
+     * DropResult with error code for programmatic handling.
+     */
+    public record DropResult(boolean success, String message, String errorCode, String sqlState, String suggestion) {
+        public DropResult(boolean success, String message) {
+            this(success, message, success ? null : "INTERNAL_ERROR", null, null);
+        }
+
+        public DropResult(boolean success, String message, H2StorageEngine.SqlResult sqlResult) {
+            this(success, message,
+                 sqlResult != null ? sqlResult.errorCode() : null,
+                 sqlResult != null ? sqlResult.sqlState() : null,
+                 sqlResult != null ? sqlResult.suggestion() : null);
+        }
+
+        /**
+         * Convert to error map if operation failed.
+         */
+        public Map<String, Object> toErrorMap() {
+            if (success) return null;
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", errorCode != null ? errorCode : "INTERNAL_ERROR");
+            error.put("message", message);
+            if (sqlState != null) error.put("sqlState", sqlState);
+            if (suggestion != null) error.put("suggestion", suggestion);
+            return error;
+        }
+    }
 
     public CreateResult createTable(String tableName, Map<String, Object> columns) {
         if (tableExists(tableName)) {
@@ -141,7 +195,9 @@ public class SchemaManager {
         }
         var sql = "CREATE TABLE " + tableName + " (" + columnDefs + ")";
         var result = engine.executeSql(sql);
-        return new CreateResult(result.success(), result.success() ? "Table created: " + tableName : result.message());
+        return new CreateResult(result.success(),
+                               result.success() ? "Table created: " + tableName : result.message(),
+                               result);
     }
 
     public DropResult dropTable(String tableName) {
@@ -154,7 +210,9 @@ public class SchemaManager {
         }
         var sql = "DROP TABLE IF EXISTS " + tableName;
         var result = engine.executeSql(sql);
-        return new DropResult(result.success(), result.success() ? "Table dropped: " + tableName : result.message());
+        return new DropResult(result.success(),
+                             result.success() ? "Table dropped: " + tableName : result.message(),
+                             result);
     }
 
     public Map<String, Object> getTableInfo(String tableName) {

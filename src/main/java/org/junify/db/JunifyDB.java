@@ -8,7 +8,10 @@ import org.junify.db.core.event.EventBus;
 import org.junify.db.core.metrics.DatabaseMetrics;
 import org.junify.db.nosql.column.ColumnFamily;
 import org.junify.db.nosql.document.DocumentCollection;
+import org.junify.db.nosql.kv.HashBucket;
 import org.junify.db.nosql.kv.KeyValueBucket;
+import org.junify.db.nosql.kv.ListBucket;
+import org.junify.db.nosql.kv.SetBucket;
 import org.junify.db.storage.spi.H2StorageEngine;
 import org.junify.db.storage.spi.StorageEngine;
 import org.junify.db.transaction.mvcc.MVCCManager;
@@ -26,6 +29,9 @@ public class JunifyDB implements Closeable {
     private final MVCCManager mvcc;
     private final ConcurrentMap<String, DocumentCollection> collections;
     private final ConcurrentMap<String, KeyValueBucket> buckets;
+    private final ConcurrentMap<String, ListBucket> listBuckets;
+    private final ConcurrentMap<String, SetBucket> setBuckets;
+    private final ConcurrentMap<String, HashBucket> hashBuckets;
     private final ConcurrentMap<String, ColumnFamily> columnFamilies;
     private final EventBus eventBus;
     private final DatabaseMetrics metrics;
@@ -39,6 +45,9 @@ public class JunifyDB implements Closeable {
         this.mvcc = new MVCCManager();
         this.collections = new ConcurrentHashMap<>();
         this.buckets = new ConcurrentHashMap<>();
+        this.listBuckets = new ConcurrentHashMap<>();
+        this.setBuckets = new ConcurrentHashMap<>();
+        this.hashBuckets = new ConcurrentHashMap<>();
         this.columnFamilies = new ConcurrentHashMap<>();
         this.eventBus = new EventBus();
         this.metrics = new DatabaseMetrics();
@@ -77,6 +86,30 @@ public class JunifyDB implements Closeable {
     public ColumnFamily columnFamily(String name) {
         checkOpen();
         return columnFamilies.computeIfAbsent(name, n -> new ColumnFamily(n, engine));
+    }
+
+    public ListBucket listBucket(String name) {
+        checkOpen();
+        return listBuckets.computeIfAbsent(name, n -> {
+            eventBus.emit(EventBus.EventType.BUCKET_CREATED, n);
+            return new ListBucket(n, engine, eventBus, metrics);
+        });
+    }
+
+    public SetBucket setBucket(String name) {
+        checkOpen();
+        return setBuckets.computeIfAbsent(name, n -> {
+            eventBus.emit(EventBus.EventType.BUCKET_CREATED, n);
+            return new SetBucket(n, engine, eventBus, metrics);
+        });
+    }
+
+    public HashBucket hashBucket(String name) {
+        checkOpen();
+        return hashBuckets.computeIfAbsent(name, n -> {
+            eventBus.emit(EventBus.EventType.BUCKET_CREATED, n);
+            return new HashBucket(n, engine, eventBus, metrics);
+        });
     }
 
     public Transaction beginTransaction() {
