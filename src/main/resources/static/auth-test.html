@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Test - JunifyDB</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1 { color: #6366f1; }
+        .test-section {
+            background: #16213e;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #0f3460;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #4f46e5; }
+        input {
+            background: #0f3460;
+            border: 1px solid #1a1a2e;
+            color: #eee;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        pre {
+            background: #0a0a0f;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            color: #10b981;
+        }
+        .success { color: #10b981; }
+        .error { color: #f43f5e; }
+        label { display: block; margin: 10px 0 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔐 JunifyDB Authentication Test</h1>
+    
+    <div class="test-section">
+        <h2>Login Test</h2>
+        <label>Username: <input type="text" id="username" value="admin" placeholder="Username"></label>
+        <label>Password: <input type="password" id="password" value="admin123" placeholder="Password"></label>
+        <button onclick="testLogin()">Test Login</button>
+        <button onclick="clearSession()">Clear Session</button>
+        <pre id="loginResult">Click "Test Login" to authenticate...</pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Session Verification</h2>
+        <button onclick="verifySession()">Verify Current Session</button>
+        <pre id="verifyResult">Click "Verify Current Session" to check token...</pre>
+    </div>
+
+    <div class="test-section">
+        <h2>API Access Test</h2>
+        <button onclick="testHealth()">Test Health Endpoint</button>
+        <button onclick="testCollections()">Test Collections Endpoint</button>
+        <pre id="apiResult">Click a button to test API access...</pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Logout Test</h2>
+        <button onclick="testLogout()">Test Logout</button>
+        <pre id="logoutResult">Click "Test Logout" to end session...</pre>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+
+        function showResult(elementId, data, isError = false) {
+            const el = document.getElementById(elementId);
+            el.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+            el.className = isError ? 'error' : 'success';
+        }
+
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    sessionStorage.setItem('authToken', data.sessionId);
+                    sessionStorage.setItem('userInfo', JSON.stringify(data.user));
+                    showResult('loginResult', { 
+                        status: 'SUCCESS', 
+                        message: 'Login successful!',
+                        session: data.sessionId.substring(0, 30) + '...',
+                        user: data.user,
+                        expiresAt: new Date(data.expiresAt).toLocaleString()
+                    });
+                } else {
+                    showResult('loginResult', { status: 'FAILED', ...data }, true);
+                }
+            } catch (error) {
+                showResult('loginResult', { status: 'ERROR', message: error.message }, true);
+            }
+        }
+
+        async function verifySession() {
+            const authToken = sessionStorage.getItem('authToken');
+
+            if (!authToken) {
+                showResult('verifyResult', { status: 'NO_SESSION', message: 'No active session found' }, true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/verify`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const data = await response.json();
+                showResult('verifyResult', data);
+            } catch (error) {
+                showResult('verifyResult', { status: 'ERROR', message: error.message }, true);
+            }
+        }
+
+        async function testHealth() {
+            const authToken = sessionStorage.getItem('authToken');
+            const apiKey = 'hYXuECpj4dM28vf3En47ar2KaA1FPMLVNrmAYYSAoFM';
+
+            try {
+                const headers = authToken 
+                    ? { 'Authorization': `Bearer ${authToken}` }
+                    : { 'X-API-Key': apiKey };
+
+                const response = await fetch(`${API_BASE}/health`, { headers });
+                const data = await response.json();
+                showResult('apiResult', data);
+            } catch (error) {
+                showResult('apiResult', { status: 'ERROR', message: error.message }, true);
+            }
+        }
+
+        async function testCollections() {
+            const authToken = sessionStorage.getItem('authToken');
+            const apiKey = 'hYXuECpj4dM28vf3En47ar2KaA1FPMLVNrmAYYSAoFM';
+
+            try {
+                const headers = authToken 
+                    ? { 'Authorization': `Bearer ${authToken}` }
+                    : { 'X-API-Key': apiKey };
+
+                const response = await fetch(`${API_BASE}/collections`, { headers });
+                const data = await response.json();
+                showResult('apiResult', data);
+            } catch (error) {
+                showResult('apiResult', { status: 'ERROR', message: error.message }, true);
+            }
+        }
+
+        async function testLogout() {
+            const authToken = sessionStorage.getItem('authToken');
+
+            if (!authToken) {
+                showResult('logoutResult', { status: 'NO_SESSION', message: 'No active session to logout' }, true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/logout`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    sessionStorage.removeItem('authToken');
+                    sessionStorage.removeItem('userInfo');
+                    showResult('logoutResult', { status: 'SUCCESS', message: 'Logout successful!' });
+                } else {
+                    showResult('logoutResult', data, true);
+                }
+            } catch (error) {
+                showResult('logoutResult', { status: 'ERROR', message: error.message }, true);
+            }
+        }
+
+        function clearSession() {
+            sessionStorage.removeItem('authToken');
+            sessionStorage.removeItem('userInfo');
+            showResult('loginResult', { status: 'CLEARED', message: 'Session cleared. Click "Test Login" to authenticate again.' });
+            showResult('verifyResult', 'Session cleared');
+            showResult('apiResult', 'Session cleared - API tests will use API key fallback');
+            showResult('logoutResult', 'Session cleared');
+        }
+
+        // Auto-verify on page load if session exists
+        window.addEventListener('load', () => {
+            const authToken = sessionStorage.getItem('authToken');
+            if (authToken) {
+                verifySession();
+            }
+        });
+    </script>
+</body>
+</html>

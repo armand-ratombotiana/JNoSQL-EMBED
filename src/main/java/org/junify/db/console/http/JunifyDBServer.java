@@ -1,8 +1,14 @@
 package org.junify.db.console.http;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpsConfigurator;
+import com.sun.net.httpserver.HttpsParameters;
+import com.sun.net.httpserver.HttpsServer;
 import org.junify.db.JunifyDB;
 import org.junify.db.nosql.document.Document;
 import org.junify.db.nosql.document.DocumentCollection;
@@ -15,6 +21,7 @@ import org.junify.db.nosql.kv.SetBucket;
 import org.junify.db.storage.spi.SchemaManager;
 
 import java.io.IOException;
+import javax.net.ssl.SSLContext;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -32,9 +39,18 @@ import java.util.zip.GZIPOutputStream;
 public class JunifyDBServer {
 
     private final JunifyDB db;
+    private HttpsServer httpsServer;
+    private int sslPort = -1;
+    private String sslKeystorePath = null;
+    private String sslKeystorePassword = null;
     private HttpServer server;
     private long startTime;
     private String apiKey = "hYXuECpj4dM28vf3En47ar2KaA1FPMLVNrmAYYSAoFM";  // Default API key - change in production!
+
+    // In-memory session storage for authentication
+    private final Map<String, SessionInfo> sessions = new java.util.concurrent.ConcurrentHashMap<>();
+    private record SessionInfo(String username, long expiresAt) {}
+    private static final long SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
     private boolean authEnabled = true;  // Authentication enabled by default for security
     private boolean corsEnabled = true;
     private boolean compressionEnabled = true;
@@ -42,11 +58,16 @@ public class JunifyDBServer {
     private long maxRequestSizeBytes = 10 * 1024 * 1024; // 10MB default max request size
     private int queryTimeoutSeconds = 30; // Default query timeout
     private Map<String, RateLimitEntry> rateLimitMap = new ConcurrentHashMap<>();
+    private static final Logger logger = LoggerFactory.getLogger(JunifyDBServer.class);
+    private final java.util.List<AuditEvent> auditLog = new java.util.concurrent.CopyOnWriteArrayList<>();
     
     private static class RateLimitEntry {
         AtomicInteger count = new AtomicInteger(0);
         long windowStart = System.currentTimeMillis();
     }
+
+    public record AuditEvent(long timestamp, String operation, String resource, String documentId,
+                             String status, String clientIp, String details) {}
 
     public JunifyDBServer(JunifyDB db) {
         this.db = db;
@@ -87,6 +108,53 @@ public class JunifyDBServer {
     public void setQueryTimeout(int seconds) {
         this.queryTimeoutSeconds = seconds;
     }
+    /**
+     * Configure SSL/HTTPS support.
+     * @param port SSL port number
+     * @param keystorePath Path to JKS keystore file
+     * @param keystorePassword Keystore password
+     */
+    public void configureSsl(int port, String keystorePath, String keystorePassword) {
+        this.sslPort = port;
+        this.sslKeystorePath = keystorePath;
+        this.sslKeystorePassword = keystorePassword;
+    }
+
+    public int getSslPort() {
+        return sslPort;
+    }
+
+    public String getSslKeystorePath() {
+        return sslKeystorePath;
+    }
+
+    private void logAuditEvent(String operation, String resource, String documentId, String status,
+                               String clientIp, String details) {
+        var event = new AuditEvent(System.currentTimeMillis(), operation, resource, documentId, status, clientIp, details);
+        auditLog.add(event);
+        logger.info("[AUDIT] {} {} {} - {} - {} - {}", operation, resource,
+                    documentId != null ? documentId : "", status, clientIp, details);
+    }
+
+    private void logCrudEvent(String operation, String collection, String documentId, String clientIp) {
+        logAuditEvent(operation, collection, documentId, "SUCCESS", clientIp, "CRUD operation");
+    }
+
+    private java.util.Map<String, String> parseQueryParams(String query) {
+        var params = new java.util.LinkedHashMap<String, String>();
+        if (query != null) {
+            for (var param : query.split("&")) {
+                var kv = param.split("=", 2);
+                if (kv.length == 2) {
+                    params.put(kv[0], java.net.URLDecoder.decode(kv[1], java.nio.charset.StandardCharsets.UTF_8));
+                } else if (kv.length == 1) {
+                    params.put(kv[0], "");
+                }
+            }
+        }
+        return params;
+    }
+
 
     private boolean isAuthValid(HttpExchange exchange) {
         if (!authEnabled) return true;
@@ -167,6 +235,7 @@ public class JunifyDBServer {
         server.createContext("/api/cdc", new CDCHandler());
         server.createContext("/api/tables/", new TablesHandler());
         server.createContext("/api/constraints/", new ConstraintsHandler());
+        server.createContext("/api/audit/logs", new AuditLogHandler());
 
         if (corsEnabled) {
             server.createContext("/api/cors", new CorsPreflightHandler());
@@ -174,6 +243,10 @@ public class JunifyDBServer {
 
         server.setExecutor(null);
         server.start();
+        // Start HTTPS server if SSL is configured
+        if (sslPort > 0 && sslKeystorePath != null) {
+            startHttpsServer();
+        }
     }
     
     private class CorsPreflightHandler implements HttpHandler {
@@ -185,9 +258,153 @@ public class JunifyDBServer {
         }
     }
 
-    public void stop() {
+    
+
+    /**
+     * Initialize default admin user if not exists.
+     */
+    private void initializeAdminUser() {
+        try {
+            // Check if db_users table exists
+            var tableCheck = db.h2Engine().executeSql(
+                "SELECT COUNT(*) as cnt FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'DB_USERS'"
+            );
+            boolean tableExists = false;
+            if (tableCheck.success() && tableCheck.rows() != null && !tableCheck.rows().isEmpty()) {
+                var cnt = tableCheck.rows().get(0).get("CNT");
+                tableExists = cnt instanceof Number && ((Number) cnt).intValue() > 0;
+            }
+
+            if (!tableExists) {
+                System.out.println("[Auth] db_users table not yet created - will be created by UserManager on first access");
+                return;
+            }
+
+            // Check if admin user exists
+            var checkResult = db.h2Engine().executeSql(
+                "SELECT COUNT(*) as cnt FROM db_users WHERE username = 'admin'"
+            );
+            boolean adminExists = false;
+            if (checkResult.success() && checkResult.rows() != null && !checkResult.rows().isEmpty()) {
+                var cnt = checkResult.rows().get(0).get("CNT");
+                adminExists = cnt instanceof Number && ((Number) cnt).intValue() > 0;
+            }
+
+            if (!adminExists) {
+                // Create default admin user
+                String salt = java.util.UUID.randomUUID().toString().substring(0, 8);
+                String password = "admin123";
+                String hash = hashPassword(password, salt);
+
+                var insertResult = db.h2Engine().executeSql(
+                    "INSERT INTO db_users (username, password_hash, salt, role, created_at, enabled) VALUES (?, ?, ?, ?, ?, ?)",
+                    "admin", hash, salt, "ADMIN", System.currentTimeMillis(), true
+                );
+
+                if (insertResult.success()) {
+                    System.out.println("=================================================");
+                    System.out.println("  DEFAULT ADMIN USER CREATED");
+                    System.out.println("=================================================");
+                    System.out.println("  Username: admin");
+                    System.out.println("  Password: admin123");
+                    System.out.println("  Role: ADMIN");
+                    System.out.println("=================================================");
+                    System.out.println("  IMPORTANT: Change password after first login!");
+                    System.out.println("=================================================");
+                }
+            } else {
+                System.out.println("[Auth] Admin user already exists");
+            }
+        } catch (Exception e) {
+            System.err.println("[Auth] Failed to initialize admin user: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Hash password using SHA-256 with salt.
+     */
+    private String hashPassword(String password, String salt) {
+        try {
+            var md = java.security.MessageDigest.getInstance("SHA-256");
+            var bytes = md.digest((password + salt).getBytes());
+            var sb = new StringBuilder();
+            for (var b : bytes) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("SHA-256 not available", e);
+        }
+    }
+
+    private void startHttpsServer() {
+        try {
+            System.setProperty("javax.net.ssl.keyStore", sslKeystorePath);
+            System.setProperty("javax.net.ssl.keyStorePassword", sslKeystorePassword);
+
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, null, null);
+
+            httpsServer = HttpsServer.create(new InetSocketAddress(sslPort), 0);
+            httpsServer.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
+                @Override
+                public void configure(HttpsParameters params) {
+                    try {
+                        SSLContext context = getSSLContext();
+                        params.setNeedClientAuth(false);
+                        params.setCipherSuites(new String[]{"TLS_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_256_CBC_SHA"});
+                        params.setProtocols(new String[]{"TLSv1.2", "TLSv1.3"});
+                        params.setSSLParameters(context.getDefaultSSLParameters());
+                    } catch (Exception e) {
+                        System.err.println("[JunifyDBServer] SSL configuration error: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                }
+            });
+
+            registerHandlers(httpsServer);
+            httpsServer.setExecutor(null);
+            httpsServer.start();
+            System.out.println("[JunifyDBServer] HTTPS server started on port " + sslPort);
+        } catch (Exception e) {
+            System.err.println("[JunifyDBServer] SSL initialization error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void registerHandlers(HttpServer server) {
+        server.createContext("/", new StaticHandler());
+        server.createContext("/api/collections/", new CollectionsHandler());
+        server.createContext("/api/kv/", new KeyValueHandler());
+        server.createContext("/api/kv/lists/", new ListHandler());
+        server.createContext("/api/kv/sets/", new SetHandler());
+        server.createContext("/api/kv/hashes/", new HashHandler());
+        server.createContext("/api/columns/", new ColumnHandler());
+        server.createContext("/api/health", new HealthHandler());
+        server.createContext("/api/metrics", new MetricsHandler());
+        server.createContext("/api/metrics/stream", new MetricsStreamHandler());
+        server.createContext("/api/stats", new StatsHandler());
+        server.createContext("/api/backup", new BackupHandler());
+        server.createContext("/api/indexes/", new IndexHandler());
+        server.createContext("/api/transactions", new TransactionHandler());
+        server.createContext("/api/schema/", new SchemaHandler());
+        server.createContext("/api/vectors/", new VectorHandler());
+        server.createContext("/api/sql", new SqlHandler());
+        server.createContext("/api/bulk", new BulkHandler());
+        server.createContext("/api/cdc", new CDCHandler());
+        server.createContext("/api/tables/", new TablesHandler());
+        server.createContext("/api/constraints/", new ConstraintsHandler());
+        server.createContext("/api/audit/logs", new AuditLogHandler());
+        if (corsEnabled) {
+            server.createContext("/api/cors", new CorsPreflightHandler());
+        }
+    }
+public void stop() {
         if (server != null) {
             server.stop(0);
+        }
+        if (httpsServer != null) {
+            httpsServer.stop(0);
         }
     }
 
@@ -195,7 +412,60 @@ public class JunifyDBServer {
         return server.getAddress().getPort();
     }
 
-    private class StaticHandler implements HttpHandler {
+    
+    private class AuditLogHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
+
+            if ("GET".equals(exchange.getRequestMethod())) {
+                var query = exchange.getRequestURI().getQuery();
+                var params = parseQueryParams(query);
+
+                String operation = params.get("operation");
+                String resource = params.get("resource");
+                String since = params.get("since");
+                int limit = params.containsKey("limit") ? Integer.parseInt(params.get("limit")) : 100;
+
+                var filtered = auditLog.stream();
+
+                if (operation != null && !operation.isEmpty()) {
+                    filtered = filtered.filter(e -> e.operation().equals(operation));
+                }
+                if (resource != null && !resource.isEmpty()) {
+                    filtered = filtered.filter(e -> e.resource().equals(resource));
+                }
+                if (since != null && !since.isEmpty()) {
+                    try {
+                        long sinceTs = Long.parseLong(since);
+                        filtered = filtered.filter(e -> e.timestamp() >= sinceTs);
+                    } catch (NumberFormatException ex) {
+                        // Ignore invalid since parameter
+                    }
+                }
+
+                var result = filtered.limit(limit).toList();
+                sendJson(exchange, 200, java.util.Map.of(
+                    "count", result.size(),
+                    "events", result.stream()
+                        .map(e -> java.util.Map.of(
+                            "timestamp", e.timestamp(),
+                            "operation", e.operation(),
+                            "resource", e.resource(),
+                            "documentId", e.documentId(),
+                            "status", e.status(),
+                            "clientIp", e.clientIp(),
+                            "details", e.details()
+                        ))
+                        .toList()
+                ));
+            } else {
+                sendJson(exchange, 405, java.util.Map.of("error", "Method not allowed"));
+            }
+        }
+    }
+
+private class StaticHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             var path = exchange.getRequestURI().getPath();
@@ -287,6 +557,7 @@ public class JunifyDBServer {
                         var body = readBody(exchange);
                         var doc = Document.fromJson(body);
                         var saved = collection.insert(doc);
+                        logCrudEvent("INSERT", name, saved.getId(), getClientIp(exchange));
                         sendJson(exchange, 201, saved);
                     } catch (Exception e) {
                         System.err.println("[CollectionsHandler] POST error: " + e.getMessage());
@@ -426,6 +697,7 @@ public class JunifyDBServer {
                             doc.add(e.getKey().toString(), e.getValue());
                         }
                         var saved = collection.insert(doc);
+                        logCrudEvent("UPDATE", name, id, getClientIp(exchange));
                         sendJson(exchange, 201, saved);
                     } catch (Exception e) {
                         System.err.println("[CollectionsHandler] PUT/POST error: " + e.getMessage());
@@ -440,6 +712,7 @@ public class JunifyDBServer {
                     try {
                         boolean deleted = collection.deleteById(id);
                         if (deleted) {
+                            logCrudEvent("DELETE", name, id, getClientIp(exchange));
                             sendJson(exchange, 204, null);
                         } else {
                             sendJson(exchange, 404, Map.of("error", "Not found", "id", id));
@@ -487,6 +760,7 @@ public class JunifyDBServer {
                     sendJson(exchange, 201, Map.of("key", key, "value", value, "status", "created"));
                 } else if ("DELETE".equals(exchange.getRequestMethod())) {
                     bucket.delete(key);
+                    logCrudEvent("DELETE", bucketName + "/" + key, key, getClientIp(exchange));
                     sendJson(exchange, 204, null);
                 }
             } else {
@@ -502,20 +776,19 @@ public class JunifyDBServer {
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
             
-            // Context path /api/kv/lists/ is stripped by HttpServer
-            // Remaining path: /{bucket}/{key}[/{operation}]
-            // parts[0]="", [1]="bucket", [2]="key", [3]="operation"
-            if (parts.length < 3) {
+            // Full path: /api/kv/lists/{bucket}/{key}[/{operation}]
+            // parts[0]="", [1]="api", [2]="kv", [3]="lists", [4]="bucket", [5]="key", [6]="operation"
+            if (parts.length < 6) {
                 sendJson(exchange, 400, Map.of("error", "Usage: /api/kv/lists/{bucket}/{key}[/{operation}]"));
                 return;
             }
             
-            var bucketName = parts[1];
+            var bucketName = parts[4];
             var bucket = db.listBucket(bucketName);
-            var key = parts[2];
+            var key = parts[5];
             
             // If only bucket and key (no operation), return full list
-            if (parts.length == 3 || (parts.length == 4 && parts[3].isEmpty())) {
+            if (parts.length == 5 || (parts.length == 6 && parts[6].isEmpty())) {
                 if ("GET".equals(exchange.getRequestMethod())) {
                     var result = bucket.lrange(key, 0, -1);
                     sendJson(exchange, 200, Map.of("key", key, "values", result, "length", result.size()));
@@ -529,8 +802,7 @@ public class JunifyDBServer {
             }
             
             // /api/kv/lists/{bucket}/{key}/{operation}
-            var operation = parts[3];
-            
+            var operation = parts[6];
             switch (operation.toLowerCase()) {
                 case "lpush" -> {
                     if (!"POST".equals(exchange.getRequestMethod())) {
@@ -659,20 +931,19 @@ public class JunifyDBServer {
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
             
-            // Context path /api/kv/sets/ is stripped by HttpServer
-            // Remaining path: /{bucket}/{key}[/{operation}]
-            // parts[0]="", [1]="bucket", [2]="key", [3]="operation"
-            if (parts.length < 3) {
+            // Full path: /api/kv/sets/{bucket}/{key}[/{operation}]
+            // parts[0]="", [1]="api", [2]="kv", [3]="sets", [4]="bucket", [5]="key", [6]="operation"
+            if (parts.length < 6) {
                 sendJson(exchange, 400, Map.of("error", "Usage: /api/kv/sets/{bucket}/{key}[/{operation}]"));
                 return;
             }
             
-            var bucketName = parts[1];
+            var bucketName = parts[4];
             var bucket = db.setBucket(bucketName);
-            var key = parts[2];
+            var key = parts[5];
             
             // If only bucket and key (no operation), return all members
-            if (parts.length == 3 || (parts.length == 4 && parts[3].isEmpty())) {
+            if (parts.length == 5 || (parts.length == 6 && parts[6].isEmpty())) {
                 if ("GET".equals(exchange.getRequestMethod())) {
                     var members = bucket.smembers(key);
                     sendJson(exchange, 200, Map.of("key", key, "members", members, "cardinality", members.size()));
@@ -686,8 +957,7 @@ public class JunifyDBServer {
             }
             
             // /api/kv/sets/{bucket}/{key}/{operation}
-            var operation = parts[3];
-            
+            var operation = parts[6];
             switch (operation.toLowerCase()) {
                 case "sadd" -> {
                     if (!"POST".equals(exchange.getRequestMethod())) {
@@ -841,20 +1111,19 @@ public class JunifyDBServer {
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
             
-            // Context path /api/kv/hashes/ is stripped by HttpServer
-            // Remaining path: /{bucket}/{key}[/{operation}]
-            // parts[0]="", [1]="bucket", [2]="key", [3]="operation"
-            if (parts.length < 3) {
+            // Full path: /api/kv/hashes/{bucket}/{key}[/{operation}]
+            // parts[0]="", [1]="api", [2]="kv", [3]="hashes", [4]="bucket", [5]="key", [6]="operation"
+            if (parts.length < 6) {
                 sendJson(exchange, 400, Map.of("error", "Usage: /api/kv/hashes/{bucket}/{key}[/{operation}]"));
                 return;
             }
             
-            var bucketName = parts[1];
+            var bucketName = parts[4];
             var bucket = db.hashBucket(bucketName);
-            var key = parts[2];
+            var key = parts[5];
             
             // If only bucket and key (no operation), return all fields
-            if (parts.length == 3 || (parts.length == 4 && parts[3].isEmpty())) {
+            if (parts.length == 5 || (parts.length == 6 && parts[6].isEmpty())) {
                 if ("GET".equals(exchange.getRequestMethod())) {
                     var fields = bucket.hgetall(key);
                     sendJson(exchange, 200, Map.of("key", key, "fields", fields, "length", fields.size()));
@@ -868,8 +1137,7 @@ public class JunifyDBServer {
             }
             
             // /api/kv/hashes/{bucket}/{key}/{operation}
-            var operation = parts[3];
-            
+            var operation = parts[6];
             switch (operation.toLowerCase()) {
                 case "hset", "set" -> {
                     if (!"POST".equals(exchange.getRequestMethod())) {

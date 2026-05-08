@@ -54,23 +54,24 @@ public class QueryOptimizer {
 
     public boolean isOptimized(String sql) {
         var upperSql = sql.toUpperCase();
-        
+
         if (upperSql.contains("SELECT") && upperSql.contains("WHERE")) {
             if (!upperSql.contains("INDEX") && !upperSql.contains("FORCE INDEX")) {
                 return false;
             }
         }
-        
+
         if (upperSql.contains("LIKE")) {
             if (upperSql.contains("LIKE '%")) {
                 return false;
             }
         }
-        
-        if (upperSql.contains("OR") && !upperSql.contains("UNION")) {
+
+        // Check for OR operator (not part of another word like ORDER, ORIGIN, etc.)
+        if (upperSql.matches(".*\\s+OR\\s+.*") && !upperSql.contains("UNION")) {
             return false;
         }
-        
+
         return true;
     }
 
