@@ -115,7 +115,8 @@ public class UserManager {
 
     public boolean validatePassword(String username, String password) {
         var result = engine.executeSql(
-            "SELECT password_hash, salt FROM db_users WHERE username = '" + username + "' AND enabled = TRUE"
+            "SELECT password_hash, salt FROM db_users WHERE username = ? AND enabled = TRUE",
+            username
         );
         if (!result.success() || result.rows() == null || result.rows().isEmpty()) {
             return false;
