@@ -95,8 +95,15 @@ public class AuditLogger {
                failureReason, metadataJson, timestamp);
         
         if (result.success()) {
-            long eventId = result.generatedKey();
-            updateHashChain(eventId, timestamp);
+            // Get the last inserted ID
+            var idResult = engine.executeSql("SELECT MAX(id) as id FROM auth_audit_log");
+            if (idResult.success() && idResult.rows() != null && !idResult.rows().isEmpty()) {
+                var row = idResult.rows().get(0);
+                if (row.get("ID") != null) {
+                    long eventId = ((Number) row.get("ID")).longValue();
+                    updateHashChain(eventId, timestamp);
+                }
+            }
         }
         
         // Log to SLF4J for immediate visibility
@@ -234,9 +241,13 @@ public class AuditLogger {
             WHERE client_ip = ? AND event_type = 'LOGIN_FAILURE' AND created_at > ?
         """, clientIp, since);
         
-        if (!result.success() || result.rows() == null) return 0;
+        if (!result.success() || result.rows() == null || result.rows().isEmpty()) return 0;
         
-        return ((Number) result.rows().get(0).get("CNT")).intValue();
+        var row = result.rows().get(0);
+        if (row.get("CNT") != null) {
+            return ((Number) row.get("CNT")).intValue();
+        }
+        return 0;
     }
     
     private String sha256(String input) {
