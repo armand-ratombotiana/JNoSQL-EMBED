@@ -156,17 +156,9 @@
     }
 
     .brand-logo {
-      width: 44px; height: 44px;
-      background: linear-gradient(135deg, var(--brand) 0%, #8b5cf6 100%);
-      border-radius: var(--radius-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 1.25rem;
-      color: white;
+      width: 48px; height: 48px;
       flex-shrink: 0;
-      box-shadow: 0 0 20px rgba(99,102,241,0.5);
+      filter: drop-shadow(0 0 14px rgba(99,102,241,0.55));
     }
 
     .brand-name {
@@ -865,7 +857,35 @@
     <div class="orb orb-2"></div>
 
     <div class="brand-top">
-      <div class="brand-logo">J</div>
+      <!-- Unique JunifyDB SVG Logo -->
+      <svg class="brand-logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="JunifyDB Logo">
+        <defs>
+          <linearGradient id="lg1" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#6366f1"/>
+            <stop offset="100%" stop-color="#8b5cf6"/>
+          </linearGradient>
+          <linearGradient id="lg2" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#a5b4fc"/>
+            <stop offset="100%" stop-color="#c084fc"/>
+          </linearGradient>
+        </defs>
+        <!-- Rounded square background -->
+        <rect width="48" height="48" rx="12" fill="url(#lg1)"/>
+        <!-- DB cylinder top ellipse -->
+        <ellipse cx="24" cy="14" rx="11" ry="4" fill="url(#lg2)" opacity="0.95"/>
+        <!-- DB cylinder body left/right lines -->
+        <path d="M13 14 Q13 20 13 26" stroke="url(#lg2)" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+        <path d="M35 14 Q35 20 35 26" stroke="url(#lg2)" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+        <!-- DB cylinder middle ellipse -->
+        <ellipse cx="24" cy="20" rx="11" ry="4" fill="none" stroke="url(#lg2)" stroke-width="1.5" opacity="0.6"/>
+        <!-- DB cylinder bottom ellipse -->
+        <ellipse cx="24" cy="26" rx="11" ry="4" fill="url(#lg2)" opacity="0.85"/>
+        <!-- Bottom arc to close cylinder -->
+        <path d="M13 26 Q13 30 24 34 Q35 30 35 26" fill="url(#lg2)" opacity="0.75"/>
+        <!-- Lightning bolt / J overlay (identity mark) -->
+        <path d="M27 8 L20 22 H25 L18 38 L32 18 H26 L31 8 Z"
+              fill="white" opacity="0.92" stroke="white" stroke-width="0.3" stroke-linejoin="round"/>
+      </svg>
       <div>
         <div class="brand-name">JunifyDB</div>
         <div class="brand-tagline">Database Console</div>
@@ -926,6 +946,27 @@
 
     <!-- Top controls: theme toggle + help -->
     <div class="panel-form-controls">
+      <!-- Compact logo for mobile form panel -->
+      <div style="display:flex;align-items:center;gap:10px;margin-right:auto;padding-left:4px">
+        <svg width="32" height="32" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:none" id="mobileLogo">
+          <defs>
+            <linearGradient id="mlg1" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#8b5cf6"/>
+            </linearGradient>
+            <linearGradient id="mlg2" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#a5b4fc"/><stop offset="100%" stop-color="#c084fc"/>
+            </linearGradient>
+          </defs>
+          <rect width="48" height="48" rx="12" fill="url(#mlg1)"/>
+          <ellipse cx="24" cy="14" rx="11" ry="4" fill="url(#mlg2)" opacity="0.95"/>
+          <path d="M13 14 Q13 20 13 26" stroke="url(#mlg2)" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+          <path d="M35 14 Q35 20 35 26" stroke="url(#mlg2)" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+          <ellipse cx="24" cy="20" rx="11" ry="4" fill="none" stroke="url(#mlg2)" stroke-width="1.5" opacity="0.6"/>
+          <ellipse cx="24" cy="26" rx="11" ry="4" fill="url(#mlg2)" opacity="0.85"/>
+          <path d="M13 26 Q13 30 24 34 Q35 30 35 26" fill="url(#mlg2)" opacity="0.75"/>
+          <path d="M27 8 L20 22 H25 L18 38 L32 18 H26 L31 8 Z" fill="white" opacity="0.92" stroke="white" stroke-width="0.3" stroke-linejoin="round"/>
+        </svg>
+      </div>
       <button class="icon-btn" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle colour theme" title="Toggle theme">
         <svg id="iconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
           <circle cx="12" cy="12" r="5"/>
@@ -1069,7 +1110,7 @@
       </div>
 
       <!-- API Key access -->
-      <button class="btn-ghost" onclick="openApiKeyModal()" type="button">
+      <button class="btn-ghost" onclick="openApiKeyModal()" type="button" id="btnApiKey">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
         </svg>
@@ -1107,25 +1148,36 @@
             </svg>
           </span>
           <input
-            type="password"
+            type="text"
             id="apiKeyInput"
             class="form-input"
             placeholder="Paste your API key here"
             autocomplete="off"
             aria-label="API Key"
+            spellcheck="false"
+            style="font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.5px;"
           />
-          <button type="button" class="input-action" id="toggleApiKey" aria-label="Show API key">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <button type="button" class="input-action" id="toggleApiKey" aria-label="Toggle API key visibility">
+            <svg id="apiEyeOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
               <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+            <svg id="apiEyeOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
             </svg>
           </button>
         </div>
       </div>
 
+      <!-- API key hint -->
+      <p style="font-size:0.78rem;color:var(--text-muted);margin-top:10px;line-height:1.6;">
+        Your API key is shown in the server startup log as<br/>
+        <code style="font-family:var(--font-mono);color:var(--brand-light);font-size:0.78rem;">API key prefix: hYXuECpj...</code>
+      </p>
+
       <div class="modal-foot">
         <button class="btn-sm btn-sm-ghost" onclick="closeApiKeyModal()">Cancel</button>
-        <button class="btn-sm btn-sm-primary" onclick="submitApiKey()">
+        <button class="btn-sm btn-sm-primary" id="btnConnect" onclick="submitApiKey()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20 6 9 17 4 12"/>
           </svg>
@@ -1197,11 +1249,18 @@
       this.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
     });
 
+    /* ---- API key toggle visibility ---- */
     document.getElementById('toggleApiKey').addEventListener('click', function () {
       const inp = document.getElementById('apiKeyInput');
-      const isHidden = inp.type === 'password';
-      inp.type = isHidden ? 'text' : 'password';
+      const isText = inp.type === 'text';
+      inp.type = isText ? 'password' : 'text';
+      // Also switch the icon: when showing as text → show eye-on, when hiding → show eye-off
+      document.getElementById('apiEyeOff').style.display = isText ? 'block' : 'none';
+      document.getElementById('apiEyeOn').style.display  = isText ? 'none'  : 'block';
+      // Start as text (visible), toggle to password (hidden)
     });
+
+    /* ---- On modal open, reset API key field to text (visible) ---- */
 
     /* ---- Ripple effect ---- */
     function addRipple(btn, e) {
@@ -1302,10 +1361,16 @@
         const data = await res.json();
 
         if (res.ok && data.success) {
-          const expiry = Date.now() + (remember ? 30 * 24 * 60 * 60 * 1000 : 30 * 60 * 1000);
-          sessionStorage.setItem('apiKey',        data.apiKey);
-          sessionStorage.setItem('sessionExpiry', expiry.toString());
-          sessionStorage.setItem('userInfo', JSON.stringify({ username: data.username, role: data.role }));
+          // Server returns sessionId + user info (not apiKey)
+          const expiry = data.expiresAt || (Date.now() + (remember ? 30 * 24 * 60 * 60 * 1000 : 30 * 60 * 1000));
+          // Store sessionId as the auth token used for all API calls
+          sessionStorage.setItem('apiKey',        data.sessionId);   // reuse key name for compatibility
+          sessionStorage.setItem('sessionToken',  data.sessionId);
+          sessionStorage.setItem('sessionExpiry', String(expiry));
+          sessionStorage.setItem('userInfo', JSON.stringify({
+            username: data.user ? data.user.username : username,
+            role:     data.user ? data.user.role     : 'USER'
+          }));
 
           if (remember) {
             localStorage.setItem('jdb-username', username);
@@ -1316,8 +1381,9 @@
           showAlert('Login successful! Redirecting…', 'success');
           setTimeout(() => window.location.replace('index.html'), 900);
         } else {
-          showAlert(data.message || 'Invalid username or password.', 'error');
+          showAlert(data.message || data.error || 'Invalid username or password.', 'error');
           setLoading(false);
+          document.getElementById('password').value = '';
           document.getElementById('password').focus();
         }
 
@@ -1330,9 +1396,17 @@
 
     /* ---- API Key modal ---- */
     function openApiKeyModal() {
-      document.getElementById('apiKeyModal').classList.add('show');
+      const modal = document.getElementById('apiKeyModal');
+      const inp   = document.getElementById('apiKeyInput');
+      // Reset field: visible text mode so user can see what they paste
+      inp.type = 'text';
+      inp.value = '';
+      inp.classList.remove('is-error');
+      document.getElementById('apiEyeOff').style.display = 'none';
+      document.getElementById('apiEyeOn').style.display  = 'block';
+      modal.classList.add('show');
       document.body.classList.add('modal-open');
-      setTimeout(() => document.getElementById('apiKeyInput').focus(), 150);
+      setTimeout(() => inp.focus(), 160);
     }
 
     function closeApiKeyModal() {
@@ -1345,7 +1419,7 @@
       if (e.target === document.getElementById('apiKeyModal')) closeApiKeyModal();
     }
 
-    function submitApiKey() {
+    async function submitApiKey() {
       const key = document.getElementById('apiKeyInput').value.trim();
       if (!key) {
         document.getElementById('apiKeyInput').classList.add('is-error');
@@ -1353,13 +1427,49 @@
         return;
       }
 
-      const expiry = Date.now() + 30 * 60 * 1000;
-      sessionStorage.setItem('apiKey',        key);
-      sessionStorage.setItem('sessionExpiry', expiry.toString());
-      sessionStorage.setItem('userInfo', JSON.stringify({ username: 'api-user', role: 'USER' }));
-      closeApiKeyModal();
-      window.location.replace('index.html');
+      // Disable connect button while verifying
+      const btn = document.getElementById('btnConnect');
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner" style="border-top-color:#fff;width:15px;height:15px;border-width:2px;"></div> Verifying…';
+
+      try {
+        // Verify the API key against the health endpoint
+        const res = await fetch('/api/health', {
+          headers: { 'X-API-Key': key }
+        });
+
+        if (res.ok) {
+          const expiry = Date.now() + 30 * 60 * 1000;
+          // Store the raw API key — used as X-API-Key header for all requests
+          sessionStorage.setItem('apiKey',        key);
+          sessionStorage.setItem('sessionToken',  key);
+          sessionStorage.setItem('sessionExpiry', String(expiry));
+          sessionStorage.setItem('userInfo', JSON.stringify({ username: 'api-key-user', role: 'ADMIN' }));
+          closeApiKeyModal();
+          window.location.replace('index.html');
+        } else {
+          document.getElementById('apiKeyInput').classList.add('is-error');
+          // Show inline error below input
+          const hint = document.querySelector('.modal-box p');
+          if (hint) {
+            hint.style.color = '#f87171';
+            hint.textContent = '⚠ API key verification failed. Check the key and try again.';
+          }
+          btn.disabled = false;
+          btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Connect`;
+          document.getElementById('apiKeyInput').focus();
+        }
+      } catch (err) {
+        document.getElementById('apiKeyInput').classList.add('is-error');
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Connect`;
+      }
     }
+
+    /* ---- Enter key in API key input → submit ---- */
+    document.getElementById('apiKeyInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); submitApiKey(); }
+    });
 
     /* ---- Keyboard shortcuts ---- */
     document.addEventListener('keydown', function (e) {
@@ -1370,6 +1480,15 @@
     document.getElementById('apiKeyInput').addEventListener('input', function () {
       this.classList.remove('is-error');
     });
+
+    /* ---- Show mobile logo on small screens ---- */
+    (function () {
+      const ml = document.getElementById('mobileLogo');
+      if (window.innerWidth <= 800 && ml) ml.style.display = 'block';
+      window.addEventListener('resize', () => {
+        if (ml) ml.style.display = window.innerWidth <= 800 ? 'block' : 'none';
+      });
+    })();
   </script>
 </body>
 </html>
