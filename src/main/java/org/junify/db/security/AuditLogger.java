@@ -270,8 +270,12 @@ public class AuditLogger {
             writer.write("{");
             boolean first = true;
             for (Map.Entry<String, Object> entry : map.entrySet()) {
-                if (!first) writer.write(",");
-                writer.write("\"").write(entry.getKey()).write("\":\"");
+                if (!first) {
+                    writer.write(",");
+                }
+                writer.write("\"");
+                writer.write(entry.getKey());
+                writer.write("\":\"");
                 writer.write(String.valueOf(entry.getValue()));
                 writer.write("\"");
                 first = false;
