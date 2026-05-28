@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -175,6 +175,8 @@
         .btn-success { background: var(--success); }
         .btn-success:hover { background: #16a34a; }
         .btn-warning { background: var(--warning); color: #000; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow); }
         
         /* GitHub Button */
         .github-btn {
@@ -523,40 +525,19 @@
         .modal p { color: var(--text-secondary); margin-bottom: 24px; }
         .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
         
-        /* Notification Toast */
+        /* Toast — managed by enhancements.css; keep a minimal fallback here */
         .toast-container {
             position: fixed;
             top: 80px;
             right: 24px;
-            z-index: 1001;
+            z-index: 1050;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
+            width: clamp(280px, 90vw, 400px);
+            pointer-events: none;
         }
-        .toast {
-            padding: 16px 20px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow-lg);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            animation: slideIn 0.3s ease;
-            max-width: 360px;
-        }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        .toast-icon { width: 24px; height: 24px; flex-shrink: 0; }
-        .toast-success .toast-icon { color: var(--success); }
-        .toast-error .toast-icon { color: var(--error); }
-        .toast-warning .toast-icon { color: var(--warning); }
-        .toast-info .toast-icon { color: var(--accent); }
-        .toast-content { flex: 1; }
-        .toast-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 2px; }
-        .toast-message { font-size: 0.8rem; color: var(--text-muted); }
+        .toast { pointer-events: auto; }
         
         /* Dropdown */
         .dropdown { position: relative; }
@@ -564,16 +545,17 @@
             display: none;
             position: absolute;
             right: 0;
-            top: 100%;
+            top: calc(100% + 6px);
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: var(--radius-sm);
             box-shadow: var(--shadow-lg);
             min-width: 200px;
-            z-index: 50;
-            margin-top: 8px;
+            z-index: 200;
+            margin-top: 2px;
         }
-        .dropdown:hover .dropdown-content { display: block; }
+        .dropdown:hover .dropdown-content,
+        .dropdown:focus-within .dropdown-content { display: block; }
         .dropdown-item {
             display: flex;
             align-items: center;
@@ -590,12 +572,14 @@
         
         /* Loading Spinner */
         .spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid var(--border);
-            border-top-color: var(--accent);
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: currentColor;
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            animation: spin 0.75s linear infinite;
+            display: inline-block;
+            flex-shrink: 0;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
         
@@ -633,51 +617,24 @@
             .form-row > * { min-width: 100%; }
         }
         
-        /* Enhanced Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideInRight {
-            from { opacity: 0; transform: translateX(20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes pulseGlow {
-            0%, 100% { box-shadow: 0 0 5px var(--accent-glow); }
-            50% { box-shadow: 0 0 20px var(--accent-glow); }
-        }
-        .card {
-            animation: fadeIn 0.4s ease-out;
-        }
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-            transition: all 0.2s ease;
-        }
-        .tab:hover {
-            background: var(--bg-tertiary);
-            transition: background 0.2s ease;
-        }
-        .btn:hover {
-            transform: translateY(-1px);
-        }
-        .doc-item:hover {
-            transform: translateX(4px);
-            border-color: var(--accent);
-            transition: all 0.2s ease;
-        }
-        .logo-section img {
-            animation: pulseGlow 3s ease-in-out infinite;
-        }
-        /* Loading skeleton */
+        /* Animations */
+        @keyframes fadeIn    { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes shimmer   { 0%   { background-position:200% 0; } 100% { background-position:-200% 0; } }
+        @keyframes pulseGlow { 0%,100% { box-shadow:0 0 5px var(--accent-glow); } 50% { box-shadow:0 0 20px var(--accent-glow); } }
+
+        .card           { animation: fadeIn 0.35s ease-out; }
+        .stat-card      { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .stat-card:hover{ transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+        .doc-item       { transition: transform 0.15s ease, border-color 0.15s ease; }
+        .doc-item:hover { transform: translateX(4px); border-color: var(--accent); }
         .skeleton {
             background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-secondary) 50%, var(--bg-tertiary) 75%);
             background-size: 200% 100%;
             animation: shimmer 1.5s infinite;
         }
-        @keyframes shimmer {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, .card, .stat-card, .doc-item { animation: none !important; transition-duration: 0.01ms !important; }
         }
     </style>
     <link rel="stylesheet" href="css/enhancements.css">
@@ -1529,11 +1486,29 @@
         </div>
     </main>
 
-    <footer class="footer">
-        <p>JunifyDB v1.0.0 | Built with Java 21 | <a href="https://github.com/junifydb/JunifyDB" target="_blank">GitHub</a></p>
-    </footer>
+<footer class="footer">
+    <p>JunifyDB v1.0.0 | Built with Java 21 | <a href="https://github.com/junifydb/JunifyDB" target="_blank">GitHub</a></p>
+</footer>
 
-    <div class="toast-container" id="toastContainer"></div>
+<!-- Enhancements: must be loaded AFTER the main script so inline functions are defined first -->
+<script src="js/enhancements.js"></script>
+
+<!-- Query History Side Panel -->
+<div class="query-history-overlay" id="queryHistoryOverlay" onclick="closeQueryHistory()"></div>
+<div class="query-history-panel" id="queryHistoryPanel" role="complementary" aria-label="Query History">
+    <div class="query-history-header">
+        <span class="query-history-title">Query History</span>
+        <div class="query-history-actions">
+            <button class="btn btn-sm btn-ghost" onclick="clearQueryHistory()" title="Clear all history">Clear All</button>
+            <button class="query-history-close" onclick="closeQueryHistory()" aria-label="Close history panel">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+    </div>
+    <div class="query-history-list" id="queryHistoryList"></div>
+</div>
+
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
 
     <div class="modal-overlay" id="confirmModal">
         <div class="modal">
@@ -1553,8 +1528,10 @@
         let docView = 'grid';
         let currentPage = 0;
         const PAGE_SIZE = 20;
-        let isLightTheme = false;
-        let metricsEventSource = null;
+let isLightTheme = localStorage.getItem('theme') === 'light';
+if (isLightTheme) document.body.classList.add('light-theme');
+let metricsEventSource = null;
+window._apiKey = sessionStorage.getItem('apiKey') || localStorage.getItem('apiKey') || '';
 
         // Start SSE stream for real-time metrics
         function startMetricsStream() {
@@ -1604,14 +1581,372 @@
         }
 
         function toggleTheme() {
-            isLightTheme = !isLightTheme;
-            document.body.classList.toggle('light-theme', isLightTheme);
-            localStorage.setItem('theme', isLightTheme ? 'light' : 'dark');
-        }
+    isLightTheme = !isLightTheme;
+    document.body.classList.toggle('light-theme', isLightTheme);
+    localStorage.setItem('theme', isLightTheme ? 'light' : 'dark');
+}
 
-        function showTab(name) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+// ── Auth helpers ─────────────────────────────────────────────────────────────
+
+function handleUnauth() {
+    showToast('Session expired', 'Please log in again', 'warning');
+    setTimeout(() => { window.location.href = '/login.html'; }, 1500);
+}
+
+async function checkAuth() {
+    const health = await fetchJSON(`${API}/health`);
+    if (!health) return; // fetchJSON already handled redirect
+    const dot  = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+    if (health && health.open !== false) {
+        if (dot)  dot.classList.remove('offline');
+        if (text) text.textContent = 'Online';
+    } else {
+        if (dot)  dot.classList.add('offline');
+        if (text) text.textContent = 'Offline';
+    }
+}
+
+function toggleUserDropdown() {
+    const dd = document.getElementById('userDropdown');
+    if (!dd) return;
+    const visible = dd.style.display === 'block';
+    dd.style.display = visible ? 'none' : 'block';
+    if (!visible) {
+        // Close on next outside click
+        setTimeout(() => {
+            document.addEventListener('click', function handler(e) {
+                if (!document.getElementById('userMenu')?.contains(e.target)) {
+                    dd.style.display = 'none';
+                    document.removeEventListener('click', handler);
+                }
+            });
+        }, 0);
+    }
+}
+
+function showChangePasswordModal() {
+    showToast('Info', 'Change password via the /api/auth/change-password endpoint', 'info');
+    const dd = document.getElementById('userDropdown');
+    if (dd) dd.style.display = 'none';
+}
+
+async function logout() {
+    try { await fetch(`${API}/auth/logout`, { method: 'POST' }); } catch(_) {}
+    sessionStorage.clear();
+    try { localStorage.removeItem('apiKey'); } catch(_) {}
+    window._apiKey = '';
+    window.location.href = '/login.html';
+}
+
+// ── Data export / import / benchmark stubs ──────────────────────────────────
+
+async function exportAllData() {
+    showToast('Exporting', 'Collecting all data…', 'info');
+    try {
+        const [docs, kv, stats] = await Promise.all([
+            fetchJSON(`${API}/collections`),
+            fetchJSON(`${API}/stats`),
+            fetchJSON(`${API}/metrics`)
+        ]);
+        const ts = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        exportAsJson({ collections: docs, stats, metrics: stats }, `junifydb-export-${ts}.json`);
+    } catch (e) {
+        showToast('Export failed', e.message || 'Unknown error', 'error');
+    }
+}
+
+async function importData(event) {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            showToast('Import', `Loaded ${file.name} — import via API not yet implemented`, 'warning');
+            console.info('[Import] Parsed data:', data);
+        } catch (_) {
+            showToast('Import failed', 'Invalid JSON file', 'error');
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // reset input
+}
+
+async function runBenchmarks() {
+    showToast('Benchmarks', 'Running via /api/benchmark — check server logs', 'info');
+    const result = await fetchJSON(`${API}/benchmark`, { method: 'POST', body: '{}' });
+    if (result) showToast('Benchmarks complete', JSON.stringify(result).slice(0, 120), 'success');
+}
+
+// ── SQL Tab helpers ──────────────────────────────────────────────────────────
+
+async function executeSql() {
+    const sql = document.getElementById('sqlQuery')?.value?.trim();
+    if (!sql) { showMessage('sqlMessage', 'Enter a SQL query first', 'warning', false); return; }
+
+    const start = Date.now();
+    const result = await fetchJSON(`${API}/sql`, {
+        method: 'POST',
+        body: JSON.stringify({ sql })
+    });
+    if (!result) return;
+
+    const ms = Date.now() - start;
+    const rowCount = document.getElementById('sqlRowCount');
+    const resultsEl = document.getElementById('sqlResults');
+    const actionsEl = document.getElementById('sqlResultActions');
+
+    if (result.success === false || result.error) {
+        showMessage('sqlMessage', result.message || result.error || 'Query failed', 'error', false);
+        if (rowCount) rowCount.textContent = '0 rows';
+        if (actionsEl) actionsEl.style.display = 'none';
+        return;
+    }
+
+    const rows = result.rows || [];
+    const cols = result.columns || (rows.length > 0 ? Object.keys(rows[0]) : []);
+    if (rowCount) rowCount.textContent = `${rows.length} rows`;
+    if (actionsEl) actionsEl.style.display = rows.length ? 'flex' : 'none';
+
+    if (rows.length === 0) {
+        if (resultsEl) resultsEl.innerHTML = `<p style="color:var(--text-muted);padding:16px;">Query executed successfully — ${result.affected || 0} row(s) affected in ${ms}ms</p>`;
+        showMessage('sqlMessage', `Executed in ${ms}ms`, 'success', false);
+        addToQueryHistory(sql, 'sql', 0, ms);
+        return;
+    }
+
+    const table = document.createElement('table');
+    table.className = 'sql-table';
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr>' + cols.map(c => `<th>${escapeHtml(String(c))}</th>`).join('') + '</tr>';
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    rows.forEach(row => {
+        const tr = document.createElement('tr');
+        cols.forEach(c => {
+            const td = document.createElement('td');
+            const val = row[c];
+            if (val === null || val === undefined) {
+                td.textContent = 'NULL';
+                td.className = 'null';
+            } else {
+                td.textContent = String(val);
+            }
+            tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    if (resultsEl) {
+        resultsEl.innerHTML = '';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'sql-table-wrapper';
+        wrapper.appendChild(table);
+        resultsEl.appendChild(wrapper);
+    }
+    showMessage('sqlMessage', `${rows.length} rows in ${ms}ms`, 'success', false);
+    addToQueryHistory(sql, 'sql', rows.length, ms);
+}
+
+function clearSql() {
+    const q = document.getElementById('sqlQuery');
+    if (q) q.value = '';
+    const r = document.getElementById('sqlResults');
+    if (r) r.innerHTML = '';
+    const m = document.getElementById('sqlMessage');
+    if (m) m.innerHTML = '';
+    const a = document.getElementById('sqlResultActions');
+    if (a) a.style.display = 'none';
+    const rc = document.getElementById('sqlRowCount');
+    if (rc) rc.textContent = '0 rows';
+}
+
+async function browseSqlTable() {
+    const table = document.getElementById('sqlTableSelect')?.value;
+    if (!table) return;
+    const sqlInput = document.getElementById('sqlQuery');
+    if (sqlInput) sqlInput.value = `SELECT * FROM ${table} LIMIT 100;`;
+    await executeSql();
+}
+
+// ── Hybrid Query helpers ─────────────────────────────────────────────────────
+
+function toggleHybridMode() {
+    const mode = document.getElementById('hybridMode')?.value;
+    const placeholder = {
+        sql:    'SELECT * FROM doc_store LIMIT 10;',
+        nosql:  '{"collection":"users","filter":{"age":{"$gt":18}}}',
+        vector: '{"index":"embeddings","query":[0.1,0.2,0.3],"k":5}'
+    };
+    const hq = document.getElementById('hybridQuery');
+    if (hq && placeholder[mode]) hq.placeholder = placeholder[mode];
+}
+
+function clearHybridQuery() {
+    const q = document.getElementById('hybridQuery');
+    if (q) q.value = '';
+    const r = document.getElementById('hybridResults');
+    if (r) r.innerHTML = '';
+    const m = document.getElementById('hybridMessage');
+    if (m) m.innerHTML = '';
+    ['profilerTime','profilerRows','profilerType','profilerIndex'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '-';
+    });
+}
+
+async function executeHybridQuery() {
+    const mode  = document.getElementById('hybridMode')?.value || 'sql';
+    const query = document.getElementById('hybridQuery')?.value?.trim();
+    if (!query) { showMessage('hybridMessage', 'Enter a query first', 'warning', false); return; }
+
+    const start = Date.now();
+    let result;
+
+    if (mode === 'sql') {
+        result = await fetchJSON(`${API}/sql`, { method: 'POST', body: JSON.stringify({ sql: query }) });
+    } else if (mode === 'nosql') {
+        let parsed = {};
+        try { parsed = JSON.parse(query); } catch(_) { showMessage('hybridMessage', 'Invalid JSON query', 'error', false); return; }
+        const col = parsed.collection || 'default';
+        result = await fetchJSON(`${API}/collections/${encodeURIComponent(col)}/query`, {
+            method: 'POST', body: JSON.stringify(parsed.filter || {})
+        });
+    } else {
+        let parsed = {};
+        try { parsed = JSON.parse(query); } catch(_) { showMessage('hybridMessage', 'Invalid JSON query', 'error', false); return; }
+        result = await fetchJSON(`${API}/vectors/${encodeURIComponent(parsed.index || 'default')}/search`, {
+            method: 'POST', body: JSON.stringify({ vector: parsed.query, k: parsed.k || 5 })
+        });
+    }
+
+    const ms = Date.now() - start;
+    if (!result) return;
+
+    const profTime  = document.getElementById('profilerTime');
+    const profRows  = document.getElementById('profilerRows');
+    const profType  = document.getElementById('profilerType');
+    const profIndex = document.getElementById('profilerIndex');
+    const rows = result.rows || result.documents || result.results || [];
+
+    if (profTime)  profTime.textContent  = `${ms}ms`;
+    if (profRows)  profRows.textContent  = rows.length;
+    if (profType)  profType.textContent  = mode.toUpperCase();
+    if (profIndex) profIndex.textContent = result.indexUsed || 'N/A';
+
+    const rEl = document.getElementById('hybridResults');
+    if (rEl) {
+        if (rows.length === 0) {
+            rEl.innerHTML = '<p style="color:var(--text-muted);padding:16px;">No results</p>';
+        } else {
+            const cols = Object.keys(rows[0]);
+            const table = document.createElement('table');
+            table.className = 'sql-table';
+            table.innerHTML = '<thead><tr>' + cols.map(c => `<th>${escapeHtml(c)}</th>`).join('') + '</tr></thead>';
+            const tbody = document.createElement('tbody');
+            rows.forEach(row => {
+                const tr = document.createElement('tr');
+                cols.forEach(c => {
+                    const td = document.createElement('td');
+                    td.textContent = row[c] == null ? 'NULL' : String(row[c]);
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            rEl.innerHTML = '';
+            rEl.appendChild(table);
+        }
+    }
+    showMessage('hybridMessage', `${rows.length} result(s) in ${ms}ms`, 'success', false);
+    addToQueryHistory(query, mode, rows.length, ms);
+}
+
+// ── Schema Browser helpers ───────────────────────────────────────────────────
+
+async function refreshSchema() {
+    const el = document.getElementById('schemaCollections');
+    if (el) el.innerHTML = '<div class="empty-state">Loading…</div>';
+    const data = await fetchJSON(`${API}/collections`);
+    if (!el) return;
+    if (!data || !data.collections || data.collections.length === 0) {
+        el.innerHTML = '<div class="empty-state"><p>No collections found</p></div>';
+        return;
+    }
+    el.innerHTML = data.collections.map(c =>
+        `<div class="metric-item"><span class="metric-label">${escapeHtml(c.name || c)}</span>
+         <span class="badge badge-info">${c.count || 0} docs</span></div>`
+    ).join('');
+}
+
+async function refreshTables() {
+    const el = document.getElementById('schemaTables');
+    if (el) el.innerHTML = '<div class="empty-state">Loading…</div>';
+    const data = await fetchJSON(`${API}/sql/schema`);
+    if (!el) return;
+    if (!data || !data.tables || data.tables.length === 0) {
+        el.innerHTML = '<div class="empty-state"><p>No tables found</p></div>';
+        return;
+    }
+    el.innerHTML = data.tables.map(t =>
+        `<div class="metric-item"><span class="metric-label">${escapeHtml(t.name || t)}</span>
+         <span class="badge badge-info">${t.rowCount || 0} rows</span></div>`
+    ).join('');
+}
+
+// ── Collection helpers ───────────────────────────────────────────────────────
+
+function setDocView(view) {
+    document.getElementById('gridViewBtn')?.classList.toggle('active',  view === 'grid');
+    document.getElementById('tableViewBtn')?.classList.toggle('active', view === 'table');
+    renderDocs(view);
+}
+
+async function exportCollectionData() {
+    const col = document.getElementById('colName')?.value?.trim();
+    if (!col) { showToast('Error', 'Select a collection first', 'error'); return; }
+    const data = await fetchJSON(`${API}/collections/${encodeURIComponent(col)}`);
+    if (data) {
+        const ts = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        exportAsJson(data, `${col}-${ts}.json`);
+    }
+}
+
+// ── User menu init ───────────────────────────────────────────────────────────
+
+function initUserMenu() {
+    try {
+        const sessionData = JSON.parse(sessionStorage.getItem('sessionData') || '{}');
+        if (sessionData.username) {
+            const menu   = document.getElementById('userMenu');
+            const avatar = document.getElementById('userAvatar');
+            const name   = document.getElementById('userName');
+            const role   = document.getElementById('userRole');
+            if (menu)   menu.style.display   = 'flex';
+            if (avatar) avatar.textContent   = sessionData.username[0].toUpperCase();
+            if (name)   name.textContent     = sessionData.username;
+            if (role)   role.textContent     = (sessionData.role || 'USER').toUpperCase();
+        }
+    } catch(_) {}
+}
+
+// ── Page bootstrap ───────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+    initUserMenu();
+    checkAuth();
+    loadMetrics();
+    loadCollections();
+});
+
+function showTab(name) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    const content = document.getElementById('tab-' + name);
+    if (content) content.classList.add('active');
+    const btn = document.getElementById('tabBtn-' + name);
+    if (btn) btn.classList.add('active');
             document.getElementById('tab-' + name).classList.add('active');
             if (event && event.target) event.target.classList.add('active');
             if (name === 'overview') {
@@ -1870,1229 +2205,4 @@
         async function deleteDoc(id) {
             const col = document.getElementById('colName').value.trim();
             if (!col) return;
-            await fetch(`${API}/collections/${col}/${id}`, { method: 'DELETE' });
-            showToast('Deleted', `Document ${id}`, 'warning');
-            loadDocuments();
-            loadMetrics();
-        }
-
-        function renderPagination() {
-            const totalPages = Math.ceil(currentDocs.length / PAGE_SIZE);
-            const pagEl = document.getElementById('docPagination');
-            if (totalPages <= 1) { pagEl.innerHTML = ''; return; }
-            pagEl.innerHTML = `
-                <button onclick="prevPage()" ${currentPage === 0 ? 'disabled' : ''}>&laquo; Prev</button>
-                <span class="info">Page ${currentPage + 1} of ${totalPages} (${currentDocs.length} total)</span>
-                <button onclick="nextPage()" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>Next &raquo;</button>
-            `;
-        }
-
-        function prevPage() { if (currentPage > 0) { currentPage--; renderDocs(); } }
-        function nextPage() { currentPage++; renderDocs(); }
-
-        function setDocView(view) {
-            docView = view;
-            document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
-            document.getElementById('tableViewBtn').classList.toggle('active', view === 'table');
-            renderDocs();
-        }
-
-        async function deleteAllDocs() {
-            const col = document.getElementById('colName').value.trim();
-            if (!col) return;
-            showModal('Delete All', `Delete ALL documents in "${col}"?`, async () => {
-                const docs = await fetchJSON(`${API}/collections/${col}`);
-                if (docs && Array.isArray(docs)) {
-                    for (const d of docs) { if (d.id) await fetch(`${API}/collections/${col}/${d.id}`, { method: 'DELETE' }); }
-                }
-                showToast('Deleted', `All docs deleted from ${col}`, 'warning');
-                loadDocuments();
-                loadMetrics();
-            });
-        }
-
-        async function updateDocument() {
-            const col = document.getElementById('colName').value.trim();
-            const json = document.getElementById('docJson').value.trim();
-            if (!col || !json) return;
-            try { JSON.parse(json); } catch (e) { showMessage('docMessage', 'Invalid JSON', 'error'); return; }
-            await fetchJSON(`${API}/collections/${col}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: json });
-            showToast('Updated', 'Document updated', 'success');
-            loadDocuments();
-        }
-
-        async function executeQuery() {
-            const col = document.getElementById('queryCol').value;
-            if (!col) { showMessage('queryMessage', 'Select a collection', 'error'); return; }
-            const docs = await fetchJSON(`${API}/collections/${col}`);
-            if (!docs) return;
-            let results = Array.isArray(docs) ? docs : [docs];
-            results = results.filter(d => d && d.id);
-            const field = document.getElementById('queryField').value.trim();
-            const op = document.getElementById('queryOp').value;
-            const value = document.getElementById('queryValue').value.trim();
-            if (field && value) {
-                results = results.filter(d => {
-                    const fields = d.fields || d;
-                    const fieldValue = fields[field];
-                    if (fieldValue === undefined) return false;
-                    switch (op) {
-                        case 'eq': return String(fieldValue).toLowerCase() === value.toLowerCase();
-                        case 'gt': return Number(fieldValue) > Number(value);
-                        case 'lt': return Number(fieldValue) < Number(value);
-                        case 'gte': return Number(fieldValue) >= Number(value);
-                        case 'lte': return Number(fieldValue) <= Number(value);
-                        case 'ne': return String(fieldValue).toLowerCase() !== value.toLowerCase();
-                        case 'like': return String(fieldValue).toLowerCase().includes(value.toLowerCase());
-                        case 'in': return value.split(',').map(v => v.trim()).includes(String(fieldValue));
-                        default: return true;
-                    }
-                });
-            }
-            const sort = document.getElementById('querySort').value;
-            if (sort && field) {
-                results.sort((a, b) => {
-                    const fields = a.fields || a;
-                    const aVal = fields[field] ?? '';
-                    const bVal = fields[field] ?? '';
-                    const cmp = String(aVal).localeCompare(String(bVal), undefined, {numeric: true});
-                    return sort === 'desc' ? -cmp : cmp;
-                });
-            }
-            const skip = parseInt(document.getElementById('querySkip').value) || 0;
-            const limit = parseInt(document.getElementById('queryLimit').value) || 100;
-            results = results.slice(skip, skip + limit);
-            const resEl = document.getElementById('queryResults');
-            if (results.length === 0) { resEl.innerHTML = '<div class="empty-state"><p>No results</p></div>'; return; }
-            resEl.innerHTML = `<p style="margin-bottom:16px;color:var(--text-muted)">${results.length} result(s)</p>` + results.map(d => {
-                const fields = d.fields || d;
-                return `<div class="doc-item"><div class="doc-header"><span class="doc-id">${d.id || 'N/A'}</span></div><div class="doc-fields">${Object.entries(fields).map(([k,v]) => `<span class="doc-field"><strong>${k}:</strong> ${v}</span>`).join('')}</div></div>`;
-            }).join('');
-            showToast('Query', `${results.length} results`, 'success');
-        }
-
-        function clearQuery() {
-            document.getElementById('queryField').value = '';
-            document.getElementById('queryValue').value = '';
-            document.getElementById('querySort').value = '';
-            document.getElementById('queryLimit').value = '100';
-            document.getElementById('querySkip').value = '0';
-            document.getElementById('queryResults').innerHTML = '';
-        }
-
-        function explainQuery() {
-            const col = document.getElementById('queryCol').value;
-            showToast('Query Plan', `Full scan on ${col || 'collection'}`, 'info');
-        }
-
-        async function kvPut() {
-            const bucket = document.getElementById('bucketName').value.trim();
-            const key = document.getElementById('kvKey').value.trim();
-            const value = document.getElementById('kvValue').value;
-            if (!bucket || !key) { showMessage('kvMessage', 'Bucket and key required', 'error'); return; }
-            const result = await fetchJSON(`${API}/kv/${bucket}/${key}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ value: value || '' })
-            });
-            if (result) { showMessage('kvMessage', `Stored: ${key}`, 'success'); showToast('Success', `KV Put: ${bucket}/${key}`, 'success'); }
-        }
-
-        async function kvGet() {
-            const bucket = document.getElementById('bucketName').value.trim();
-            const key = document.getElementById('kvKey').value.trim();
-            if (!bucket || !key) return;
-            const result = await fetchJSON(`${API}/kv/${bucket}/${key}`);
-            document.getElementById('kvResult').innerHTML = result 
-                ? `<div class="msg msg-success"><span><strong>${key}</strong> = ${result.value}</span></div>`
-                : `<div class="msg msg-error"><span>Key not found: ${key}</span></div>`;
-        }
-
-        async function kvExists() {
-            const bucket = document.getElementById('bucketName').value.trim();
-            const key = document.getElementById('kvKey').value.trim();
-            if (!bucket || !key) return;
-            const result = await fetchJSON(`${API}/kv/${bucket}/${key}`);
-            showToast(result ? 'Exists' : 'Not Found', `${key}`, result ? 'success' : 'warning');
-        }
-
-        async function kvDelete() {
-            const bucket = document.getElementById('bucketName').value.trim();
-            const key = document.getElementById('kvKey').value.trim();
-            if (!bucket || !key) return;
-            await fetch(`${API}/kv/${bucket}/${key}`, { method: 'DELETE' });
-            showMessage('kvMessage', `Deleted: ${key}`, 'success');
-            showToast('Deleted', `${key}`, 'warning');
-        }
-
-        async function cfPut() {
-            const cf = document.getElementById('cfName').value.trim();
-            const key = document.getElementById('cfKey').value.trim();
-            const json = document.getElementById('cfColumns').value.trim();
-            if (!cf || !key) return;
-            const result = await fetchJSON(`${API}/columns/${cf}/${key}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: json || '{}'
-            });
-            if (result) { showMessage('cfMessage', `Row stored: ${key}`, 'success'); showToast('Success', `CF Put: ${cf}/${key}`, 'success'); }
-        }
-
-        async function cfGet() {
-            const cf = document.getElementById('cfName').value.trim();
-            const key = document.getElementById('cfKey').value.trim();
-            if (!cf || !key) return;
-            const result = await fetchJSON(`${API}/columns/${cf}/${key}`);
-            document.getElementById('cfResult').innerHTML = result 
-                ? `<div class="msg msg-success"><span>${JSON.stringify(result.columns || result)}</span></div>`
-                : `<div class="msg msg-error"><span>Row not found</span></div>`;
-        }
-
-        async function cfDelete() {
-            const cf = document.getElementById('cfName').value.trim();
-            const key = document.getElementById('cfKey').value.trim();
-            if (!cf || !key) { showToast('Error', 'Enter column family and key', 'error'); return; }
-            showConfirmDialog(
-                'Delete Column',
-                `Delete row "${key}" from column family "${cf}"?`,
-                async () => {
-                    try {
-                        await fetch(`${API}/columns/${cf}/${key}`, { method: 'DELETE' });
-                        showToast('Deleted', `Row "${key}" deleted`, 'success');
-                        document.getElementById('cfResult').innerHTML = '';
-                    } catch (e) {
-                        showToast('Error', `Delete failed: ${e.message}`, 'error');
-                    }
-                },
-                'danger'
-            );
-            return;
-            // Original code replaced
-            await fetch(`${API}/columns/${cf}/${key}`, { method: 'DELETE' });
-            showMessage('cfMessage', `Deleted: ${key}`, 'success');
-        }
-
-        async function createIndex() {
-            const col = document.getElementById('idxColName').value.trim();
-            const field = document.getElementById('idxField').value.trim();
-            if (!col || !field) { showMessage('idxMessage', 'Fill required fields', 'error'); return; }
-            const result = await fetchJSON(`${API}/indexes/${col}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ field })
-            });
-            if (result) { showMessage('idxMessage', `Index created: ${col}.${field}`, 'success'); showToast('Success', `Index: ${col}.${field}`, 'success'); }
-        }
-
-        let activeTxId = null;
-
-        async function beginTransaction() {
-            const result = await fetchJSON(`${API}/transactions`, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ isolation: document.getElementById('txIsolation').value })
-            });
-            if (result && result.id) {
-                activeTxId = result.id;
-                document.getElementById('activeTransactions').innerHTML = 
-                    `<div class="doc-item">
-                        <div class="doc-id">TX: ${result.id}</div>
-                        <div class="doc-fields">
-                            <span class="doc-field"><strong>Isolation:</strong> ${result.isolation}</span>
-                            <span class="doc-field"><strong>Status:</strong> ACTIVE</span>
-                        </div>
-                        <button class="btn btn-success btn-sm" onclick="commitTransaction()" style="margin-top:8px">Commit</button>
-                        <button class="btn btn-danger btn-sm" onclick="rollbackTransaction()" style="margin-top:8px;margin-left:8px">Rollback</button>
-                    </div>`;
-                showToast('Transaction', `Started: ${result.id}`, 'success');
-            }
-        }
-
-        async function commitTransaction() {
-            if (!activeTxId) return;
-            await fetchJSON(`${API}/transactions`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'commit' }) });
-            activeTxId = null;
-            document.getElementById('activeTransactions').innerHTML = 'No active transactions';
-            showToast('Transaction', 'Committed', 'success');
-        }
-
-        async function rollbackTransaction() {
-            if (!activeTxId) return;
-            await fetchJSON(`${API}/transactions`, { method: 'DELETE' });
-            activeTxId = null;
-            document.getElementById('activeTransactions').innerHTML = 'No active transactions';
-            showToast('Transaction', 'Rolled back', 'warning');
-        }
-
-        async function loadIndexes() {
-            const col = document.getElementById('idxViewCol').value.trim();
-            if (!col) return;
-            const result = await fetchJSON(`${API}/indexes/${col}`);
-            const listEl = document.getElementById('indexList');
-            if (result && result.indexes) {
-                const indexes = Object.entries(result.indexes);
-                listEl.innerHTML = indexes.length 
-                    ? indexes.map(([f, idx]) => `<div class="metric-item"><span class="metric-label">${f}</span><span class="badge badge-info">${idx.size || 0} entries</span></div>`).join('')
-                    : '<div class="empty-state"><p>No indexes</p></div>';
-            } else { listEl.innerHTML = '<div class="empty-state"><p>No indexes</p></div>'; }
-        }
-
-        async function loadBackupInfo() {
-            const result = await fetchJSON(`${API}/backup`);
-            if (result) {
-                const disk = result.diskUsage || {};
-                document.getElementById('diskFiles').textContent = disk.fileCount || 0;
-                document.getElementById('diskSize').textContent = disk.totalMB || '0 MB';
-                document.getElementById('dataDir').textContent = disk.dataDir || '-';
-                document.getElementById('diskUsage').textContent = disk.totalMB || '0 MB';
-            }
-        }
-
-        async function createBackup() {
-            showMessage('backupMessage', 'Creating backup...', 'info');
-            const result = await fetchJSON(`${API}/backup`, { method: 'POST' });
-            if (result) { showMessage('backupMessage', `Backup: ${result.file}`, 'success'); showToast('Success', `Backup: ${result.file}`, 'success'); loadBackupInfo(); }
-        }
-
-        async function restoreBackup() {
-            const file = document.getElementById('restoreFile').value.trim();
-            if (!file) { showToast('Error', 'Enter backup file path', 'error'); return; }
-            showConfirmDialog(
-                'Restore Backup',
-                `Restore database from "${file}"? This will replace all current data.`,
-                async () => {
-                    showLoading('Restoring backup...');
-                    try {
-                        await fetchJSON(`${API}/backup`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ backupFile: file }) });
-                        hideLoading();
-                        showToast('Restored', 'Backup restored successfully', 'success');
-                        loadBackupInfo();
-                    } catch (e) {
-                        hideLoading();
-                        showToast('Error', `Restore failed: ${e.message}`, 'error');
-                    }
-                },
-                'warning',
-                'Restore',
-                'Cancel'
-            );
-        }
-
-        function clearLogs() { logs = []; renderLogs(); }
-
-        function exportCollectionData() {
-            const col = document.getElementById('colName').value.trim();
-            if (!col) return;
-            const data = JSON.stringify(currentDocs, null, 2);
-            const blob = new Blob([data], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${col}_${Date.now()}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('Exported', `${currentDocs.length} documents`, 'success');
-        }
-
-        function exportAllData() { showToast('Coming Soon', 'Export all data', 'info'); }
-
-        function importData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    showToast('Import', `Parsed ${Array.isArray(data) ? data.length : 1} items`, 'info');
-                } catch { showToast('Error', 'Invalid JSON file', 'error'); }
-            };
-            reader.readAsText(file);
-        }
-
-        function runBenchmarks() { showToast('Coming Soon', 'Benchmarks', 'info'); }
-
-        // SQL Console Functions
-        let sqlHistory = [];
-
-        async function executeSql() {
-            const sql = document.getElementById('sqlQuery').value.trim();
-            if (!sql) { showMessage('sqlMessage', 'Enter a SQL query', 'error', false); return; }
-            showMessage('sqlMessage', 'Executing...', 'info', false);
-            const startTime = performance.now();
-            try {
-                const result = await fetchJSON(`${API}/sql`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: sql
-                });
-                if (result !== null) {
-                    if (result.error) {
-                        showMessage('sqlMessage', `Error: ${result.error}`, 'error');
-                        // Toast already shown by showMessage
-                    } else if (result.type === 'select') {
-                        renderSqlResults(result);
-                        sqlHistory.unshift({ sql, time: new Date().toLocaleTimeString(), rows: result.rows?.length || 0 });
-                        showToast('Query Success', `${result.rows?.length || 0} rows`, 'success');
-                        addToQueryHistory(sql, 'sql', result.rows?.length || 0, Math.round(performance.now() - startTime));
-                    } else {
-                        showMessage('sqlMessage', `Success: ${result.message || result.affected || 0} row(s) affected`, 'success');
-                        showToast('Success', `${result.affected || 0} rows affected`, 'success');
-                    }
-                } else {
-                    showMessage('sqlMessage', 'Query executed (no response)', 'success');
-                }
-            } catch (e) {
-                showMessage('sqlMessage', `Error: ${e.message}`, 'error');
-            }
-        }
-
-        function renderSqlResults(result) {
-            const resultsEl = document.getElementById('sqlResults');
-            const rowCountEl = document.getElementById('sqlRowCount');
-            if (!result.rows || result.rows.length === 0) {
-                resultsEl.innerHTML = '<div class="empty-state"><p>No results</p></div>';
-                rowCountEl.textContent = '0 rows';
-                return;
-            }
-            const columns = result.columns || Object.keys(result.rows[0]);
-            rowCountEl.textContent = `${result.rows.length} row${result.rows.length !== 1 ? 's' : ''}`;
-            let html = '<div class="sql-table-wrapper"><table class="sql-table"><thead><tr>';
-            columns.forEach(col => { html += `<th>${escapeHtml(col)}</th>`; });
-            html += '</tr></thead><tbody>';
-            result.rows.forEach(row => {
-                html += '<tr>';
-                columns.forEach(col => {
-                    const val = row[col];
-                    if (val === null || val === undefined) {
-                        html += '<td class="null">NULL</td>';
-                    } else {
-                        html += `<td title="${escapeHtml(String(val))}">${escapeHtml(String(val))}</td>`;
-                    }
-                });
-                html += '</tr>';
-            });
-            html += '</tbody></table></div>';
-            resultsEl.innerHTML = html;
-            
-            // Show action bar
-            const actionbar = document.getElementById('sqlResultActions');
-            const countEl = document.getElementById('sqlResultCount');
-            if (actionbar && countEl) {
-                actionbar.style.display = 'flex';
-                countEl.textContent = `${result.rows.length} row${result.rows.length !== 1 ? 's' : ''}`;
-            }
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        }
-
-        
-        function exportSqlAsCsv() {
-            const table = document.querySelector('#sqlResults table');
-            if (!table) {
-                showToast('Error', 'No results to export', 'error');
-                return;
-            }
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            exportTableAsCsv(table, `sql_results_${timestamp}.csv`);
-        }
-
-        function clearSql() {
-            document.getElementById('sqlQuery').value = '';
-            document.getElementById('sqlResults').innerHTML = '';
-            document.getElementById('sqlRowCount').textContent = '0 rows';
-            document.getElementById('sqlMessage').innerHTML = '';
-            const actionbar = document.getElementById('sqlResultActions');
-            if (actionbar) actionbar.style.display = 'none';
-        }
-
-        function loadSqlHistory() {
-            if (sqlHistory.length === 0) {
-                showToast('History Empty', 'No queries executed yet', 'info');
-                return;
-            }
-            const history = sqlHistory.slice(0, 10).map((h, i) => 
-                `<div class="dropdown-item" onclick="document.getElementById('sqlQuery').value='${escapeHtml(h.sql).replace(/'/g, "\\'")}'; showTab('sql');">
-                    <span style="color: var(--text-muted); font-size: 0.8rem;">${h.time}</span>
-                    <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(h.sql).substring(0, 50)}...</span>
-                    <span style="color: var(--accent); font-size: 0.8rem;">${h.rows} rows</span>
-                </div>`
-            ).join('');
-            showToast('Query History', `${sqlHistory.length} queries in history`, 'info');
-        }
-
-        async function browseSqlTable() {
-            const table = document.getElementById('sqlTableSelect').value;
-            const browserEl = document.getElementById('sqlTableBrowser');
-            if (!table) { browserEl.innerHTML = '<div class="empty-state"><p>Select a table to browse</p></div>'; return; }
-            const result = await fetchJSON(`${API}/sql`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: `SELECT * FROM ${table} LIMIT 100`
-            });
-            if (result && result.rows) {
-                renderSqlTableBrowser(result);
-            } else if (result && result.error) {
-                browserEl.innerHTML = `<div class="msg msg-error"><span>${result.error}</span></div>`;
-            } else {
-                browserEl.innerHTML = '<div class="empty-state"><p>No data</p></div>';
-            }
-        }
-
-        function renderSqlTableBrowser(result) {
-            const browserEl = document.getElementById('sqlTableBrowser');
-            if (!result.rows || result.rows.length === 0) {
-                browserEl.innerHTML = '<div class="empty-state"><p>Table is empty</p></div>';
-                return;
-            }
-            const columns = result.columns || Object.keys(result.rows[0]);
-            let html = `<p style="margin-bottom:12px;color:var(--text-muted);font-size:0.85rem">${result.rows.length} row(s)</p>`;
-            html += '<div class="sql-table-wrapper"><table class="sql-table"><thead><tr>';
-            columns.forEach(col => { html += `<th>${escapeHtml(col)}</th>`; });
-            html += '</tr></thead><tbody>';
-            result.rows.slice(0, 50).forEach(row => {
-                html += '<tr>';
-                columns.forEach(col => {
-                    const val = row[col];
-                    if (val === null || val === undefined) {
-                        html += '<td class="null">NULL</td>';
-                    } else {
-                        const strVal = String(val);
-                        html += `<td title="${escapeHtml(strVal)}">${strVal.length > 50 ? escapeHtml(strVal.substring(0, 50)) + '...' : escapeHtml(strVal)}</td>`;
-                    }
-                });
-                html += '</tr>';
-            });
-            html += '</tbody></table></div>';
-            browserEl.innerHTML = html;
-        }
-
-        // Vector Search Functions
-        async function addVector() {
-            const indexName = document.getElementById('vectorIndexName').value.trim() || 'default';
-            const dimensions = parseInt(document.getElementById('vectorDimensions').value) || 128;
-            const valuesStr = document.getElementById('vectorValues').value.trim();
-            const id = document.getElementById('vectorId').value.trim() || 'vec_' + Date.now();
-            
-            if (!valuesStr) {
-                showMessage('vectorMessage', 'Enter vector values', 'error');
-                return;
-            }
-            
-            const values = valuesStr.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
-            if (values.length === 0) {
-                showMessage('vectorMessage', 'Invalid vector values', 'error');
-                return;
-            }
-            
-            try {
-                const result = await fetchJSON(`${API}/vectors/${indexName}/${id}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ vector: values })
-                });
-                if (result && result.id) {
-                    showMessage('vectorMessage', `Vector ${id} added to index ${indexName}`, 'success');
-                    showToast('Vector Added', `ID: ${result.id}`, 'success');
-                    updateVectorStats(indexName);
-                } else {
-                    showMessage('vectorMessage', 'Failed to add vector', 'error');
-                }
-            } catch (e) {
-                showMessage('vectorMessage', `Error: ${e.message}`, 'error');
-            }
-        }
-
-        async function searchVectors() {
-            const indexName = document.getElementById('vectorIndexName').value.trim() || 'default';
-            const valuesStr = document.getElementById('vectorValues').value.trim();
-            const k = parseInt(document.getElementById('vectorSearchK').value) || 5;
-            const accuracy = parseFloat(document.getElementById('vectorSearchAccuracy').value) || 1.0;
-            
-            if (!valuesStr) {
-                showMessage('vectorMessage', 'Enter query vector values', 'error');
-                return;
-            }
-            
-            const values = valuesStr.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
-            if (values.length === 0) {
-                showMessage('vectorMessage', 'Invalid vector values', 'error');
-                return;
-            }
-            
-            try {
-                const result = await fetchJSON(`${API}/vectors/${indexName}/search`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ vector: values, k: k, accuracy: accuracy })
-                });
-                if (result && result.results) {
-                    renderVectorResults(result);
-                    showToast('Search Complete', `${result.results.length} results`, 'success');
-                } else if (result && result.error) {
-                    showMessage('vectorMessage', result.error, 'error');
-                }
-            } catch (e) {
-                showMessage('vectorMessage', `Error: ${e.message}`, 'error');
-            }
-        }
-
-        function renderVectorResults(result) {
-            const resultsEl = document.getElementById('vectorResults');
-            if (!result.results || result.results.length === 0) {
-                resultsEl.innerHTML = '<div class="empty-state"><p>No results found</p></div>';
-                return;
-            }
-            let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
-            result.results.forEach((r, i) => {
-                html += `<div class="card" style="padding: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: 600;">#${i + 1} - ${escapeHtml(r.id || 'unknown')}</span>
-                        <span class="badge badge-success">${typeof r.distance === 'number' ? r.distance.toFixed(4) : 'N/A'}</span>
-                    </div>
-                </div>`;
-            });
-            html += '</div>';
-            resultsEl.innerHTML = html;
-        }
-
-        async function deleteVector() {
-            const indexName = document.getElementById('vectorIndexName').value.trim() || 'default';
-            const id = document.getElementById('vectorId').value.trim();
-            
-            if (!id) {
-                showMessage('vectorMessage', 'Enter vector ID to delete', 'error');
-                return;
-            }
-            
-            try {
-                const result = await fetchJSON(`${API}/vectors/${indexName}/${id}`, {
-                    method: 'DELETE'
-                });
-                showToast('Vector Deleted', `ID: ${id}`, 'success');
-                updateVectorStats(indexName);
-            } catch (e) {
-                showMessage('vectorMessage', `Error: ${e.message}`, 'error');
-            }
-        }
-
-        async function updateVectorStats(indexName) {
-            const statsEl = document.getElementById('vectorStats');
-            try {
-                const result = await fetchJSON(`${API}/vectors/${indexName}`);
-                if (result && result.size !== undefined) {
-                    statsEl.innerHTML = `
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                            <div class="stat-card"><div class="stat-value">${result.dimensions}</div><div class="stat-label">Dimensions</div></div>
-                            <div class="stat-card"><div class="stat-value">${result.size}</div><div class="stat-label">Vectors</div></div>
-                        </div>
-                    `;
-                } else {
-                    statsEl.innerHTML = '<div class="empty-state"><p>No index data</p></div>';
-                }
-            } catch (e) {
-                statsEl.innerHTML = '<div class="empty-state"><p>Index not available</p></div>';
-            }
-        }
-        // ==========================================
-        // AUTHENTICATION & SESSION MANAGEMENT
-        // ==========================================
-        const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-        const SESSION_WARNING_MS = 25 * 60 * 1000; // Warn at 25 minutes (5 min before expiry)
-        let sessionTimer = null;
-        let warningTimer = null;
-        let expiryTimeout = null;
-
-        // Check authentication on page load
-        function checkAuth() {
-            const apiKey = sessionStorage.getItem('apiKey');
-            const expiry = sessionStorage.getItem('sessionExpiry');
-            const userInfo = sessionStorage.getItem('userInfo');
-
-            if (!apiKey || !expiry) {
-                redirectToLogin();
-                return false;
-            }
-
-            const now = Date.now();
-            const expiryTime = parseInt(expiry);
-
-            if (now >= expiryTime) {
-                // Session expired
-                clearSession();
-                redirectToLogin();
-                return false;
-            }
-
-            // Valid session
-            if (userInfo) {
-                const user = JSON.parse(userInfo);
-                updateUserMenu(user);
-            }
-
-            startSessionTimers(expiryTime);
-            return true;
-        }
-
-        function redirectToLogin() {
-            window.location.href = 'login.html';
-        }
-
-        function clearSession() {
-            sessionStorage.removeItem('apiKey');
-            sessionStorage.removeItem('sessionExpiry');
-            sessionStorage.removeItem('userInfo');
-            if (sessionTimer) clearTimeout(sessionTimer);
-            if (warningTimer) clearTimeout(warningTimer);
-            if (expiryTimeout) clearTimeout(expiryTimeout);
-        }
-
-        function updateUserMenu(user) {
-            const userMenu = document.getElementById('userMenu');
-            const userAvatar = document.getElementById('userAvatar');
-            const userName = document.getElementById('userName');
-            const userRole = document.getElementById('userRole');
-
-            if (userMenu && userName && userRole) {
-                userMenu.style.display = 'flex';
-                userName.textContent = user.username || 'User';
-                userRole.textContent = user.role || 'USER';
-                
-                if (userAvatar) {
-                    const initial = (user.username || 'U').charAt(0).toUpperCase();
-                    userAvatar.textContent = initial;
-                }
-            }
-        }
-
-        function startSessionTimers(expiryTime) {
-            // Clear existing timers
-            if (sessionTimer) clearTimeout(sessionTimer);
-            if (warningTimer) clearTimeout(warningTimer);
-            if (expiryTimeout) clearTimeout(expiryTimeout);
-
-            const now = Date.now();
-            const timeUntilExpiry = expiryTime - now;
-            const timeUntilWarning = Math.max(0, timeUntilExpiry - SESSION_WARNING_MS);
-
-            // Show warning 5 minutes before expiry
-            warningTimer = setTimeout(() => {
-                showSessionWarning(timeUntilExpiry - SESSION_WARNING_MS);
-            }, timeUntilWarning);
-
-            // Auto-logout on expiry
-            expiryTimeout = setTimeout(() => {
-                showSessionExpired();
-            }, timeUntilExpiry);
-        }
-
-        function showSessionWarning(timeRemaining) {
-            const warning = document.getElementById('sessionWarning');
-            const message = document.getElementById('sessionWarningMessage');
-            const minutes = Math.floor(timeRemaining / 60000);
-            
-            if (message) {
-                message.textContent = `Your session will expire in ${minutes} minutes.`;
-            }
-            
-            if (warning) {
-                warning.classList.add('active');
-            }
-        }
-
-        function hideSessionWarning() {
-            const warning = document.getElementById('sessionWarning');
-            if (warning) {
-                warning.classList.remove('active');
-            }
-        }
-
-        function extendSession() {
-            const apiKey = sessionStorage.getItem('apiKey');
-            const userInfo = sessionStorage.getItem('userInfo');
-            
-            if (!apiKey) {
-                redirectToLogin();
-                return;
-            }
-
-            // Extend session by 30 minutes from now
-            const newExpiry = Date.now() + SESSION_TIMEOUT_MS;
-            sessionStorage.setItem('sessionExpiry', newExpiry.toString());
-            
-            hideSessionWarning();
-            startSessionTimers(newExpiry);
-            
-            showToast('Session Extended', 'Your session has been extended by 30 minutes', 'success');
-        }
-
-        function showSessionExpired() {
-            clearSession();
-            alert('Your session has expired. Please login again.');
-            redirectToLogin();
-        }
-
-        function logout() {
-            // Hide dropdown
-            const dropdown = document.getElementById('userDropdown');
-            if (dropdown) dropdown.style.display = 'none';
-
-            // Call logout API to invalidate server-side session
-            const apiKey = sessionStorage.getItem('apiKey');
-            if (apiKey) {
-                fetch(`${API}/auth/logout`, {
-                    method: 'POST',
-                    headers: { 'X-API-Key': apiKey }
-                }).catch(() => {}); // Ignore errors
-            }
-
-            clearSession();
-            showToast('Logged Out', 'You have been logged out successfully', 'info');
-            setTimeout(() => {
-                redirectToLogin();
-            }, 1000);
-        }
-
-        function toggleUserDropdown() {
-            const dropdown = document.getElementById('userDropdown');
-            if (dropdown) {
-                dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
-            }
-        }
-
-        // Change Password Modal
-        function showChangePasswordModal() {
-            const dropdown = document.getElementById('userDropdown');
-            if (dropdown) dropdown.style.display = 'none';
-            document.getElementById('changePasswordModal').classList.add('active');
-            document.getElementById('currentPassword').value = '';
-            document.getElementById('newPassword').value = '';
-            document.getElementById('confirmPassword').value = '';
-            document.getElementById('changePasswordMessage').innerHTML = '';
-        }
-
-        function closeChangePasswordModal() {
-            document.getElementById('changePasswordModal').classList.remove('active');
-        }
-
-        async function changePassword() {
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            const messageEl = document.getElementById('changePasswordMessage');
-
-            if (!currentPassword || !newPassword || !confirmPassword) {
-                showMessageEl(messageEl, 'All fields are required', 'error');
-                return;
-            }
-
-            if (newPassword.length < 6) {
-                showMessageEl(messageEl, 'Password must be at least 6 characters', 'error');
-                return;
-            }
-
-            if (newPassword !== confirmPassword) {
-                showMessageEl(messageEl, 'New passwords do not match', 'error');
-                return;
-            }
-
-            const userInfo = sessionStorage.getItem('userInfo');
-            const user = userInfo ? JSON.parse(userInfo) : null;
-            const username = user ? user.username : null;
-
-            if (!username) {
-                showMessageEl(messageEl, 'User information not found', 'error');
-                return;
-            }
-
-            try {
-                const apiKey = sessionStorage.getItem('apiKey');
-                const response = await fetch(`${API}/auth/change-password`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-Key': apiKey
-                    },
-                    body: JSON.stringify({
-                        username: username,
-                        currentPassword: currentPassword,
-                        newPassword: newPassword
-                    })
-                });
-
-                const data = await response.json();
-
-                if (response.ok && data.success) {
-                    showMessageEl(messageEl, 'Password changed successfully', 'success');
-                    setTimeout(() => {
-                        closeChangePasswordModal();
-                        showToast('Success', 'Password changed successfully', 'success');
-                    }, 1500);
-                } else {
-                    showMessageEl(messageEl, data.message || 'Failed to change password', 'error');
-                }
-            } catch (error) {
-                console.error('Change password error:', error);
-                showMessageEl(messageEl, 'Connection error. Please try again.', 'error');
-            }
-        }
-
-        function showMessageEl(element, message, type) {
-            element.className = `msg msg-${type}`;
-            element.innerHTML = `<span>${message}</span>`;
-            element.style.display = 'flex';
-        }
-
-        // Enhanced fetch with authentication
-        async function fetchWithAuth(url, options = {}) {
-            const apiKey = sessionStorage.getItem('apiKey');
-            
-            // Add API key header to all requests
-            const headers = options.headers || {};
-            if (apiKey) {
-                headers['X-API-Key'] = apiKey;
-            }
-            
-            const response = await fetch(url, {
-                ...options,
-                headers
-            });
-
-            // Handle 401 responses
-            if (response.status === 401) {
-                clearSession();
-                redirectToLogin();
-                throw new Error('Unauthorized - session expired');
-            }
-
-            return response;
-        }
-
-        // Override fetchJSON to use auth
-        const originalFetchJSON = window.fetchJSON;
-        window.fetchJSON = async function(url, options = {}) {
-            try {
-                const response = await fetchWithAuth(url, options);
-                return await response.json();
-            } catch (error) {
-                console.error('API request failed:', error);
-                throw error;
-            }
-        };
-
-        // Initialize auth on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAuth();
-            
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(event) {
-                const userMenu = document.getElementById('userMenu');
-                const dropdown = document.getElementById('userDropdown');
-                if (userMenu && dropdown && !userMenu.contains(event.target)) {
-                    dropdown.style.display = 'none';
-                }
-            });
-        });
-
-        // Log auth initialization
-        console.log('[Auth] Authentication system initialized');
-
-
-        // Initialize
-        if (localStorage.getItem('theme') === 'light') { isLightTheme = true; document.body.classList.add('light-theme'); }
-        log('Dashboard initialized', 'info');
-        checkHealth();
-        loadMetrics();
-        loadStats();
-        loadCollections();
-        setInterval(() => { checkHealth(); loadMetrics(); loadStats(); }, 5000);
-    </script>
-
-    <!-- PHASE 3: Hybrid Query & Schema Browser Functions -->
-    <script>
-        // Hybrid Query Editor
-        function toggleHybridMode() {
-            const mode = document.getElementById('hybridMode').value;
-            const queryEl = document.getElementById('hybridQuery');
-            const placeholders = {
-                sql: 'SELECT * FROM users WHERE age > 18',
-                nosql: '{"name": {"$eq": "Alice"}}',
-                vector: '{"vector": [0.1, 0.2, 0.3, 0.4], "k": 5}'
-            };
-            queryEl.placeholder = placeholders[mode] || '';
-        }
-
-        async function executeHybridQuery() {
-            const mode = document.getElementById('hybridMode').value;
-            const query = document.getElementById('hybridQuery').value.trim();
-            const startTime = performance.now();
-            const messageEl = document.getElementById('hybridMessage');
-            const resultsEl = document.getElementById('hybridResults');
-            const startTime = performance.now();
-
-            if (!query) {
-                showMessage('hybridMessage', 'Please enter a query', 'error');
-                return;
-            }
-
-            try {
-                let result;
-                if (mode === 'sql') {
-                    result = await fetchJSON(`${API}/sql`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: query
-                    });
-                } else if (mode === 'nosql') {
-                    const collection = prompt('Enter collection name:');
-                    if (!collection) return;
-                    result = await fetchJSON(`${API}/collections/${collection}/query`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: query
-                    });
-                } else if (mode === 'vector') {
-                    const index = prompt('Enter vector index name:');
-                    if (!index) return;
-                    result = await fetchJSON(`${API}/vectors/${index}/search`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: query
-                    });
-                }
-
-                const elapsed = Math.round(performance.now() - startTime);
-                
-                // Update profiler
-                document.getElementById('profilerTime').textContent = elapsed + ' ms';
-                document.getElementById('profilerRows').textContent = Array.isArray(result) ? result.length : (result.rows ? result.rows.length : 1);
-                document.getElementById('profilerType').textContent = mode.toUpperCase();
-                document.getElementById('profilerIndex').textContent = mode === 'sql' ? 'Auto' : (mode === 'vector' ? 'HNSW' : 'Secondary');
-
-                // Display results
-                if (mode === 'sql' && result && result.rows) {
-                    renderSqlTable(result.columns, result.rows);
-                } else if (Array.isArray(result)) {
-                    renderResultsTable(result);
-                } else {
-                    resultsEl.innerHTML = '<pre style="padding: 16px; overflow: auto;">' + JSON.stringify(result, null, 2) + '</pre>';
-                }
-
-                showMessage('hybridMessage', `Query executed in ${elapsed}ms`, 'success', false);
-                addToQueryHistory(query, mode, Array.isArray(result) ? result.length : (result.rows ? result.rows.length : 1), elapsed);
-                log(`Hybrid query (${mode}) executed in ${elapsed}ms`, 'success');
-            } catch (e) {
-                showMessage('hybridMessage', 'Query failed: ' + e.message, 'error');
-                log('Hybrid query failed: ' + e.message, 'error');
-                document.getElementById('profilerTime').textContent = 'Error';
-            }
-        }
-
-        function clearHybridQuery() {
-            document.getElementById('hybridQuery').value = '';
-            document.getElementById('hybridResults').innerHTML = '';
-            document.getElementById('profilerTime').textContent = '-';
-            document.getElementById('profilerRows').textContent = '-';
-            document.getElementById('profilerType').textContent = '-';
-            document.getElementById('profilerIndex').textContent = '-';
-        }
-
-        function renderSqlTable(columns, rows) {
-            const resultsEl = document.getElementById('hybridResults');
-            if (!rows || rows.length === 0) {
-                resultsEl.innerHTML = '<div class="empty-state"><p>No results</p></div>';
-                return;
-            }
-            let html = '<table class="sql-table"><thead><tr>';
-            columns.forEach(col => { html += '<th>' + col + '</th>'; });
-            html += '</tr></thead><tbody>';
-            rows.forEach(row => {
-                html += '<tr>';
-                columns.forEach(col => { html += '<td>' + (row[col] !== null ? row[col] : '<span class="null">NULL</span>') + '</td>'; });
-                html += '</tr>';
-            });
-            html += '</tbody></table>';
-            resultsEl.innerHTML = html;
-        }
-
-        function renderResultsTable(results) {
-            const resultsEl = document.getElementById('hybridResults');
-            if (!results || results.length === 0) {
-                resultsEl.innerHTML = '<div class="empty-state"><p>No results</p></div>';
-                return;
-            }
-            const keys = Object.keys(results[0]);
-            let html = '<table class="sql-table"><thead><tr>';
-            keys.forEach(key => { html += '<th>' + key + '</th>'; });
-            html += '</tr></thead><tbody>';
-            results.forEach(row => {
-                html += '<tr>';
-                keys.forEach(key => { html += '<td>' + JSON.stringify(row[key]) + '</td>'; });
-                html += '</tr>';
-            });
-            html += '</tbody></table>';
-            resultsEl.innerHTML = html;
-        }
-
-        // Schema Browser
-        async function refreshSchema() {
-            const collectionsEl = document.getElementById('schemaCollections');
-            try {
-                const metrics = await fetchJSON(`${API}/metrics`);
-                if (metrics && metrics.collections) {
-                    const cols = Object.entries(metrics.collections);
-                    if (cols.length === 0) {
-                        collectionsEl.innerHTML = '<div class="empty-state"><p>No collections</p></div>';
-                    } else {
-                        collectionsEl.innerHTML = cols.map(([name, count]) => 
-                            `<div class="metric-item" style="cursor:pointer" onclick="showCollectionIndexes('${name}')">
-                                <span class="metric-label">${name}</span>
-                                <span class="badge badge-info">${count} docs</span>
-                            </div>`
-                        ).join('');
-                    }
-                }
-            } catch (e) {
-                collectionsEl.innerHTML = '<div class="empty-state"><p>Error loading collections</p></div>';
-            }
-        }
-
-        async function refreshTables() {
-            const tablesEl = document.getElementById('schemaTables');
-            try {
-                const result = await fetchJSON(`${API}/schema`);
-                if (result && result.tables) {
-                    tablesEl.innerHTML = result.tables.map(table => 
-                        `<div class="metric-item" style="cursor:pointer" onclick="showTableColumns('${table}')">
-                            <span class="metric-label">${table}</span>
-                            <span class="badge badge-info">Table</span>
-                        </div>`
-                    ).join('');
-                } else {
-                    tablesEl.innerHTML = '<div class="empty-state"><p>No tables (H2 engine required)</p></div>';
-                }
-            } catch (e) {
-                tablesEl.innerHTML = '<div class="empty-state"><p>H2 engine not available</p></div>';
-            }
-        }
-
-        async function showCollectionIndexes(name) {
-            const indexesEl = document.getElementById('schemaIndexes');
-            try {
-                const result = await fetchJSON(`${API}/indexes/${name}`);
-                if (result && result.indexes && Object.keys(result.indexes).length > 0) {
-                    indexesEl.innerHTML = Object.entries(result.indexes).map(([field, idx]) => 
-                        `<div class="metric-item">
-                            <span class="metric-label">${field}</span>
-                            <span class="badge badge-success">${idx.type || 'Secondary'}</span>
-                        </div>`
-                    ).join('');
-                } else {
-                    indexesEl.innerHTML = '<div class="empty-state"><p>No indexes for this collection</p></div>';
-                }
-            } catch (e) {
-                indexesEl.innerHTML = '<div class="empty-state"><p>Error loading indexes</p></div>';
-            }
-        }
-
-        async function showTableColumns(table) {
-            const indexesEl = document.getElementById('schemaIndexes');
-            try {
-                const result = await fetchJSON(`${API}/tables/${table}`);
-                if (result && result.columns) {
-                    indexesEl.innerHTML = result.columns.map(col => 
-                        `<div class="metric-item">
-                            <span class="metric-label">${col.name} (${col.type})</span>
-                            ${col.primaryKey ? '<span class="badge badge-warning">PK</span>' : ''}
-                        </div>`
-                    ).join('');
-                } else {
-                    indexesEl.innerHTML = '<div class="empty-state"><p>No columns found</p></div>';
-                }
-            } catch (e) {
-                indexesEl.innerHTML = '<div class="empty-state"><p>Error loading columns</p></div>';
-            }
-        }
-
-        // Add schema refresh to showTab
-        const originalShowTab = window.showTab;
-        window.showTab = function(name) {
-            originalShowTab(name);
-            if (name === 'schema') {
-                refreshSchema();
-                refreshTables();
-            }
-        };
-    </script>
-    <!-- Change Password Modal -->
-    <div class="modal-overlay" id="changePasswordModal" onclick="if(event.target === this) closeChangePasswordModal()">
-        <div class="modal">
-            <h3>Change Password</h3>
-            <p>Update your account password</p>
-            <div class="form-group">
-                <label class="form-label">Current Password</label>
-                <input type="password" id="currentPassword" class="form-input" placeholder="Enter current password">
-            </div>
-            <div class="form-group">
-                <label class="form-label">New Password</label>
-                <input type="password" id="newPassword" class="form-input" placeholder="Enter new password">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Confirm New Password</label>
-                <input type="password" id="confirmPassword" class="form-input" placeholder="Confirm new password">
-            </div>
-            <div id="changePasswordMessage"></div>
-            <div class="modal-actions">
-                <button class="btn btn-ghost" onclick="closeChangePasswordModal()">Cancel</button>
-                <button class="btn" onclick="changePassword()">Change Password</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Session Timeout Warning -->
-    <div class="session-warning" id="sessionWarning">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
-        </svg>
-        <div class="session-warning-content">
-            <div class="session-warning-title">Session Expiring Soon</div>
-            <div class="session-warning-message" id="sessionWarningMessage">Your session will expire in 5 minutes.</div>
-        </div>
-        <div class="session-warning-actions">
-            <button class="btn btn-extend" onclick="extendSession()">Extend Session</button>
-            <button class="btn btn-ghost btn-sm" onclick="logout()">Logout</button>
-        </div>
-    </div>
-
-    <!-- Query History Panel -->
-    <div class="query-history-overlay" id="queryHistoryOverlay" onclick="toggleQueryHistory()"></div>
-    <div class="query-history-panel" id="queryHistoryPanel">
-        <div class="query-history-header">
-            <span class="query-history-title">Query History</span>
-            <button class="query-history-close" onclick="toggleQueryHistory()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-            </button>
-        </div>
-        <div class="query-history-list" id="queryHistoryList">
-            <div class="query-history-empty">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <p>No query history yet</p>
-            </div>
-        </div>
-        <div style="padding: 16px; border-top: 1px solid var(--border);">
-            <button class="btn btn-danger btn-sm" onclick="clearQueryHistory()" style="width: 100%;">Clear History</button>
-        </div>
-    </div>
-
-    <script src="js/enhancements.js"></script>
-</body>
-</html>
-
-
-
+            await fetc

@@ -1253,11 +1253,13 @@
     document.getElementById('toggleApiKey').addEventListener('click', function () {
       const inp = document.getElementById('apiKeyInput');
       const isText = inp.type === 'text';
+      // Toggle: text (visible) → password (hidden), and vice-versa
       inp.type = isText ? 'password' : 'text';
-      // Also switch the icon: when showing as text → show eye-on, when hiding → show eye-off
+      // eye-off icon = field is now hidden (password mode) → clicking will reveal
+      // eye-on  icon = field is now visible (text mode)   → clicking will hide
       document.getElementById('apiEyeOff').style.display = isText ? 'block' : 'none';
       document.getElementById('apiEyeOn').style.display  = isText ? 'none'  : 'block';
-      // Start as text (visible), toggle to password (hidden)
+      this.setAttribute('aria-label', isText ? 'Show API key' : 'Hide API key');
     });
 
     /* ---- On modal open, reset API key field to text (visible) ---- */
@@ -1402,8 +1404,21 @@
       inp.type = 'text';
       inp.value = '';
       inp.classList.remove('is-error');
+      // Field starts as text (visible): eye-on icon should show (indicating it is visible / clicking hides it)
       document.getElementById('apiEyeOff').style.display = 'none';
       document.getElementById('apiEyeOn').style.display  = 'block';
+      document.getElementById('toggleApiKey').setAttribute('aria-label', 'Hide API key');
+      // Reset the hint paragraph in case it was changed to an error state
+      const hint = document.querySelector('.modal-box p');
+      if (hint && hint.style.color === 'rgb(248, 113, 113)') {
+        hint.style.color = '';
+        hint.innerHTML = 'Your API key is shown in the server startup log as<br/>'
+          + '<code style="font-family:var(--font-mono);color:var(--brand-light);font-size:0.78rem;">API key prefix: hYXuECpj...</code>';
+      }
+      // Reset connect button if it was left disabled
+      const btn = document.getElementById('btnConnect');
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Connect';
       modal.classList.add('show');
       document.body.classList.add('modal-open');
       setTimeout(() => inp.focus(), 160);

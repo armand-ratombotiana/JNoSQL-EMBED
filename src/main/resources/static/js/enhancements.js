@@ -1,6 +1,15 @@
 /* ==========================================================================
    JUNIFYDB WEB CONSOLE - UI/UX ENHANCEMENTS
+   Version 2.0 — Fixed & Improved
    ========================================================================== */
+
+'use strict';
+
+// ============================================================================
+// SAFE QUERY HISTORY ITEM CACHE
+// Maps string keys → history item objects to avoid JSON-in-HTML-attribute bugs
+// ============================================================================
+window.__queryHistoryItems = Object.create(null);
 
 // ============================================================================
 // TOAST NOTIFICATION SYSTEM
@@ -17,38 +26,49 @@ const toasts = new Map();
  * @param {number} duration - Auto-hide duration in ms (0 = persistent)
  */
 function showToast(title, message, type = 'info', duration = 5000) {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
+    // Ensure a toast container exists (create one if index.html didn't supply it)
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
 
     const toastId = ++toastIdCounter;
     const icons = {
         success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>',
-        error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
+        error:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
         warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
-        info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'
+        info:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'
     };
+    const safeType = icons[type] ? type : 'info';
 
     const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
+    toast.className = `toast toast-${safeType}`;
     toast.id = `toast-${toastId}`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
     toast.innerHTML = `
-        <div class="toast-icon">${icons[type]}</div>
+        <div class="toast-icon">${icons[safeType]}</div>
         <div class="toast-content">
-            <div class="toast-title">${escapeHtml(title)}</div>
-            <div class="toast-message">${escapeHtml(message)}</div>
+            <div class="toast-title">${escapeHtml(String(title))}</div>
+            <div class="toast-message">${escapeHtml(String(message))}</div>
         </div>
-        <button class="toast-close" onclick="hideToast(${toastId})">
+        <button class="toast-close" aria-label="Dismiss notification">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M18 6L6 18M6 6l12 12"/>
             </svg>
         </button>
     `;
 
-    toast.onclick = (e) => {
-        if (!e.target.closest('.toast-close')) {
-            hideToast(toastId);
-        }
-    };
+    // Use event delegation — no inline onclick with IDs in HTML
+    const closeBtn = toast.querySelector('.toast-close');
+    closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        hideToast(toastId);
+    });
+    toast.addEventListener('click', () => hideToast(toastId));
 
     container.appendChild(toast);
     toasts.set(toastId, toast);
@@ -96,30 +116,44 @@ function clearAllToasts() {
  * @param {string} cancelText - Cancel button text
  */
 function showConfirmDialog(title, message, onConfirm, type = 'warning', confirmText = 'Confirm', cancelText = 'Cancel') {
-    const overlay = document.getElementById('confirmModal');
-    if (!overlay) {
-        // Create modal if it doesn't exist
+    // Lazily create the modal if it doesn't yet exist in the DOM
+    if (!document.getElementById('confirmModal')) {
         createConfirmModal();
     }
 
     const modalOverlay = document.getElementById('confirmModal');
     const icons = {
         warning: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
-        danger: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
-        info: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'
+        danger:  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
+        info:    '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'
     };
+    const safeType = icons[type] ? type : 'warning';
 
-    document.getElementById('confirmModalIcon').innerHTML = icons[type];
-    document.getElementById('confirmModalTitle').textContent = title;
-    document.getElementById('confirmModalMessage').textContent = message;
-    document.getElementById('confirmBtn').textContent = confirmText;
-    document.getElementById('cancelBtn').textContent = cancelText;
+    const iconEl    = document.getElementById('confirmModalIcon');
+    const titleEl   = document.getElementById('confirmModalTitle');
+    const msgEl     = document.getElementById('confirmModalMessage');
+    const confirmEl = document.getElementById('confirmBtn');
+    const cancelEl  = document.getElementById('cancelBtn');
+
+    if (iconEl)    iconEl.innerHTML        = icons[safeType];
+    if (titleEl)   titleEl.textContent     = title;
+    if (msgEl)     msgEl.textContent       = message;
+    if (confirmEl) confirmEl.textContent   = confirmText;
+    if (cancelEl)  cancelEl.textContent    = cancelText;
+
+    // Update icon wrapper class for correct colour
+    if (iconEl) {
+        iconEl.className = `modal-icon ${safeType}`;
+    }
 
     modalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
 
-    // Setup confirm handler
-    window._confirmCallback = onConfirm;
+    // Store callback; cleared on dismiss
+    window._confirmCallback = typeof onConfirm === 'function' ? onConfirm : null;
+
+    // Focus the confirm button for keyboard accessibility
+    if (confirmEl) setTimeout(() => confirmEl.focus(), 50);
 }
 
 /**
@@ -145,28 +179,40 @@ function confirmAction() {
 }
 
 /**
- * Create confirmation modal HTML
+ * Create confirmation modal HTML — uses event listeners, no inline onclick
  */
 function createConfirmModal() {
     const modal = document.createElement('div');
     modal.id = 'confirmModal';
     modal.className = 'modal-overlay';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'confirmModalTitle');
     modal.innerHTML = `
         <div class="modal">
             <div class="modal-header">
                 <div class="modal-icon warning" id="confirmModalIcon"></div>
                 <span class="modal-title" id="confirmModalTitle">Confirm</span>
             </div>
-            <div class="modal-body" id="confirmModalMessage">
-                Are you sure?
-            </div>
+            <div class="modal-body" id="confirmModalMessage">Are you sure?</div>
             <div class="modal-actions">
-                <button class="btn btn-ghost" id="cancelBtn" onclick="hideConfirmDialog()">Cancel</button>
-                <button class="btn btn-danger" id="confirmBtn" onclick="confirmAction()">Confirm</button>
+                <button class="btn btn-ghost" id="cancelBtn">Cancel</button>
+                <button class="btn btn-danger" id="confirmBtn">Confirm</button>
             </div>
         </div>
     `;
     document.body.appendChild(modal);
+
+    // Wire up buttons via addEventListener (no inline onclick)
+    document.getElementById('cancelBtn').addEventListener('click', hideConfirmDialog);
+    document.getElementById('confirmBtn').addEventListener('click', confirmAction);
+
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) hideConfirmDialog();
+    });
+
+    // Close on Escape is handled by the global keydown listener in initKeyboardShortcuts
 }
 
 // ============================================================================
@@ -178,14 +224,16 @@ function createConfirmModal() {
  * @param {string} message - Loading message
  */
 function showLoading(message = 'Loading...') {
-    let overlay = document.getElementById('loadingOverlay');
-    if (!overlay) {
+    if (!document.getElementById('loadingOverlay')) {
         createLoadingOverlay();
-        overlay = document.getElementById('loadingOverlay');
     }
-    document.getElementById('loadingText').textContent = message;
-    overlay.classList.add('active');
-    document.body.style.overflow = 'hidden';
+    const overlay  = document.getElementById('loadingOverlay');
+    const textEl   = document.getElementById('loadingText');
+    if (textEl) textEl.textContent = message;
+    if (overlay) {
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
 }
 
 /**
@@ -323,17 +371,16 @@ let autoRefreshInterval = null;
  */
 function toggleAutoRefresh() {
     autoRefreshEnabled = !autoRefreshEnabled;
-    const toggle = document.getElementById('autoRefreshToggle');
+    const toggle   = document.getElementById('autoRefreshToggle');
     const switchEl = document.getElementById('autoRefreshSwitch');
 
+    if (toggle)   toggle.classList.toggle('active', autoRefreshEnabled);
+    if (switchEl) switchEl.classList.toggle('active', autoRefreshEnabled);
+
     if (autoRefreshEnabled) {
-        toggle.classList.add('active');
-        switchEl.classList.add('active');
         startAutoRefresh();
         showToast('Auto-refresh', 'Metrics will refresh every 5 seconds', 'info');
     } else {
-        toggle.classList.remove('active');
-        switchEl.classList.remove('active');
         stopAutoRefresh();
         showToast('Auto-refresh', 'Disabled', 'info');
     }
@@ -376,23 +423,37 @@ const MAX_HISTORY_ITEMS = 50;
  * @param {number} executionTime - Execution time in ms
  */
 function addToQueryHistory(query, type, rows = 0, executionTime = 0) {
+    if (!query || typeof query !== 'string') return;
+
     const historyKey = type === 'sql' ? SQL_HISTORY_KEY : HYBRID_HISTORY_KEY;
-    let history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+    let history;
+    try {
+        history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+        if (!Array.isArray(history)) history = [];
+    } catch (_) {
+        history = [];
+    }
+
+    // Deduplicate: remove identical previous entry if present
+    history = history.filter(h => h.query !== query);
 
     history.unshift({
         query,
         type,
-        rows,
-        executionTime,
+        rows:          Number(rows)         || 0,
+        executionTime: Number(executionTime) || 0,
         timestamp: new Date().toISOString()
     });
 
-    // Limit history size
     if (history.length > MAX_HISTORY_ITEMS) {
         history = history.slice(0, MAX_HISTORY_ITEMS);
     }
 
-    localStorage.setItem(historyKey, JSON.stringify(history));
+    try {
+        localStorage.setItem(historyKey, JSON.stringify(history));
+    } catch (_) {
+        // localStorage quota exceeded — silently skip persistence
+    }
     updateQueryHistoryPanel();
 }
 
@@ -403,7 +464,12 @@ function addToQueryHistory(query, type, rows = 0, executionTime = 0) {
  */
 function getQueryHistory(type = 'sql') {
     const historyKey = type === 'sql' ? SQL_HISTORY_KEY : HYBRID_HISTORY_KEY;
-    return JSON.parse(localStorage.getItem(historyKey) || '[]');
+    try {
+        const parsed = JSON.parse(localStorage.getItem(historyKey) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+        return [];
+    }
 }
 
 /**
@@ -411,13 +477,17 @@ function getQueryHistory(type = 'sql') {
  * @param {string} type - Query type
  */
 function clearQueryHistory(type) {
-    if (type) {
-        const historyKey = type === 'sql' ? SQL_HISTORY_KEY : HYBRID_HISTORY_KEY;
-        localStorage.removeItem(historyKey);
+    if (type === 'sql') {
+        localStorage.removeItem(SQL_HISTORY_KEY);
+    } else if (type === 'hybrid') {
+        localStorage.removeItem(HYBRID_HISTORY_KEY);
     } else {
+        // Clear both if no specific type given
         localStorage.removeItem(SQL_HISTORY_KEY);
         localStorage.removeItem(HYBRID_HISTORY_KEY);
     }
+    // Reset the in-memory cache too
+    window.__queryHistoryItems = Object.create(null);
     updateQueryHistoryPanel();
     showToast('History Cleared', 'Query history has been cleared', 'success');
 }
@@ -447,42 +517,79 @@ function updateQueryHistoryPanel() {
         return;
     }
 
-    listEl.innerHTML = allHistory.map(item => {
-        const date = new Date(item.timestamp);
+    // Build items using DOM creation (no innerHTML with user data for item rows)
+    const fragment = document.createDocumentFragment();
+    allHistory.forEach((item, idx) => {
+        const dataIdx = `qh-${idx}`;
+        window.__queryHistoryItems[dataIdx] = item;
+
+        const date    = new Date(item.timestamp);
         const timeStr = date.toLocaleTimeString();
         const dateStr = date.toLocaleDateString();
 
-        return `
-            <div class="query-history-item" onclick="loadQueryFromHistory(${escapeHtml(JSON.stringify(item).replace(/'/g, "\\'"))})">
-                <div class="time">${timeStr} - ${dateStr}</div>
-                <div class="query">${escapeHtml(item.query)}</div>
-                <div class="meta">
-                    <span class="badge badge-info">${item.type.toUpperCase()}</span>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">
-                        ${item.rows} rows, ${item.executionTime}ms
-                    </span>
-                </div>
-            </div>
-        `;
-    }).join('');
+        const div = document.createElement('div');
+        div.className = 'query-history-item';
+        div.setAttribute('data-qh-key', dataIdx);
+        div.setAttribute('role', 'button');
+        div.setAttribute('tabindex', '0');
+
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'time';
+        timeDiv.textContent = `${timeStr} — ${dateStr}`;
+
+        const queryDiv = document.createElement('div');
+        queryDiv.className = 'query';
+        queryDiv.textContent = item.query; // textContent = safe, no XSS
+
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'meta';
+
+        const badge = document.createElement('span');
+        badge.className = 'badge badge-info';
+        badge.textContent = (item.type || 'sql').toUpperCase();
+
+        const info = document.createElement('span');
+        info.style.cssText = 'font-size:0.75rem;color:var(--text-muted)';
+        info.textContent = `${item.rows || 0} rows, ${item.executionTime || 0}ms`;
+
+        metaDiv.appendChild(badge);
+        metaDiv.appendChild(info);
+        div.appendChild(timeDiv);
+        div.appendChild(queryDiv);
+        div.appendChild(metaDiv);
+
+        // Click / keyboard handler
+        const handler = () => loadQueryFromHistory(dataIdx);
+        div.addEventListener('click', handler);
+        div.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); }
+        });
+
+        fragment.appendChild(div);
+    });
+    listEl.appendChild(fragment);
 }
 
 /**
  * Toggle query history panel
  */
 function toggleQueryHistory() {
-    const panel = document.getElementById('queryHistoryPanel');
+    const panel   = document.getElementById('queryHistoryPanel');
     const overlay = document.getElementById('queryHistoryOverlay');
     if (!panel || !overlay) return;
 
-    const isActive = panel.classList.contains('active');
-    if (isActive) {
+    if (panel.classList.contains('active')) {
         closeQueryHistory();
     } else {
+        // Reset item cache before rebuilding
+        window.__queryHistoryItems = Object.create(null);
         updateQueryHistoryPanel();
         panel.classList.add('active');
         overlay.classList.add('active');
         document.body.style.overflow = 'hidden';
+        // Focus the close button for keyboard users
+        const closeBtn = panel.querySelector('.query-history-close');
+        if (closeBtn) setTimeout(() => closeBtn.focus(), 50);
     }
 }
 
@@ -501,25 +608,43 @@ function closeQueryHistory() {
 
 /**
  * Load query from history
- * @param {Object} item - History item
+ * @param {string} key - Cache key (e.g. "qh-0")
  */
-function loadQueryFromHistory(item) {
-    if (item.type === 'sql') {
-        document.getElementById('sqlQuery').value = item.query;
-        showTab('sql');
+function loadQueryFromHistory(key) {
+    const item = window.__queryHistoryItems[key];
+    if (!item) return;
+
+    const type = item.type || 'sql';
+
+    if (type === 'sql') {
+        const el = document.getElementById('sqlQuery');
+        if (el) {
+            el.value = item.query;
+            el.dispatchEvent(new Event('input')); // trigger any listeners
+        }
+        if (typeof showTab === 'function') showTab('sql');
     } else {
-        document.getElementById('hybridQuery').value = item.query;
-        document.getElementById('hybridMode').value = item.type;
-        showTab('hybrid');
+        const hq = document.getElementById('hybridQuery');
+        const hm = document.getElementById('hybridMode');
+        if (hq) {
+            hq.value = item.query;
+            hq.dispatchEvent(new Event('input'));
+        }
+        if (hm) hm.value = type;
+        if (typeof showTab === 'function') showTab('hybrid');
     }
     closeQueryHistory();
 }
 
+/** Legacy alias */
+function loadSqlHistory() { toggleQueryHistory(); }
+
 /**
- * Legacy function for backward compatibility
+ * Add SQL query to history — backward-compat alias used by handleSaveShortcut()
+ * @param {string} sql - SQL query text
  */
-function loadSqlHistory() {
-    toggleQueryHistory();
+function addToSqlHistory(sql) {
+    addToQueryHistory(sql, 'sql', 0, 0);
 }
 
 // ============================================================================
@@ -532,29 +657,34 @@ function loadSqlHistory() {
  * @returns {Promise<boolean>} Success status
  */
 async function copyToClipboard(text) {
-    try {
-        await navigator.clipboard.writeText(text);
-        showToast('Copied', 'Content copied to clipboard', 'success');
-        return true;
-    } catch (err) {
-        // Fallback for older browsers
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
+    if (typeof text !== 'string') text = String(text);
+    // Modern Clipboard API
+    if (navigator.clipboard && window.isSecureContext) {
         try {
-            document.execCommand('copy');
+            await navigator.clipboard.writeText(text);
             showToast('Copied', 'Content copied to clipboard', 'success');
             return true;
-        } catch (err2) {
-            showToast('Error', 'Failed to copy to clipboard', 'error');
-            return false;
-        } finally {
-            document.body.removeChild(textarea);
-        }
+        } catch (_) { /* fall through to legacy approach */ }
     }
+    // Legacy execCommand fallback
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    let success = false;
+    try {
+        success = document.execCommand('copy');
+    } finally {
+        document.body.removeChild(textarea);
+    }
+    if (success) {
+        showToast('Copied', 'Content copied to clipboard', 'success');
+    } else {
+        showToast('Error', 'Failed to copy to clipboard', 'error');
+    }
+    return success;
 }
 
 /**
@@ -573,7 +703,7 @@ function copySqlResults() {
     // Extract table data as TSV
     let text = '';
     const rows = table.querySelectorAll('tr');
-    rows.forEach((row, i) => {
+    rows.forEach(row => {
         const cells = row.querySelectorAll('th, td');
         text += Array.from(cells).map(cell => cell.textContent.trim()).join('\t') + '\n';
     });
@@ -615,14 +745,13 @@ function copyJsonToClipboard(data) {
  * @param {string} filename - Filename
  */
 function exportAsJson(data, filename) {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Exported', `Data exported to ${filename}`, 'success');
+    try {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        _triggerDownload(blob, filename || 'export.json');
+        showToast('Exported', `Data exported to ${filename}`, 'success');
+    } catch (e) {
+        showToast('Export Failed', e.message || 'Could not export data', 'error');
+    }
 }
 
 /**
@@ -633,28 +762,47 @@ function exportAsJson(data, filename) {
 function exportTableAsCsv(table, filename) {
     if (!table) return;
 
-    let csv = '';
+    let csv = '\uFEFF'; // BOM for Excel UTF-8 compatibility
     const rows = table.querySelectorAll('tr');
     rows.forEach(row => {
         const cells = row.querySelectorAll('th, td');
         csv += Array.from(cells).map(cell => {
             const text = cell.textContent.trim();
-            // Escape quotes and wrap in quotes if contains comma
-            if (text.includes(',') || text.includes('"') || text.includes('\n')) {
+            // RFC 4180: wrap in quotes if value contains comma, quote or newline
+            if (text.includes(',') || text.includes('"') || text.includes('\n') || text.includes('\r')) {
                 return '"' + text.replace(/"/g, '""') + '"';
             }
             return text;
-        }).join(',') + '\n';
+        }).join(',') + '\r\n'; // CRLF per RFC 4180
     });
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    try {
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        _triggerDownload(blob, filename || 'export.csv');
+        showToast('Exported', `Data exported to ${filename}`, 'success');
+    } catch (e) {
+        showToast('Export Failed', e.message || 'Could not export CSV', 'error');
+    }
+}
+
+/**
+ * Internal helper — creates a temporary <a> and triggers a download
+ * @param {Blob} blob
+ * @param {string} filename
+ */
+function _triggerDownload(blob, filename) {
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
+    const a   = document.createElement('a');
+    a.href     = url;
     a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
-    showToast('Exported', `Data exported to ${filename}`, 'success');
+    // Defer revoke so browser has time to initiate the download
+    setTimeout(() => {
+        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    }, 150);
 }
 
 // ============================================================================
@@ -667,10 +815,14 @@ function exportTableAsCsv(table, filename) {
  * @returns {string} Escaped string
  */
 function escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    if (str === null || str === undefined) return '';
+    // Faster path using a regex replace instead of a DOM node
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 /**
@@ -690,7 +842,13 @@ function formatExecutionTime(ms) {
  * @returns {string} Formatted number
  */
 function formatNumber(num) {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const n = Number(num);
+    if (isNaN(n)) return '0';
+    // Use Intl if available for locale-aware formatting
+    if (typeof Intl !== 'undefined' && Intl.NumberFormat) {
+        return new Intl.NumberFormat().format(n);
+    }
+    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
 /**
@@ -718,12 +876,12 @@ function debounce(func, wait) {
  * @returns {Function} Throttled function
  */
 function throttle(func, limit) {
-    let inThrottle;
-    return function(...args) {
+    let inThrottle = false;
+    return function throttled(...args) {
         if (!inThrottle) {
             func.apply(this, args);
             inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
+            setTimeout(() => { inThrottle = false; }, limit);
         }
     };
 }
@@ -757,23 +915,30 @@ function showMessage(elementId, message, type = 'info', showToastAlso = true) {
     const el = document.getElementById(elementId);
     if (!el) return;
 
+    const validTypes = ['success', 'error', 'warning', 'info'];
+    const safeType   = validTypes.includes(type) ? type : 'info';
+
     const icons = {
         success: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>',
-        error: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
+        error:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
         warning: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
-        info: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'
+        info:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'
     };
 
-    el.innerHTML = `<div class="msg msg-${type}">${icons[type]}<span>${escapeHtml(message)}</span></div>`;
+    // Use DOM construction for the text node to avoid XSS via innerHTML
+    el.innerHTML = '';
+    const wrapper = document.createElement('div');
+    wrapper.className = `msg msg-${safeType}`;
+    wrapper.setAttribute('role', safeType === 'error' ? 'alert' : 'status');
+    wrapper.innerHTML = icons[safeType]; // SVG is trusted static content
+    const span = document.createElement('span');
+    span.textContent = message; // textContent = safe
+    wrapper.appendChild(span);
+    el.appendChild(wrapper);
 
     if (showToastAlso !== false) {
-        const toastTitles = {
-            success: 'Success',
-            error: 'Error',
-            warning: 'Warning',
-            info: 'Info'
-        };
-        showToast(toastTitles[type], message, type);
+        const toastTitles = { success: 'Success', error: 'Error', warning: 'Warning', info: 'Info' };
+        showToast(toastTitles[safeType], message, safeType);
     }
 }
 
@@ -786,24 +951,47 @@ function showMessage(elementId, message, type = 'info', showToastAlso = true) {
  */
 function initEnhancements() {
     initKeyboardShortcuts();
-    createConfirmModal();
-    createLoadingOverlay();
-    updateQueryHistoryPanel();
 
-    // Show keyboard shortcuts hint on first visit
-    if (!localStorage.getItem('shortcutsHintShown')) {
-        setTimeout(() => {
-            showToast('Keyboard Shortcuts', 'Press Ctrl+H for query history, Ctrl+Enter to execute', 'info', 8000);
-            localStorage.setItem('shortcutsHintShown', 'true');
-        }, 2000);
+    // Only create modal/overlay if they don't already exist in the HTML
+    if (!document.getElementById('confirmModal'))   createConfirmModal();
+    if (!document.getElementById('loadingOverlay')) createLoadingOverlay();
+
+    // Ensure a toast container exists
+    if (!document.getElementById('toastContainer')) {
+        const tc = document.createElement('div');
+        tc.id = 'toastContainer';
+        tc.className = 'toast-container';
+        tc.setAttribute('aria-live', 'polite');
+        tc.setAttribute('aria-atomic', 'false');
+        document.body.appendChild(tc);
     }
 
-    console.log('JunifyDB Console Enhancements initialized');
+    // Show keyboard shortcuts hint on first visit (non-blocking)
+    try {
+        if (!localStorage.getItem('shortcutsHintShown')) {
+            setTimeout(() => {
+                showToast('Keyboard Shortcuts', 'Ctrl+H — history • Ctrl+Enter — execute • Ctrl+R — refresh', 'info', 8000);
+                localStorage.setItem('shortcutsHintShown', 'true');
+            }, 2500);
+        }
+    } catch (_) { /* localStorage might be blocked in private mode */ }
+
+    // Populate history panel if it already exists in DOM
+    updateQueryHistoryPanel();
+
+    console.info('[JunifyDB] Console Enhancements v2.0 initialized');
 }
 
-// Auto-initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initEnhancements);
-} else {
+// Auto-initialize when DOM is ready — guard against double-init
+let _enhancementsInitialized = false;
+function _safeInit() {
+    if (_enhancementsInitialized) return;
+    _enhancementsInitialized = true;
     initEnhancements();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _safeInit);
+} else {
+    _safeInit();
 }

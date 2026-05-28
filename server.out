@@ -1,0 +1,10 @@
+Starting JunifyDB server on port 8080...
+Data directory: data
+Storage engine: H2
+Flush mode: sync
+[JunifyDBServer] Authentication ENABLED with API key
+[JunifyDBServer] Include header: X-API-Key: <your-key>
+[JunifyDBServer] API key prefix: hYXuECpj...
+Server started successfully!
+API available at http://localhost:8080/api
+Health check at http://localhost:8080/api/health

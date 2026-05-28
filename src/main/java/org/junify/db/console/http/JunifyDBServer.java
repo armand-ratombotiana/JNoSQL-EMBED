@@ -38,6 +38,9 @@ import java.util.zip.GZIPOutputStream;
 
 public class JunifyDBServer {
 
+    /** Maximum number of audit events retained in memory before oldest are evicted. */
+    private static final int AUDIT_LOG_MAX_SIZE = 10_000;
+
     private final JunifyDB db;
     private HttpsServer httpsServer;
     private int sslPort = -1;
@@ -45,13 +48,22 @@ public class JunifyDBServer {
     private String sslKeystorePassword = null;
     private HttpServer server;
     private long startTime;
-    private String apiKey = "hYXuECpj4dM28vf3En47ar2KaA1FPMLVNrmAYYSAoFM";  // Default API key - change in production!
+    /**
+     * API key for request authentication.
+     * null = authentication disabled (only permitted via explicit disableAuthentication()).
+     * No default key is provided — callers must set one via setApiKey() or leave auth disabled.
+     */
+    private String apiKey = null;
 
     // In-memory session storage for authentication
     private final Map<String, SessionInfo> sessions = new java.util.concurrent.ConcurrentHashMap<>();
     private record SessionInfo(String username, long expiresAt) {}
     private static final long SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
-    private boolean authEnabled = true;  // Authentication enabled by default for security
+    /**
+     * Authentication is DISABLED by default when no API key has been set.
+     * Call setApiKey() to enable it, or disableAuthentication() to explicitly opt out.
+     */
+    private boolean authEnabled = false;
     private boolean corsEnabled = true;
     private boolean compressionEnabled = true;
     private int rateLimit = 1000;
@@ -59,7 +71,11 @@ public class JunifyDBServer {
     private int queryTimeoutSeconds = 30; // Default query timeout
     private Map<String, RateLimitEntry> rateLimitMap = new ConcurrentHashMap<>();
     private static final Logger logger = LoggerFactory.getLogger(JunifyDBServer.class);
-    private final java.util.List<AuditEvent> auditLog = new java.util.concurrent.CopyOnWriteArrayList<>();
+    /**
+     * Bounded audit log. Older events are evicted when {@link #AUDIT_LOG_MAX_SIZE} is reached.
+     * Uses a synchronized LinkedList as a ring buffer to avoid unbounded memory growth.
+     */
+    private final java.util.Deque<AuditEvent> auditLog = new java.util.ArrayDeque<>(AUDIT_LOG_MAX_SIZE + 1);
     
     private static class RateLimitEntry {
         AtomicInteger count = new AtomicInteger(0);
@@ -81,6 +97,7 @@ public class JunifyDBServer {
             // Explicitly disable auth if null/empty is passed (not recommended)
             this.authEnabled = false;
             this.apiKey = null;
+            logger.warn("[JunifyDBServer] setApiKey called with null/empty key — authentication disabled!");
         }
     }
 
@@ -131,7 +148,13 @@ public class JunifyDBServer {
     private void logAuditEvent(String operation, String resource, String documentId, String status,
                                String clientIp, String details) {
         var event = new AuditEvent(System.currentTimeMillis(), operation, resource, documentId, status, clientIp, details);
-        auditLog.add(event);
+        synchronized (auditLog) {
+            auditLog.addLast(event);
+            // Evict oldest entry when the cap is exceeded
+            if (auditLog.size() > AUDIT_LOG_MAX_SIZE) {
+                auditLog.pollFirst();
+            }
+        }
         logger.info("[AUDIT] {} {} {} - {} - {} - {}", operation, resource,
                     documentId != null ? documentId : "", status, clientIp, details);
     }
@@ -200,49 +223,24 @@ public class JunifyDBServer {
     public void start(int port) throws IOException {
         server = HttpServer.create(new InetSocketAddress(port), 0);
         startTime = System.currentTimeMillis();
-        
+
         // Log security configuration
         if (authEnabled) {
-            System.out.println("[JunifyDBServer] Authentication ENABLED with API key");
-            System.out.println("[JunifyDBServer] Include header: X-API-Key: <your-key>");
+            logger.info("[JunifyDBServer] Authentication ENABLED with API key");
+            logger.info("[JunifyDBServer] Include header: X-API-Key: <your-key>");
             if (apiKey != null && !apiKey.isEmpty()) {
-                // Don't log full key in production - truncated for security
+                // Truncate key for log — never log the full secret
                 String maskedKey = apiKey.length() > 8 ? apiKey.substring(0, 8) + "..." : "***";
-                System.out.println("[JunifyDBServer] API key prefix: " + maskedKey);
+                logger.info("[JunifyDBServer] API key prefix: {}", maskedKey);
             }
         } else {
-            System.err.println("[JunifyDBServer] WARNING: Authentication DISABLED - insecure!");
+            logger.warn("[JunifyDBServer] WARNING: Authentication DISABLED — all API endpoints are publicly accessible!");
         }
 
-        server.createContext("/", new StaticHandler());
-        server.createContext("/api/collections/", new CollectionsHandler());
-        server.createContext("/api/kv/", new KeyValueHandler());
-        server.createContext("/api/kv/lists/", new ListHandler());
-        server.createContext("/api/kv/sets/", new SetHandler());
-        server.createContext("/api/kv/hashes/", new HashHandler());
-        server.createContext("/api/columns/", new ColumnHandler());
-        server.createContext("/api/health", new HealthHandler());
-        server.createContext("/api/metrics", new MetricsHandler());
-        server.createContext("/api/metrics/stream", new MetricsStreamHandler());
-        server.createContext("/api/stats", new StatsHandler());
-        server.createContext("/api/backup", new BackupHandler());
-        server.createContext("/api/indexes/", new IndexHandler());
-        server.createContext("/api/transactions", new TransactionHandler());
-        server.createContext("/api/schema/", new SchemaHandler());
-        server.createContext("/api/vectors/", new VectorHandler());
-        server.createContext("/api/sql", new SqlHandler());
-        server.createContext("/api/bulk", new BulkHandler());
-        server.createContext("/api/cdc", new CDCHandler());
-        server.createContext("/api/tables/", new TablesHandler());
-        server.createContext("/api/constraints/", new ConstraintsHandler());
-        server.createContext("/api/audit/logs", new AuditLogHandler());
-
-        if (corsEnabled) {
-            server.createContext("/api/cors", new CorsPreflightHandler());
-        }
-
+        registerHandlers(server);
         server.setExecutor(null);
         server.start();
+
         // Start HTTPS server if SSL is configured
         if (sslPort > 0 && sslKeystorePath != null) {
             startHttpsServer();
@@ -339,11 +337,18 @@ public class JunifyDBServer {
 
     private void startHttpsServer() {
         try {
-            System.setProperty("javax.net.ssl.keyStore", sslKeystorePath);
-            System.setProperty("javax.net.ssl.keyStorePassword", sslKeystorePassword);
+            // Load keystore explicitly — avoids exposing password via JVM system properties.
+            var ks = java.security.KeyStore.getInstance("JKS");
+            char[] keystorePassword = sslKeystorePassword != null ? sslKeystorePassword.toCharArray() : new char[0];
+            try (var fis = new java.io.FileInputStream(sslKeystorePath)) {
+                ks.load(fis, keystorePassword);
+            }
+
+            var kmf = javax.net.ssl.KeyManagerFactory.getInstance(javax.net.ssl.KeyManagerFactory.getDefaultAlgorithm());
+            kmf.init(ks, keystorePassword);
 
             SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, null, null);
+            sslContext.init(kmf.getKeyManagers(), null, null);
 
             httpsServer = HttpsServer.create(new InetSocketAddress(sslPort), 0);
             httpsServer.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
@@ -352,12 +357,10 @@ public class JunifyDBServer {
                     try {
                         SSLContext context = getSSLContext();
                         params.setNeedClientAuth(false);
-                        params.setCipherSuites(new String[]{"TLS_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_256_CBC_SHA"});
                         params.setProtocols(new String[]{"TLSv1.2", "TLSv1.3"});
                         params.setSSLParameters(context.getDefaultSSLParameters());
                     } catch (Exception e) {
-                        System.err.println("[JunifyDBServer] SSL configuration error: " + e.getMessage());
-                        e.printStackTrace();
+                        logger.error("[JunifyDBServer] SSL configuration error: {}", e.getMessage(), e);
                     }
                 }
             });
@@ -365,38 +368,52 @@ public class JunifyDBServer {
             registerHandlers(httpsServer);
             httpsServer.setExecutor(null);
             httpsServer.start();
-            System.out.println("[JunifyDBServer] HTTPS server started on port " + sslPort);
+            logger.info("[JunifyDBServer] HTTPS server started on port {}", sslPort);
         } catch (Exception e) {
-            System.err.println("[JunifyDBServer] SSL initialization error: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("[JunifyDBServer] SSL initialization error: {}", e.getMessage(), e);
         }
     }
 
-    private void registerHandlers(HttpServer server) {
-        server.createContext("/", new StaticHandler());
-        server.createContext("/api/collections/", new CollectionsHandler());
-        server.createContext("/api/kv/", new KeyValueHandler());
-        server.createContext("/api/kv/lists/", new ListHandler());
-        server.createContext("/api/kv/sets/", new SetHandler());
-        server.createContext("/api/kv/hashes/", new HashHandler());
-        server.createContext("/api/columns/", new ColumnHandler());
-        server.createContext("/api/health", new HealthHandler());
-        server.createContext("/api/metrics", new MetricsHandler());
-        server.createContext("/api/metrics/stream", new MetricsStreamHandler());
-        server.createContext("/api/stats", new StatsHandler());
-        server.createContext("/api/backup", new BackupHandler());
-        server.createContext("/api/indexes/", new IndexHandler());
-        server.createContext("/api/transactions", new TransactionHandler());
-        server.createContext("/api/schema/", new SchemaHandler());
-        server.createContext("/api/vectors/", new VectorHandler());
-        server.createContext("/api/sql", new SqlHandler());
-        server.createContext("/api/bulk", new BulkHandler());
-        server.createContext("/api/cdc", new CDCHandler());
-        server.createContext("/api/tables/", new TablesHandler());
-        server.createContext("/api/constraints/", new ConstraintsHandler());
-        server.createContext("/api/audit/logs", new AuditLogHandler());
+    /**
+     * Register all HTTP handler contexts on the given server instance.
+     * Used by both the plain HTTP server and the HTTPS server so that
+     * handler registrations are never duplicated or out-of-sync.
+     */
+    private void registerHandlers(HttpServer httpServer) {
+        httpServer.createContext("/", new StaticHandler());
+        try {
+            var h2 = db.h2Engine();
+            httpServer.createContext("/api/auth/", new AuthenticationHandler(
+                h2,
+                new org.junify.db.storage.spi.UserManager(h2),
+                new java.util.concurrent.ConcurrentHashMap<>()
+            ));
+        } catch (Exception ex) {
+            logger.info("[JunifyDBServer] Auth handler not available (H2 engine not active)");
+        }
+        httpServer.createContext("/api/collections/", new CollectionsHandler());
+        httpServer.createContext("/api/kv/", new KeyValueHandler());
+        httpServer.createContext("/api/kv/lists/", new ListHandler());
+        httpServer.createContext("/api/kv/sets/", new SetHandler());
+        httpServer.createContext("/api/kv/hashes/", new HashHandler());
+        httpServer.createContext("/api/columns/", new ColumnHandler());
+        httpServer.createContext("/api/health", new HealthHandler());
+        httpServer.createContext("/api/metrics", new MetricsHandler());
+        httpServer.createContext("/api/metrics/stream", new MetricsStreamHandler());
+        httpServer.createContext("/api/stats", new StatsHandler());
+        httpServer.createContext("/api/backup", new BackupHandler());
+        httpServer.createContext("/api/indexes/", new IndexHandler());
+        httpServer.createContext("/api/transactions", new TransactionHandler());
+        httpServer.createContext("/api/schema/", new SchemaHandler());
+        httpServer.createContext("/api/vectors/", new VectorHandler());
+        httpServer.createContext("/api/sql", new SqlHandler());
+        httpServer.createContext("/api/bulk", new BulkHandler());
+        httpServer.createContext("/api/cdc", new CDCHandler());
+        httpServer.createContext("/api/tables/", new TablesHandler());
+        httpServer.createContext("/api/constraints/", new ConstraintsHandler());
+        httpServer.createContext("/api/audit/logs", new AuditLogHandler());
         if (corsEnabled) {
-            server.createContext("/api/cors", new CorsPreflightHandler());
+            httpServer.createContext("/api/cors", new CorsPreflightHandler());
         }
     }
 public void stop() {
@@ -427,7 +444,12 @@ public void stop() {
                 String since = params.get("since");
                 int limit = params.containsKey("limit") ? Integer.parseInt(params.get("limit")) : 100;
 
-                var filtered = auditLog.stream();
+                // Take a snapshot to avoid holding the lock during streaming
+                java.util.List<AuditEvent> snapshot;
+                synchronized (auditLog) {
+                    snapshot = new java.util.ArrayList<>(auditLog);
+                }
+                var filtered = snapshot.stream();
 
                 if (operation != null && !operation.isEmpty()) {
                     filtered = filtered.filter(e -> e.operation().equals(operation));
@@ -832,7 +854,8 @@ private class StaticHandler implements HttpHandler {
                         return;
                     }
                     String value = bucket.lpop(key);
-                    sendJson(exchange, 200, Map.of("key", key, "operation", "lpop", "value", value));
+                    var lpopResult = new java.util.HashMap<String, Object>(); lpopResult.put("key", key); lpopResult.put("operation", "lpop"); lpopResult.put("value", value);
+                    sendJson(exchange, 200, lpopResult);
                 }
                 case "rpop" -> {
                     if (!"POST".equals(exchange.getRequestMethod())) {
@@ -840,7 +863,8 @@ private class StaticHandler implements HttpHandler {
                         return;
                     }
                     String value = bucket.rpop(key);
-                    sendJson(exchange, 200, Map.of("key", key, "operation", "rpop", "value", value));
+                    var rpopResult = new java.util.HashMap<String, Object>(); rpopResult.put("key", key); rpopResult.put("operation", "rpop"); rpopResult.put("value", value);
+                    sendJson(exchange, 200, rpopResult);
                 }
                 case "range", "lrange" -> {
                     if (!"GET".equals(exchange.getRequestMethod())) {
@@ -1650,8 +1674,10 @@ private class StaticHandler implements HttpHandler {
             if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
-            if (parts.length < 4) {
-                sendJson(exchange, 400, Map.of("error", "Usage: /api/indexes/{collection}"));
+            if (parts.length < 4 || parts[3].isEmpty()) {
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    sendJson(exchange, 200, Map.of("indexes", "use /api/indexes/{collection}", "status", "ok"));
+                } else { sendJson(exchange, 405, Map.of("error", "Method not allowed")); }
                 return;
             }
             var collectionName = parts[3];
@@ -1685,15 +1711,24 @@ private class StaticHandler implements HttpHandler {
         public void handle(HttpExchange exchange) throws IOException {
             if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             if ("POST".equals(exchange.getRequestMethod())) {
-                var tx = db.beginTransaction();
-                var txId = tx.hashCode();
-                activeTransactions.put(txId, tx);
-                sendJson(exchange, 200, Map.of(
-                    "transactionId", txId,
-                    "status", "started"
-                ));
+                var body = readBody(exchange);
+                var data = JsonSerde.fromJson(body, Map.class);
+                var action = data.containsKey("action") ? data.get("action").toString() : "begin";
+                if ("commit".equals(action) || "rollback".equals(action)) {
+                    var txId = data.containsKey("transactionId") ? ((Number) data.get("transactionId")).intValue() : -1;
+                    var tx = activeTransactions.remove(txId);
+                    if (tx != null) { if ("commit".equals(action)) tx.commit(); else tx.rollback(); }
+                    sendJson(exchange, 200, Map.of("status", action + "ted", "transactionId", txId));
+                } else {
+                    var tx = db.beginTransaction();
+                    var txId = tx.hashCode();
+                    activeTransactions.put(txId, tx);
+                    sendJson(exchange, 200, Map.of("transactionId", txId, "status", "started"));
+                }
+            } else if ("GET".equals(exchange.getRequestMethod())) {
+                sendJson(exchange, 200, Map.of("activeTransactions", activeTransactions.size(), "ids", activeTransactions.keySet()));
             } else {
-                sendJson(exchange, 400, Map.of("error", "POST /api/transactions to begin"));
+                sendJson(exchange, 405, Map.of("error", "POST or GET only"));
             }
         }
     }
@@ -1778,50 +1813,46 @@ private class StaticHandler implements HttpHandler {
             var indexName = parts[3];
             var hnsw = vectorIndexes.computeIfAbsent(indexName, k -> new org.junify.db.index.hnsw.HNSWIndex(128));
             
-            if (parts.length == 5) {
-                if ("GET".equals(exchange.getRequestMethod())) {
-                    sendJson(exchange, 200, Map.of(
-                        "index", indexName,
-                        "dimensions", hnsw.dimensions(),
-                        "size", hnsw.size()
-                    ));
-                    return;
-                }
-            }
-            
             var id = parts[4];
-            
-            if ("GET".equals(exchange.getRequestMethod())) {
+
+            // /api/vectors/{index}/search — POST search
+            if ("search".equals(id) && "POST".equals(exchange.getRequestMethod())) {
                 try {
                     var body = readBody(exchange);
                     var data = JsonSerde.fromJson(body, Map.class);
                     var vector = parseVector((java.util.List<?>) data.get("vector"));
                     var k = data.containsKey("k") ? ((Number) data.get("k")).intValue() : 5;
                     var results = hnsw.search(vector, k);
-                    sendJson(exchange, 200, Map.of(
-                        "query", id,
-                        "results", results
-                    ));
+                    sendJson(exchange, 200, Map.of("results", results, "k", k));
                 } catch (Exception e) {
                     sendJson(exchange, 500, Map.of("error", "Search failed", "message", e.getMessage()));
                 }
+                return;
+            }
+
+            // /api/vectors/{index}/{id} — GET info (index-level when id missing)
+            if (parts.length == 4 || id.isEmpty()) {
+                sendJson(exchange, 200, Map.of("index", indexName, "dimensions", hnsw.dimensions(), "size", hnsw.size()));
+                return;
+            }
+
+            if ("GET".equals(exchange.getRequestMethod())) {
+                sendJson(exchange, 200, Map.of("id", id, "index", indexName, "size", hnsw.size(), "dimensions", hnsw.dimensions()));
             } else if ("POST".equals(exchange.getRequestMethod())) {
                 try {
                     var body = readBody(exchange);
                     var data = JsonSerde.fromJson(body, Map.class);
+                    // Support {id, vector, metadata} or just {vector}
+                    String vecId = data.containsKey("id") ? data.get("id").toString() : id;
                     var vector = parseVector((java.util.List<?>) data.get("vector"));
-                    hnsw.add(id, vector);
-                    sendJson(exchange, 201, Map.of("id", id, "status", "added"));
+                    hnsw.add(vecId, vector);
+                    sendJson(exchange, 201, Map.of("id", vecId, "status", "added"));
                 } catch (Exception e) {
-                    sendJson(exchange, 500, Map.of("error", "Insert failed", "message", e.getMessage()));
+                    sendJson(exchange, 400, Map.of("error", "Insert failed", "message", e.getMessage()));
                 }
             } else if ("DELETE".equals(exchange.getRequestMethod())) {
-                try {
-                    hnsw.remove(id);
-                    sendJson(exchange, 204, null);
-                } catch (Exception e) {
-                    sendJson(exchange, 500, Map.of("error", "Delete failed", "message", e.getMessage()));
-                }
+                try { hnsw.remove(id); sendJson(exchange, 204, null); }
+                catch (Exception e) { sendJson(exchange, 500, Map.of("error", e.getMessage())); }
             }
         }
         
@@ -1952,283 +1983,4 @@ private class StaticHandler implements HttpHandler {
         }
     }
 
-    private class BulkHandler implements HttpHandler {
-        @Override
-        public void handle(HttpExchange exchange) throws IOException {
-            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
-            var path = exchange.getRequestURI().getPath();
-            var parts = path.split("/");
-            if (parts.length < 4) {
-                sendJson(exchange, 400, Map.of("error", "Usage: /api/bulk/{collection}"));
-                return;
-            }
-            var collectionName = parts[3];
-            var collection = db.documentCollection(collectionName);
-            
-            if ("POST".equals(exchange.getRequestMethod())) {
-                var body = readBody(exchange);
-                var docs = JsonSerde.fromJson(body, java.util.List.class);
-                var count = 0;
-                if (docs instanceof java.util.List) {
-                    for (Object doc : (java.util.List<?>) docs) {
-                        if (doc instanceof java.util.Map) {
-                            var docMap = (java.util.Map<?, ?>) doc;
-                            var docEntity = new org.junify.db.nosql.document.Document();
-                            docEntity.id(java.util.UUID.randomUUID().toString());
-                            var fields = new java.util.HashMap<String, Object>();
-                            for (var entry : docMap.entrySet()) {
-                                fields.put(String.valueOf(entry.getKey()), entry.getValue());
-                            }
-                            docEntity.getFields().putAll(fields);
-                            collection.insert(docEntity);
-                            count++;
-                        }
-                    }
-                }
-                sendJson(exchange, 201, Map.of(
-                    "status", "success",
-                    "collection", collectionName,
-                    "inserted", count
-                ));
-            } else if ("DELETE".equals(exchange.getRequestMethod())) {
-                var count = 0;
-                for (var doc : collection.findAll()) {
-                    collection.deleteById(doc.getId());
-                    count++;
-                }
-                sendJson(exchange, 200, Map.of(
-                    "status", "success",
-                    "collection", collectionName,
-                    "deleted", count
-                ));
-            } else {
-                sendJson(exchange, 405, Map.of("error", "Only POST or DELETE allowed"));
-            }
-        }
-    }
-
-    private class SqlHandler implements HttpHandler {
-        @Override
-        public void handle(HttpExchange exchange) throws IOException {
-            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
-            if (!"POST".equals(exchange.getRequestMethod())) {
-                sendJson(exchange, 405, Map.of("error", "Only POST method is allowed for SQL execution"));
-                return;
-            }
-            if (!db.isH2Engine()) {
-                sendJson(exchange, 400, Map.of("error", "SQL execution is only available with H2 storage engine"));
-                return;
-            }
-            try {
-                var sql = readBody(exchange);
-                // Set query timeout before execution
-                db.h2Engine().setQueryTimeout(queryTimeoutSeconds);
-                var result = db.h2Engine().executeSql(sql);
-                if (result.success()) {
-                    if (result.rows() != null) {
-                        sendJson(exchange, 200, Map.of(
-                            "type", "select",
-                            "columns", result.columns(),
-                            "rows", result.rows()
-                        ));
-                    } else {
-                        sendJson(exchange, 200, Map.of(
-                            "type", "other",
-                            "affected", result.affected(),
-                            "message", result.message()
-                        ));
-                    }
-                } else {
-                    sendJson(exchange, 400, Map.of("error", result.message()));
-                }
-            } catch (Exception e) {
-                sendJson(exchange, 500, Map.of("error", e.getMessage()));
-            }
-        }
-    }
-
-    private class CDCHandler implements HttpHandler {
-        @Override
-        public void handle(HttpExchange exchange) throws IOException {
-            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
-            var path = exchange.getRequestURI().getPath();
-            var parts = path.split("/");
-            
-            if (parts.length == 3) {
-                if ("GET".equals(exchange.getRequestMethod())) {
-                    var status = db.cdcManager().getStatus();
-                    sendJson(exchange, 200, status);
-                    return;
-                }
-            }
-            
-            if (parts.length >= 4) {
-                var action = parts[3];
-                
-                if ("connectors".equals(action) && parts.length >= 5) {
-                    var connectorName = parts[4];
-                    
-                    if ("POST".equals(exchange.getRequestMethod())) {
-                        var body = readBody(exchange);
-                        var data = JsonSerde.fromJson(body, Map.class);
-                        var type = data.get("type").toString();
-                        
-                        if ("file".equals(type)) {
-                            var outputDir = java.nio.file.Paths.get(data.get("outputDir").toString());
-                            db.cdcManager().addFileConnector(connectorName, outputDir);
-                            sendJson(exchange, 201, Map.of("status", "connected", "type", "file", "name", connectorName));
-                        } else if ("kafka".equals(type)) {
-                            var bootstrapServers = data.get("bootstrapServers").toString();
-                            var topic = data.get("topic").toString();
-                            db.cdcManager().addKafkaConnector(connectorName, bootstrapServers, topic);
-                            sendJson(exchange, 201, Map.of("status", "connected", "type", "kafka", "name", connectorName));
-                        } else {
-                            sendJson(exchange, 400, Map.of("error", "Unknown connector type"));
-                        }
-                        return;
-                    } else if ("DELETE".equals(exchange.getRequestMethod())) {
-                        db.cdcManager().removeFileConnector(connectorName);
-                        db.cdcManager().removeKafkaConnector(connectorName);
-                        sendJson(exchange, 200, Map.of("status", "disconnected", "name", connectorName));
-                        return;
-                    }
-                }
-                
-                if ("events".equals(action)) {
-                    var since = exchange.getRequestHeaders().getFirst("Since");
-                    var events = since != null 
-                        ? db.cdcManager().processor().getEventsSince(Long.parseLong(since))
-                        : db.cdcManager().processor().getEventLog();
-                    sendJson(exchange, 200, Map.of("events", events));
-                    return;
-                }
-                
-                if ("enable".equals(action)) {
-                    db.cdcManager().processor().enable();
-                    sendJson(exchange, 200, Map.of("status", "enabled"));
-                    return;
-                }
-                
-                if ("disable".equals(action)) {
-                    db.cdcManager().processor().disable();
-                    sendJson(exchange, 200, Map.of("status", "disabled"));
-                    return;
-                }
-            }
-            
-            sendJson(exchange, 400, Map.of("error", "Usage: GET /api/cdc, POST/DELETE /api/cdc/connectors/{name}, GET /api/cdc/events"));
-        }
-    }
-
-    private class SchemaSqlHandler implements HttpHandler {
-        @Override
-        public void handle(HttpExchange exchange) throws IOException {
-            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
-            var path = exchange.getRequestURI().getPath();
-            
-            if ("GET".equals(exchange.getRequestMethod()) && path.equals("/api/schema")) {
-                var tables = db.h2Engine().schemaManager().getTables();
-                sendJson(exchange, 200, Map.of("tables", tables));
-                return;
-            }
-            
-            var parts = path.split("/");
-            if (parts.length >= 4) {
-                var tableName = parts[3];
-                var sm = db.h2Engine().schemaManager();
-                
-                if ("GET".equals(exchange.getRequestMethod())) {
-                    var tables = sm.getTables().stream()
-                        .filter(t -> t.startsWith(tableName))
-                        .map(t -> Map.of("name", t, "columns", sm.getColumns(t)))
-                        .collect(Collectors.toList());
-                    sendJson(exchange, 200, Map.of("tables", tables));
-                    return;
-                }
-                
-                if ("POST".equals(exchange.getRequestMethod())) {
-                    var body = readBody(exchange);
-                    var data = JsonSerde.fromJson(body, Map.class);
-                    var columnsRaw = (Map<String, Object>) data.get("columns");
-                    var columns = new java.util.HashMap<String, Object>();
-                    for (var entry : columnsRaw.entrySet()) {
-                        columns.put(entry.getKey(), entry.getValue());
-                    }
-                    var result = sm.createTable(tableName, columns);
-                    sendJson(exchange, result.success() ? 201 : 400, 
-                        Map.of("success", result.success(), "message", result.message()));
-                    return;
-                }
-                
-                if ("DELETE".equals(exchange.getRequestMethod())) {
-                    var result = sm.dropTable(tableName);
-                    sendJson(exchange, result.success() ? 200 : 400, 
-                        Map.of("success", result.success(), "message", result.message()));
-                    return;
-                }
-            }
-            
-            sendJson(exchange, 400, Map.of("error", "Usage: GET /api/schema or GET/DELETE /api/schema/{table}"));
-        }
-    }
-
-    private class TablesHandler implements HttpHandler {
-        @Override
-        public void handle(HttpExchange exchange) throws IOException {
-            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
-            var path = exchange.getRequestURI().getPath();
-            var parts = path.split("/");
-            
-            if (parts.length < 4) {
-                sendJson(exchange, 400, Map.of("error", "Usage: /api/tables/{name}"));
-                return;
-            }
-            
-            var tableName = parts[3];
-            var sm = db.h2Engine().schemaManager();
-            
-            if ("GET".equals(exchange.getRequestMethod())) {
-                sendJson(exchange, 200, sm.getTableInfo(tableName));
-            } else if ("POST".equals(exchange.getRequestMethod())) {
-                var body = readBody(exchange);
-                var data = JsonSerde.fromJson(body, Map.class);
-                var columnsRaw = (Map<String, Object>) data.get("columns");
-                var columns = new java.util.HashMap<String, Object>();
-                for (var entry : columnsRaw.entrySet()) {
-                    var colDef = (Map<String, Object>) entry.getValue();
-                    var colType = colDef.get("type") != null ? colDef.get("type").toString() : "VARCHAR";
-                    columns.put(entry.getKey(), colType);
-                }
-                var result = sm.createTable(tableName, columns);
-                sendJson(exchange, result.success() ? 201 : 400, 
-                    Map.of("success", result.success(), "message", result.message()));
-            } else {
-                sendJson(exchange, 405, Map.of("error", "Method not allowed"));
-            }
-        }
-    }
-
-    private class ConstraintsHandler implements HttpHandler {
-        @Override
-        public void handle(HttpExchange exchange) throws IOException {
-            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
-            var path = exchange.getRequestURI().getPath();
-            var parts = path.split("/");
-            
-            if (parts.length < 4) {
-                sendJson(exchange, 400, Map.of("error", "Usage: /api/constraints/{table}"));
-                return;
-            }
-            
-            var tableName = parts[3];
-            var cm = db.h2Engine().constraintManager();
-            
-            if ("GET".equals(exchange.getRequestMethod())) {
-                var constraints = cm.getAllConstraints(tableName);
-                sendJson(exchange, 200, constraints);
-            } else {
-                sendJson(exchange, 405, Map.of("error", "Method not allowed"));
-            }
-        }
-    }
-}
+    private class BulkHandler implements H

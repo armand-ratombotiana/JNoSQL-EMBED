@@ -6,7 +6,6 @@ import org.junify.db.console.http.JunifyDBServer;
 import org.junify.db.core.cdc.CDCManager;
 import org.junify.db.core.event.EventBus;
 import org.junify.db.core.metrics.DatabaseMetrics;
-import org.junify.db.nosql.column.ColumnFamily;
 import org.junify.db.nosql.document.DocumentCollection;
 import org.junify.db.nosql.kv.HashBucket;
 import org.junify.db.nosql.kv.KeyValueBucket;
@@ -165,6 +164,7 @@ public class JunifyDB implements Closeable {
         if (!closed) {
             if (server != null) server.stop();
             engine.flush();
+            engine.close();
             closed = true;
         }
     }

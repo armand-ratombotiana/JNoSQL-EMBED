@@ -14,6 +14,12 @@ public class Query {
     private int offset = 0;
     private Set<QueryHint> hints = new java.util.HashSet<>();
     private String forceIndexName;
+    /**
+     * The field name targeted by an equality predicate, if this query was
+     * created via {@link #eq(String, Object)}. Used by the index optimizer
+     * to choose an index without scanning live data.
+     */
+    private String indexedField;
 
     private Query(Predicate<Document> docPredicate) {
         this.docPredicate = docPredicate;
@@ -37,12 +43,14 @@ public class Query {
     }
 
     public static Query eq(String field, Object value) {
-        return new Query(doc -> {
+        var q = new Query(doc -> {
             if (!doc.has(field)) return false;
             var v = doc.getRaw(field);
             if (v == null) return value == null;
             return v.equals(value);
         });
+        q.indexedField = field;
+        return q;
     }
 
     public static Query fromQuery(String queryString) {
@@ -161,6 +169,10 @@ public class Query {
         q.sortField = this.sortField;
         q.limit = this.limit;
         q.offset = this.offset;
+        // Preserve indexed field only if both sides target the same field
+        if (this.indexedField != null && this.indexedField.equals(other.indexedField)) {
+            q.indexedField = this.indexedField;
+        }
         return q;
     }
 
@@ -170,6 +182,10 @@ public class Query {
         q.sortField = this.sortField;
         q.limit = this.limit;
         q.offset = this.offset;
+        // OR across different fields cannot be resolved via a single index
+        if (this.indexedField != null && this.indexedField.equals(other.indexedField)) {
+            q.indexedField = this.indexedField;
+        }
         return q;
     }
 
@@ -230,6 +246,17 @@ public class Query {
 
     public String getForceIndexName() {
         return forceIndexName;
+    }
+
+    /**
+     * Returns the field name targeted by an equality predicate, or {@code null}
+     * if this query was not built via {@link #eq(String, Object)} or if the
+     * equality field was lost through composition ({@link #and}/{@link #or}).
+     * Used by the index optimizer to select an appropriate index without a
+     * full-collection scan.
+     */
+    public String getIndexedField() {
+        return indexedField;
     }
 
     public Set<QueryHint> getHints() {

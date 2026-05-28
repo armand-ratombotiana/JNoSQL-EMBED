@@ -85,17 +85,30 @@ public class DocumentCollection {
 
     public void saveIndexes() {
         if (dataDir == null) return;
-        
+
         var indexFile = dataDir.resolve(".indexes");
+
+        // Load the existing index file to preserve indexes from other collections
+        Map<String, Object> allIndexes = new HashMap<>();
+        if (Files.exists(indexFile)) {
+            try {
+                var content = Files.readString(indexFile);
+                var existing = JsonSerde.fromJson(content, Map.class);
+                if (existing != null) {
+                    allIndexes.putAll(existing);
+                }
+            } catch (IOException e) {
+                System.err.println("Warning: Could not read existing indexes file; will overwrite: " + e.getMessage());
+            }
+        }
+
+        // Overwrite only this collection's entries
         Map<String, String> collectionIndexes = new HashMap<>();
-        
         for (var entry : indexes.entrySet()) {
             collectionIndexes.put(entry.getKey(), entry.getValue().toJson());
         }
-        
-        Map<String, Map<String, String>> allIndexes = new HashMap<>();
         allIndexes.put(name, collectionIndexes);
-        
+
         try {
             var json = JsonSerde.toJson(allIndexes);
             Files.writeString(indexFile, json);
@@ -291,60 +304,35 @@ public class DocumentCollection {
 
     /**
      * Check if query should use index optimization.
-     * Analyzes predicate to determine if index can be effectively used.
-     * 
-     * Index can be used when:
-     * - At least one index exists
-     * - Query has an equality predicate on an indexed field
-     * - Query does NOT contain regex patterns (expensive on indexes)
+     *
+     * Index usage is determined by Query-level hints:
+     * - If the query has NO_INDEX hint, never use an index.
+     * - If the query has FORCE_INDEX hint, always use an index (if one exists).
+     * - Otherwise, use an index only when an index exists on a field that the
+     *   query explicitly targets via an equality predicate (Query.eq()).
+     *   This is detected by checking whether any indexed field is named in
+     *   the Query's indexed-field set, which avoids the previous O(n) live-data
+     *   scan that defeated the whole purpose of indexing.
      */
     private boolean shouldUseIndex(Query query) {
         if (indexes.isEmpty()) {
             return false;
         }
 
-        var pred = query.docPredicate();
-        if (pred == null) {
+        // Respect explicit query hints
+        if (query.hasHint(Query.QueryHint.NO_INDEX)) {
             return false;
         }
 
-        // Check if any indexed field has an equality condition
-        // Index is most effective for exact match queries
-        for (var indexedField : indexes.keySet()) {
-            if (hasEqualityPredicate(pred, indexedField)) {
-                return true;
-            }
+        if (query.hasHint(Query.QueryHint.FORCE_INDEX)) {
+            String forced = query.getForceIndexName();
+            return forced == null || indexes.containsKey(forced);
         }
 
-        return false;
-    }
-
-    /**
-     * Check if predicate contains equality condition for given field.
-     * Uses reflection-safe approach to inspect predicate structure.
-     */
-    @SuppressWarnings("unchecked")
-    private boolean hasEqualityPredicate(java.util.function.Predicate<Document> pred, String field) {
-        // For simple equality predicates, check if the predicate 
-        // would match documents with the specific field value
-        // This is a heuristic - we test with sample documents
-        
-        // Get a sample value from existing documents for this field
-        var allDocs = findAll();
-        if (allDocs.isEmpty()) {
-            return false;
-        }
-
-        // Try to find at least one document where predicate matches
-        // and has the indexed field - suggests index could be useful
-        for (var doc : allDocs) {
-            if (doc.has(field) && pred.test(doc)) {
-                // If predicate matches and field exists, index likely useful
-                return true;
-            }
-        }
-
-        return false;
+        // Only use an index when the query targets an indexed field directly.
+        // Query exposes the indexed field name through getIndexedField().
+        String indexedField = query.getIndexedField();
+        return indexedField != null && indexes.containsKey(indexedField);
     }
 
     private List<Document> findWithIndex(Query query) {

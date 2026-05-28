@@ -14,14 +14,16 @@ import java.util.function.Predicate;
 
 /**
  * MVCC Manager — provides snapshot isolation via versioned records.
- * 
- * Java 25 Enhancements:
- * - Virtual transaction timestamps with AtomicLong clock
- * - Zero-copy version chain traversal
- * - Lock-free reads with optimistic retry
- * - GC-friendly version compaction
  *
- * Each write creates a new version with a transaction-scoped timestamp.
+ * <p>Design:
+ * <ul>
+ *   <li>Monotonically-increasing {@link AtomicLong} clock for lock-free timestamp allocation.</li>
+ *   <li>Lock-free version-chain traversal — readers never block writers.</li>
+ *   <li>Optimistic write-write conflict detection at commit time.</li>
+ *   <li>GC-friendly version compaction via {@link #vacuum(long)} and {@link #vacuumAggressive()}.</li>
+ * </ul>
+ *
+ * <p>Each write creates a new version with a transaction-scoped timestamp.
  * Readers see the latest version committed before their transaction started.
  * Write-write conflicts are detected at commit time.
  */
@@ -31,30 +33,29 @@ public final class MVCCManager {
     private final ConcurrentMap<String, VersionChain> versionStore = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, WriteBuffer> txWrites = new ConcurrentHashMap<>();
     
-    // Java 25: GC pressure monitoring for proactive vacuum
-    private final java.lang.management.MemoryMXBean memoryBean = 
+    // GC pressure monitoring for proactive vacuum
+    private final java.lang.management.MemoryMXBean memoryBean =
         java.lang.management.ManagementFactory.getMemoryMXBean();
     private static final long GC_THRESHOLD_BYTES = 100 * 1024 * 1024; // 100MB
 
     /**
      * Allocate a monotonically increasing transaction timestamp.
-     * Java 25: Uses AtomicLong for lock-free allocation.
+     * Uses {@link AtomicLong} for lock-free allocation.
      */
     public long assignTimestamp() {
         return clock.incrementAndGet();
     }
 
     /**
-     * Java 25: Optimistic read with retry on version change.
      * Read the version visible to a transaction with the given readTimestamp.
-     * Returns null if no version is visible.
+     * Returns {@code null} if no version is visible.
+     * Lock-free: readers traverse the immutable version chain without locking.
      */
     public UnifiedRecord read(String key, long readTimestamp, Function<String, ? extends UnifiedRecord> factory) {
         var chain = versionStore.get(key);
         if (chain == null) return null;
 
-        // Java 25: Lock-free version chain traversal
-        // Find the latest version committed before readTimestamp
+        // Find the latest version committed at or before readTimestamp
         var node = chain.head;
         UnifiedRecord visible = null;
         while (node != null) {
@@ -68,7 +69,7 @@ public final class MVCCManager {
     }
 
     /**
-     * Java 25: Read with predicate filter for index-assisted lookup.
+     * Read with predicate filter for index-assisted lookup.
      */
     public UnifiedRecord readIf(String key, long readTimestamp, 
                                  Predicate<UnifiedRecord> predicate,
@@ -96,8 +97,9 @@ public final class MVCCManager {
     }
 
     /**
-     * Java 25: Commit with write-write conflict detection.
-     * Returns false if a write-write conflict is detected.
+     * Commit a transaction's staged writes.
+     * Returns {@code false} if a write-write conflict is detected, in which
+     * case the caller must roll back.
      */
     public boolean commit(String txId, long commitTs) {
         var buffer = txWrites.remove(txId);
@@ -109,7 +111,8 @@ public final class MVCCManager {
             var record = entry.getValue();
             var chain = versionStore.get(key);
             
-            // Java 25: Optimistic conflict detection
+            // Optimistic conflict detection: if someone committed after our read timestamp
+            // but before our commit timestamp, we have a write-write conflict.
             if (chain != null && chain.head != null && chain.head.commitTs > commitTs) {
                 // Conflict: another transaction wrote after us
                 return false;
@@ -119,7 +122,7 @@ public final class MVCCManager {
             var metadata = record.metadata().nextVersion(txId);
             var versionedRecord = record.withMetadata(metadata);
             
-            // Java 25: Lock-free CAS for version chain update
+            // Prepend new version to the chain (lock-free: versionStore is a ConcurrentHashMap)
             var newChain = new VersionChain(new VersionNode(versionedRecord, commitTs, chain != null ? chain.head : null));
             versionStore.put(key, newChain);
         }
@@ -139,36 +142,58 @@ public final class MVCCManager {
     }
 
     /**
-     * Java 25: Proactive garbage collection based on memory pressure.
-     * Garbage collect old versions that are no longer visible to any active transaction.
+     * Garbage-collect old versions that are no longer visible to any active transaction.
+     *
+     * <p>Versions whose {@code commitTs} is older than {@code minActiveTimestamp} and
+     * that are not the most-recent version for a key are eligible for removal.
+     *
+     * <p>Vacuum is skipped entirely when heap usage is <em>below</em>
+     * {@value #GC_THRESHOLD_BYTES} bytes, to avoid overhead on lightly-loaded instances.
+     * When memory pressure is detected the full chain is trimmed.
+     *
+     * @param minActiveTimestamp the smallest read-timestamp of any active transaction
+     * @return the number of stale versions removed
      */
     public int vacuum(long minActiveTimestamp) {
-        int collected = 0;
-        
-        // Java 25: Check memory pressure first
-        var heapUsage = memoryBean.getHeapMemoryUsage().getUsed();
-        if (heapUsage < GC_THRESHOLD_BYTES && collected == 0) {
-            // Skip vacuum if memory pressure is low and nothing collected yet
+        // Skip vacuum when there is no memory pressure — avoids needless work.
+        var heapUsed = memoryBean.getHeapMemoryUsage().getUsed();
+        if (heapUsed < GC_THRESHOLD_BYTES) {
             return 0;
         }
-        
+
+        int collected = 0;
         for (var entry : versionStore.entrySet()) {
             var chain = entry.getValue();
-            var prev = chain.head;
-            while (prev != null && prev.next != null && prev.next.commitTs < minActiveTimestamp) {
-                prev = prev.next;
-                collected++;
+            // Walk to the first node that is still visible (commitTs >= minActiveTimestamp).
+            // Everything beyond that node is stale.
+            var node = chain.head;
+            VersionNode lastVisible = null;
+            while (node != null) {
+                if (node.commitTs >= minActiveTimestamp) {
+                    lastVisible = node;
+                }
+                node = node.next;
             }
-            if (chain.head != prev) {
-                entry.setValue(new VersionChain(prev));
+            // Truncate the chain after the last visible node
+            if (lastVisible != null && lastVisible.next != null) {
+                // Count how many nodes we are removing
+                var stale = lastVisible.next;
+                while (stale != null) {
+                    collected++;
+                    stale = stale.next;
+                }
+                // Rebuild chain with a new tail
+                entry.setValue(new VersionChain(new VersionNode(lastVisible.record, lastVisible.commitTs, null)));
             }
         }
         return collected;
     }
 
     /**
-     * Java 25: Aggressive vacuum for memory pressure situations.
-     * Removes all versions except the latest.
+     * Aggressive vacuum: removes all historic versions, keeping only the
+     * most-recent version for each key. Use when memory pressure is critical
+     * and correctness of in-flight transactions is no longer a concern
+     * (e.g., during shutdown or after all transactions have committed).
      */
     public int vacuumAggressive() {
         int collected = 0;
@@ -202,7 +227,7 @@ public final class MVCCManager {
     }
 
     /**
-     * Java 25: Enhanced stats with GC and memory info.
+     * Returns runtime statistics including version chain depth and heap usage.
      */
     public Map<String, Object> stats() {
         var heapUsage = memoryBean.getHeapMemoryUsage();

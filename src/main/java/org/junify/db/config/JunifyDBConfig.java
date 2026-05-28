@@ -52,7 +52,10 @@ public record JunifyDBConfig(
 
         @Deprecated(forRemoval = true)
         public Builder storageEngine(StorageEngine engine) {
-            return this;
+            throw new UnsupportedOperationException(
+                "Passing a raw StorageEngine instance is no longer supported. " +
+                "Use storageEngine(StorageEngineType) instead."
+            );
         }
 
         public Builder persistTo(String path) {
