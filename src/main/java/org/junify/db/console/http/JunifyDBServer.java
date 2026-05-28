@@ -490,6 +490,18 @@ private class StaticHandler implements HttpHandler {
                     try {
                         var body = readBody(exchange);
                         var doc = Document.fromJson(body);
+                        
+                        if (schemaValidator.hasSchema(name)) {
+                            var validation = schemaValidator.validate(name, doc.getFields());
+                            if (!validation.isValid()) {
+                                sendJson(exchange, 400, Map.of(
+                                    "error", "Schema validation failed",
+                                    "errors", validation.getErrors()
+                                ));
+                                return;
+                            }
+                        }
+                        
                         var saved = collection.insert(doc);
                         logCrudEvent("INSERT", name, saved.getId(), getClientIp(exchange));
                         sendJson(exchange, 201, saved);
@@ -630,6 +642,18 @@ private class StaticHandler implements HttpHandler {
                             var e = (java.util.Map.Entry<?, ?>) entry;
                             doc.add(e.getKey().toString(), e.getValue());
                         }
+                        
+                        if (schemaValidator.hasSchema(name)) {
+                            var validation = schemaValidator.validate(name, doc.getFields());
+                            if (!validation.isValid()) {
+                                sendJson(exchange, 400, Map.of(
+                                    "error", "Schema validation failed",
+                                    "errors", validation.getErrors()
+                                ));
+                                return;
+                            }
+                        }
+                        
                         var saved = collection.insert(doc);
                         logCrudEvent("UPDATE", name, id, getClientIp(exchange));
                         sendJson(exchange, 201, saved);
@@ -1651,10 +1675,11 @@ private class StaticHandler implements HttpHandler {
             if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
             var path = exchange.getRequestURI().getPath();
             var parts = path.split("/");
-            // /api/schema/ with no collection - return full schema info
+            
+            // /api/schema/ with no collection - return list of all registered schemas
             if (parts.length < 4 || parts[3].isEmpty()) {
                 if ("GET".equals(exchange.getRequestMethod())) {
-                    sendJson(exchange, 200, Map.of("tables", java.util.List.of()));
+                    sendJson(exchange, 200, Map.of("schemas", schemaValidator.getSchemaNames()));
                 } else {
                     sendJson(exchange, 405, Map.of("error", "Method not allowed"));
                 }
@@ -1664,22 +1689,99 @@ private class StaticHandler implements HttpHandler {
             var collectionName = parts[3];
 
             if ("GET".equals(exchange.getRequestMethod())) {
-                sendJson(exchange, 404, Map.of("error", "Table not found: " + collectionName));
-            } else if ("POST".equals(exchange.getRequestMethod())) {
-                var body = readBody(exchange);
-                var data = JsonSerde.fromJson(body, Map.class);
-                var schema = org.junify.db.core.schema.SchemaValidator.builder(collectionName);
-                
-                if (data.containsKey("strict")) {
-                    var constructor = schema.getClass().getDeclaredConstructors()[0];
-                    constructor.setAccessible(true);
+                if (schemaValidator.hasSchema(collectionName)) {
+                    var schema = schemaValidator.getSchema(collectionName);
+                    var fieldsList = new java.util.ArrayList<Map<String, Object>>();
+                    for (Object f : schema.getFields()) {
+                        try {
+                            var nameF = f.getClass().getDeclaredField("name");
+                            nameF.setAccessible(true);
+                            var typeF = f.getClass().getDeclaredField("type");
+                            typeF.setAccessible(true);
+                            var reqF  = f.getClass().getDeclaredField("required");
+                            reqF.setAccessible(true);
+                            
+                            fieldsList.add(Map.of(
+                                "name", nameF.get(f),
+                                "type", ((Class<?>) typeF.get(f)).getSimpleName(),
+                                "required", reqF.get(f)
+                            ));
+                        } catch (Exception e) {
+                            logger.error("Failed to parse schema field via reflection", e);
+                        }
+                    }
+                    sendJson(exchange, 200, Map.of(
+                        "collectionName", schema.getCollectionName(),
+                        "strict", schema.isStrict(),
+                        "fields", fieldsList
+                    ));
+                } else {
+                    sendJson(exchange, 404, Map.of("error", "No schema found for collection: " + collectionName));
                 }
-                
-                schemaValidator.registerSchema(collectionName, schema);
-                sendJson(exchange, 201, Map.of(
-                    "status", "schema registered",
+            } else if ("POST".equals(exchange.getRequestMethod())) {
+                try {
+                    var body = readBody(exchange);
+                    var data = JsonSerde.fromJson(body, Map.class);
+                    var schema = org.junify.db.core.schema.SchemaValidator.builder(collectionName);
+                    
+                    if (data.containsKey("fields") && data.get("fields") instanceof java.util.List) {
+                        var fieldsList = (java.util.List<?>) data.get("fields");
+                        for (Object f : fieldsList) {
+                            if (f instanceof Map) {
+                                var fMap = (Map<?, ?>) f;
+                                String name = (String) fMap.get("name");
+                                String typeStr = (String) fMap.get("type");
+                                boolean required = Boolean.TRUE.equals(fMap.get("required"));
+                                
+                                Class<?> type = String.class; // default
+                                if ("Integer".equalsIgnoreCase(typeStr) || "int".equalsIgnoreCase(typeStr)) {
+                                    type = Integer.class;
+                                } else if ("Long".equalsIgnoreCase(typeStr)) {
+                                    type = Long.class;
+                                } else if ("Double".equalsIgnoreCase(typeStr) || "float".equalsIgnoreCase(typeStr) || "number".equalsIgnoreCase(typeStr)) {
+                                    type = Double.class;
+                                } else if ("Boolean".equalsIgnoreCase(typeStr) || "bool".equalsIgnoreCase(typeStr)) {
+                                    type = Boolean.class;
+                                } else if ("Map".equalsIgnoreCase(typeStr) || "object".equalsIgnoreCase(typeStr)) {
+                                    type = Map.class;
+                                } else if ("List".equalsIgnoreCase(typeStr) || "array".equalsIgnoreCase(typeStr)) {
+                                    type = java.util.List.class;
+                                }
+                                
+                                if (name != null) {
+                                    schema.field(name, type, required);
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (Boolean.TRUE.equals(data.get("strict"))) {
+                        try {
+                            var strictField = schema.getClass().getDeclaredField("strict");
+                            strictField.setAccessible(true);
+                            strictField.set(schema, true);
+                        } catch (Exception e) {
+                            logger.error("Failed to set strict mode on schema via reflection", e);
+                        }
+                    }
+                    
+                    schemaValidator.registerSchema(collectionName, schema);
+                    sendJson(exchange, 201, Map.of(
+                        "status", "schema registered",
+                        "collection", collectionName
+                    ));
+                } catch (Exception e) {
+                    logger.error("Failed to register schema", e);
+                    sendJson(exchange, 500, Map.of("error", "Schema registration failed", "message", e.getMessage()));
+                }
+            } else if ("DELETE".equals(exchange.getRequestMethod())) {
+                schemaValidator.dropSchema(collectionName);
+                sendJson(exchange, 200, Map.of(
+                    "status", "schema dropped",
                     "collection", collectionName
                 ));
+            } else {
+                sendJson(exchange, 405, Map.of("error", "Method not allowed"));
             }
         }
     }

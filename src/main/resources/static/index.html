@@ -622,6 +622,26 @@
         @media (prefers-reduced-motion: reduce) {
             *, .card, .stat-card, .doc-item { animation: none !important; transition-duration: 0.01ms !important; }
         }
+        /* Premium Select List Styles */
+        .select-list .metric-item {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+        .select-list .metric-item:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--border);
+            transform: translateX(4px);
+        }
+        .select-list .metric-item.active {
+            background: var(--accent-glow);
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+        .select-list .metric-item.active .badge {
+            background: var(--accent);
+            color: white;
+        }
     </style>
     <link rel="stylesheet" href="css/enhancements.css">
 </head>
@@ -1329,27 +1349,26 @@
 
         <!-- Schema Browser Tab -->
         <div id="tab-schema" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3zM9 9h6v6H9z"/></svg>
-                        Collections
+            <div class="grid grid-2" style="align-items: start; gap: 24px;">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3zM9 9h6v6H9z"/></svg>
+                            Collections
+                        </div>
+                        <button class="btn btn-sm btn-primary" onclick="refreshSchema()">Refresh</button>
                     </div>
-                    <button class="btn btn-sm btn-primary" onclick="refreshSchema()">Refresh</button>
-                </div>
-                <div id="schemaCollections" class="metric-list">
-                    <div class="empty-state">Loading collections...</div>
-                </div>
-            </div>
-            <div class="card" style="margin-top: 24px;">
-                <div class="card-header">
-                    <div class="card-title">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                        Indexes
+                    <div id="schemaCollections" class="metric-list select-list" style="max-height: 500px; overflow-y: auto;">
+                        <div class="empty-state">Loading collections...</div>
                     </div>
                 </div>
-                <div id="schemaIndexes" class="metric-list">
-                    <div class="empty-state">Select a collection to view indexes</div>
+                
+                <div class="card" id="schemaDetailsPanel">
+                    <div class="empty-state" style="padding: 40px 20px;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted); margin-bottom: 16px; opacity: 0.5;"><path d="M3 3h18v18H3zM9 9h6v6H9z"/></svg>
+                        <h3>Select a Collection</h3>
+                        <p>Click any collection on the left to inspect its indexes and manage schema validation rules.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1662,6 +1681,10 @@ async function executeHybridQuery() {
 
 // ── Schema Browser helpers ───────────────────────────────────────────────────
 
+// ── Schema Browser helpers ───────────────────────────────────────────────────
+
+let selectedCollectionForSchemaName = null;
+
 async function refreshSchema() {
     const el = document.getElementById('schemaCollections');
     if (el) el.innerHTML = '<div class="empty-state">Loading…</div>';
@@ -1671,10 +1694,320 @@ async function refreshSchema() {
         el.innerHTML = '<div class="empty-state"><p>No collections found</p></div>';
         return;
     }
-    el.innerHTML = data.collections.map(c =>
-        `<div class="metric-item"><span class="metric-label">${escapeHtml(c.name || c)}</span>
-         <span class="badge badge-info">${c.count || 0} docs</span></div>`
-    ).join('');
+    el.innerHTML = data.collections.map(c => {
+        const name = c.name || c;
+        const count = c.count || 0;
+        const activeClass = name === selectedCollectionForSchemaName ? 'active' : '';
+        return `<div class="metric-item ${activeClass}" onclick="selectCollectionForSchema('${name}', ${count}, this)">
+            <span class="metric-label">${escapeHtml(name)}</span>
+            <span class="badge badge-info">${count} docs</span>
+        </div>`;
+    }).join('');
+}
+
+function selectCollectionForSchema(name, count, element) {
+    selectedCollectionForSchemaName = name;
+    // Highlight active element
+    document.querySelectorAll('#schemaCollections .metric-item').forEach(el => el.classList.remove('active'));
+    if (element) {
+        element.classList.add('active');
+    }
+    
+    showCollectionSchemaDetails(name, count);
+}
+
+async function showCollectionSchemaDetails(name, count) {
+    const panel = document.getElementById('schemaDetailsPanel');
+    if (!panel) return;
+    
+    panel.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:20px;">
+            <div>
+                <h3 style="font-size:1.3rem; font-weight:700; color:var(--text-primary); margin:0;">${escapeHtml(name)}</h3>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin:4px 0 0 0;">${count} documents in collection</p>
+            </div>
+            <div id="schemaActionButtons"></div>
+        </div>
+        
+        <div style="margin-bottom: 24px;">
+            <h4 style="font-size:0.95rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:12px; letter-spacing:0.5px;">Indexes</h4>
+            <div id="schemaIndexes" class="metric-list" style="gap:8px;">
+                <div class="empty-state" style="padding:16px;">Loading indexes...</div>
+            </div>
+        </div>
+        
+        <div>
+            <h4 style="font-size:0.95rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:12px; letter-spacing:0.5px;">Validation Rules</h4>
+            <div id="schemaValidationContent">
+                <div class="empty-state" style="padding:16px;">Loading validation schema...</div>
+            </div>
+        </div>
+    `;
+    
+    // Load indexes
+    loadIndexesForSchemaPanel(name);
+    
+    // Load schema
+    loadSchemaValidationForPanel(name);
+}
+
+async function loadIndexesForSchemaPanel(name) {
+    const indexesEl = document.getElementById('schemaIndexes');
+    if (!indexesEl) return;
+    try {
+        const result = await fetchJSON(`${API}/indexes/${name}`);
+        if (result && result.indexes && Object.keys(result.indexes).length > 0) {
+            indexesEl.innerHTML = Object.entries(result.indexes).map(([field, idx]) =>
+                `<div class="metric-item" style="padding: 10px 14px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-sm); display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+                        <span class="metric-label" style="font-weight:500;">${escapeHtml(field)}</span>
+                    </div>
+                    <span class="badge badge-success">${idx.type || 'Secondary'}</span>
+                </div>`
+            ).join('');
+        } else {
+            indexesEl.innerHTML = '<div class="empty-state" style="padding: 20px;"><p>No secondary indexes defined. (Only ID index exists)</p></div>';
+        }
+    } catch (e) {
+        indexesEl.innerHTML = '<div class="empty-state" style="padding: 20px;"><p>Error loading indexes</p></div>';
+    }
+}
+
+async function loadSchemaValidationForPanel(name) {
+    const contentEl = document.getElementById('schemaValidationContent');
+    const actionsEl = document.getElementById('schemaActionButtons');
+    if (!contentEl) return;
+    
+    try {
+        const response = await fetch(`${API}/schema/${name}`);
+        if (response.status === 200) {
+            const schema = await response.json();
+            
+            // Schema is registered
+            if (actionsEl) {
+                actionsEl.innerHTML = `<button class="btn btn-danger btn-sm" onclick="dropSchemaValidation('${name}')">Drop Validation</button>`;
+            }
+            
+            let fieldsHtml = '';
+            if (schema.fields && schema.fields.length > 0) {
+                fieldsHtml = `
+                    <div class="table-wrapper" style="margin-top:8px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Field Name</th>
+                                    <th>Data Type</th>
+                                    <th>Required</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${schema.fields.map(f => `
+                                    <tr>
+                                        <td><strong>${escapeHtml(f.name)}</strong></td>
+                                        <td><span class="badge badge-info">${escapeHtml(f.type)}</span></td>
+                                        <td>${f.required ? '<span style="color:var(--error); font-weight:600;">Yes</span>' : '<span style="color:var(--text-muted);">No</span>'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                fieldsHtml = '<div class="empty-state" style="padding:16px;"><p>No specific field rules defined. (Strict-only schema)</p></div>';
+            }
+            
+            contentEl.innerHTML = `
+                <div style="background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px; margin-bottom:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <span style="font-weight:600; color:var(--text-primary);">Validation Status</span>
+                        <span class="badge badge-success">ACTIVE ENFORCEMENT</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-weight:600; color:var(--text-primary);">Strict Mode (Reject unknown fields)</span>
+                        <span class="badge ${schema.strict ? 'badge-info' : 'badge-ghost'}">${schema.strict ? 'ENABLED' : 'DISABLED'}</span>
+                    </div>
+                </div>
+                ${fieldsHtml}
+            `;
+        } else {
+            // Schema not found (404)
+            if (actionsEl) actionsEl.innerHTML = '';
+            contentEl.innerHTML = `
+                <div class="empty-state" style="padding: 24px; border:1px dashed var(--border); border-radius:var(--radius); background:transparent;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="margin-bottom:8px; opacity:0.5;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <p style="margin-bottom:16px; font-size:0.9rem;">Schema validation is currently disabled. Documents inserted are schemaless and dynamic.</p>
+                    <button class="btn btn-primary btn-sm" onclick="renderSchemaCreatorForm('${name}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:4px;"><path d="M12 5v14M5 12h14"/></svg>
+                        Define Schema Validator
+                    </button>
+                </div>
+            `;
+        }
+    } catch (e) {
+        contentEl.innerHTML = `<div class="msg msg-error"><span>Failed to load schema: ${e.message}</span></div>`;
+    }
+}
+
+function renderSchemaCreatorForm(name) {
+    const contentEl = document.getElementById('schemaValidationContent');
+    const actionsEl = document.getElementById('schemaActionButtons');
+    if (!contentEl) return;
+    
+    if (actionsEl) {
+        actionsEl.innerHTML = `
+            <button class="btn btn-ghost btn-sm" onclick="showCollectionSchemaDetails('${name}', 0)" style="margin-right:8px;">Cancel</button>
+            <button class="btn btn-success btn-sm" onclick="saveSchemaValidation('${name}')">Save Schema</button>
+        `;
+    }
+    
+    contentEl.innerHTML = `
+        <div style="background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-sm); padding:20px; margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div>
+                    <strong style="color:var(--text-primary); font-size:0.95rem;">Strict Mode</strong>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin:2px 0 0 0;">Reject documents containing fields not declared in the schema.</p>
+                </div>
+                <label class="switch-toggle" style="position:relative; display:inline-block; width:48px; height:24px;">
+                    <input type="checkbox" id="schemaCreatorStrict" style="opacity:0; width:0; height:0;">
+                    <span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:var(--border); transition:0.3s; border-radius:24px;" class="toggle-slider"></span>
+                </label>
+            </div>
+            
+            <style>
+                .switch-toggle input:checked + .toggle-slider { background-color: var(--accent) !important; }
+                .switch-toggle span::before {
+                    content: "";
+                    position: absolute;
+                    height: 18px; width: 18px; left: 3px; bottom: 3px;
+                    background-color: white; transition: 0.3s; border-radius: 50%;
+                }
+                .switch-toggle input:checked + .toggle-slider::before { transform: translateX(24px); }
+            </style>
+            
+            <div style="border-top:1px solid var(--border); padding-top:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <strong style="color:var(--text-primary); font-size:0.95rem;">Field Definitions</strong>
+                    <button class="btn btn-sm btn-ghost" onclick="addSchemaField()" style="padding:4px 8px; font-size:0.75rem;">+ Add Field</button>
+                </div>
+                
+                <div id="schemaCreatorFieldsList" style="display:flex; flex-direction:column; gap:10px;">
+                    <!-- Rows will be dynamically appended here -->
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add first field row automatically
+    addSchemaField();
+}
+
+function addSchemaField() {
+    const container = document.getElementById('schemaCreatorFieldsList');
+    if (!container) return;
+    
+    const row = document.createElement('div');
+    row.className = 'schema-field-row';
+    row.style.cssText = 'display:flex; gap:10px; align-items:center; animation: fadeIn 0.2s ease;';
+    row.innerHTML = `
+        <input type="text" class="form-input field-name" placeholder="Field name" style="flex:2; margin:0;" required>
+        <select class="form-input field-type" style="flex:1.5; margin:0;">
+            <option value="String">String</option>
+            <option value="Integer">Integer</option>
+            <option value="Double">Double</option>
+            <option value="Boolean">Boolean</option>
+            <option value="Map">Object (Map)</option>
+            <option value="List">Array (List)</option>
+        </select>
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.85rem; user-select:none;">
+            <input type="checkbox" class="field-required" style="accent-color:var(--accent);"> Required
+        </label>
+        <button class="btn btn-ghost btn-sm" onclick="removeSchemaField(this)" style="padding:8px; color:var(--error); border:none; background:transparent;" title="Remove field">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+    `;
+    
+    container.appendChild(row);
+}
+
+function removeSchemaField(btn) {
+    const row = btn.closest('.schema-field-row');
+    if (row) {
+        row.style.animation = 'scaleOut 0.2s ease';
+        setTimeout(() => row.remove(), 180);
+    }
+}
+
+async function saveSchemaValidation(name) {
+    const strict = document.getElementById('schemaCreatorStrict')?.checked || false;
+    const fieldRows = document.querySelectorAll('.schema-field-row');
+    const fields = [];
+    
+    let hasInvalidField = false;
+    fieldRows.forEach(row => {
+        const fieldNameInput = row.querySelector('.field-name');
+        const fieldName = fieldNameInput?.value?.trim();
+        const type = row.querySelector('.field-type')?.value;
+        const required = row.querySelector('.field-required')?.checked || false;
+        
+        if (fieldName) {
+            fields.push({ name: fieldName, type: type, required: required });
+        } else {
+            fieldNameInput?.classList.add('error');
+            hasInvalidField = true;
+        }
+    });
+    
+    if (hasInvalidField) {
+        showToast('Error', 'Please fill in all field names', 'error');
+        return;
+    }
+    
+    showLoading('Saving validation schema...');
+    try {
+        const response = await fetch(`${API}/schema/${name}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ strict: strict, fields: fields })
+        });
+        
+        hideLoading();
+        if (response.ok) {
+            showToast('Schema Saved', `Schema validation registered for ${name}`, 'success');
+            showCollectionSchemaDetails(name, 0);
+        } else {
+            const err = await response.json();
+            showToast('Save Failed', err.message || 'Validation failed', 'error');
+        }
+    } catch (e) {
+        hideLoading();
+        showToast('Error', `Save failed: ${e.message}`, 'error');
+    }
+}
+
+async function dropSchemaValidation(name) {
+    showConfirmDialog(
+        'Drop Validation Schema',
+        `Drop validation schema for "${name}"? Documents in this collection will become fully schemaless and will not be validated on writes.`,
+        async () => {
+            showLoading('Dropping schema...');
+            try {
+                const response = await fetch(`${API}/schema/${name}`, { method: 'DELETE' });
+                hideLoading();
+                if (response.ok) {
+                    showToast('Schema Dropped', `Validation rules dropped for ${name}`, 'success');
+                    showCollectionSchemaDetails(name, 0);
+                } else {
+                    showToast('Drop Failed', 'Could not delete schema', 'error');
+                }
+            } catch (e) {
+                hideLoading();
+                showToast('Error', `Delete failed: ${e.message}`, 'error');
+            }
+        },
+        'danger',
+        'Drop Schema'
+    );
 }
 
 // ── Collection helpers ───────────────────────────────────────────────────────
@@ -1796,7 +2129,7 @@ function showTab(name) {
                           warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
                           info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' };
             el.innerHTML = `<div class="msg msg-${type}">${icons[type] || icons.info}<span>${msg}</span></div>`;
-            setTimeout(() => el.innerHTML = '', 5000);
+            setTimeout(() => el.innerHTML = '', type === 'error' ? 12000 : 5000);
         }
 
         function showModal(title, message, onConfirm) {
@@ -1904,18 +2237,35 @@ function showTab(name) {
             if (!col) { showMessage('docMessage', 'Collection name required', 'error'); return; }
             if (!json) { showMessage('docMessage', 'Document JSON required', 'error'); return; }
             try { JSON.parse(json); } catch (e) { showMessage('docMessage', 'Invalid JSON: ' + e.message, 'error'); return; }
-            const result = await fetchJSON(`${API}/collections/${col}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: json
-            });
-            if (result) {
+            try {
+                const response = await fetch(`${API}/collections/${col}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: json
+                });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: response.statusText }));
+                    if (response.status === 400 && (errorData.violations || errorData.errors)) {
+                        const errs = errorData.violations || errorData.errors;
+                        const violationList = errs.map(v => {
+                            if (typeof v === 'string') return `<li>${escapeHtml(v)}</li>`;
+                            return `<li><strong>${escapeHtml(v.field)}:</strong> ${escapeHtml(v.message)}</li>`;
+                        }).join('');
+                        showMessage('docMessage', `<strong>Schema Validation Failed:</strong><ul style="margin:8px 0 0 16px;text-align:left;">${violationList}</ul>`, 'error');
+                    } else {
+                        showMessage('docMessage', errorData.error || 'Create failed', 'error');
+                    }
+                    return;
+                }
+                const result = await response.json();
                 showMessage('docMessage', `Created: ${result.id}`, 'success');
                 showToast('Success', `Document created in ${col}`, 'success');
                 document.getElementById('docJson').value = '';
                 loadMetrics();
                 loadCollections();
                 loadDocuments();
+            } catch (e) {
+                showMessage('docMessage', 'Error: ' + e.message, 'error');
             }
         }
 
@@ -1987,4 +2337,55 @@ function showTab(name) {
         async function deleteDoc(id) {
             const col = document.getElementById('colName').value.trim();
             if (!col) return;
-            await fetc
+            await fetchJSON(`${API}/collections/${col}/${id}`, { method: 'DELETE' });
+            log(`Deleted document ${id}`);
+            loadDocuments();
+        }
+
+        async function updateDocument() {
+            const col = document.getElementById('colName').value.trim();
+            if (!col) { showMessage('docMessage', 'Select a collection first'); return; }
+            const id = document.getElementById('docId').value.trim();
+            if (!id) { showMessage('docMessage', 'Document ID is required for update'); return; }
+            const rawFields = document.getElementById('docFields').value.trim();
+            if (!rawFields) { showMessage('docMessage', 'Fields JSON is required'); return; }
+            try {
+                const fields = JSON.parse(rawFields);
+                const response = await fetch(`${API}/collections/${col}/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(fields)
+                });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: response.statusText }));
+                    if (response.status === 400 && (errorData.violations || errorData.errors)) {
+                        const errs = errorData.violations || errorData.errors;
+                        const violationList = errs.map(v => {
+                            if (typeof v === 'string') return `<li>${escapeHtml(v)}</li>`;
+                            return `<li><strong>${escapeHtml(v.field)}:</strong> ${escapeHtml(v.message)}</li>`;
+                        }).join('');
+                        showMessage('docMessage', `<strong>Validation Failed:</strong><ul style="margin:8px 0 0 16px;text-align:left;">${violationList}</ul>`, 'error');
+                    } else {
+                        showMessage('docMessage', errorData.error || 'Update failed');
+                    }
+                    return;
+                }
+                log(`Updated document ${id} in ${col}`);
+                showToast('Updated', `Document ${id} updated successfully`, 'success');
+                loadDocuments();
+            } catch (e) {
+                showMessage('docMessage', 'Invalid JSON: ' + e.message);
+            }
+        }
+
+        // ── Init ─────────────────────────────────────────────────────────────────
+        checkHealth();
+        loadCollections();
+        loadMetrics();
+        checkAuth();
+        initUserMenu();
+        startMetricsStream();
+    </script>
+    <script src="js/enhancements.js"></script>
+</body>
+</html>
