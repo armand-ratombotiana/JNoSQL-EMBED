@@ -292,10 +292,7 @@ function initKeyboardShortcuts() {
         if (e.ctrlKey && e.key === 'Enter') {
             const activeTab = document.querySelector('.tab-content.active');
             if (activeTab) {
-                if (activeTab.id === 'tab-sql') {
-                    e.preventDefault();
-                    executeSql();
-                } else if (activeTab.id === 'tab-hybrid') {
+                if (activeTab.id === 'tab-hybrid') {
                     e.preventDefault();
                     executeHybridQuery();
                 } else if (activeTab.id === 'tab-query') {
@@ -326,7 +323,6 @@ function initKeyboardShortcuts() {
                 if (activeTab.id === 'tab-schema') {
                     e.preventDefault();
                     refreshSchema();
-                    refreshTables();
                 } else if (activeTab.id === 'tab-overview') {
                     e.preventDefault();
                     loadMetrics();
@@ -343,15 +339,6 @@ function initKeyboardShortcuts() {
 function handleSaveShortcut() {
     const activeTab = document.querySelector('.tab-content.active');
     if (!activeTab) return;
-
-    // SQL tab - save query to history
-    if (activeTab.id === 'tab-sql') {
-        const sql = document.getElementById('sqlQuery')?.value.trim();
-        if (sql) {
-            addToSqlHistory(sql);
-            showToast('Saved', 'Query saved to history', 'success');
-        }
-    }
 
     // Collections tab - export current collection
     if (activeTab.id === 'tab-collections') {
@@ -614,38 +601,21 @@ function loadQueryFromHistory(key) {
     const item = window.__queryHistoryItems[key];
     if (!item) return;
 
-    const type = item.type || 'sql';
+    const type = item.type || 'nosql';
 
-    if (type === 'sql') {
-        const el = document.getElementById('sqlQuery');
-        if (el) {
-            el.value = item.query;
-            el.dispatchEvent(new Event('input')); // trigger any listeners
-        }
-        if (typeof showTab === 'function') showTab('sql');
-    } else {
-        const hq = document.getElementById('hybridQuery');
-        const hm = document.getElementById('hybridMode');
-        if (hq) {
-            hq.value = item.query;
-            hq.dispatchEvent(new Event('input'));
-        }
-        if (hm) hm.value = type;
-        if (typeof showTab === 'function') showTab('hybrid');
+    const hq = document.getElementById('hybridQuery');
+    const hm = document.getElementById('hybridMode');
+    if (hq) {
+        hq.value = item.query;
+        hq.dispatchEvent(new Event('input'));
     }
+    if (hm) hm.value = (type === 'nosql' || type === 'vector') ? type : 'nosql';
+    if (typeof showTab === 'function') showTab('hybrid');
     closeQueryHistory();
 }
 
-/** Legacy alias */
+/** @deprecated Legacy alias */
 function loadSqlHistory() { toggleQueryHistory(); }
-
-/**
- * Add SQL query to history — backward-compat alias used by handleSaveShortcut()
- * @param {string} sql - SQL query text
- */
-function addToSqlHistory(sql) {
-    addToQueryHistory(sql, 'sql', 0, 0);
-}
 
 // ============================================================================
 // COPY TO CLIPBOARD
@@ -687,45 +657,6 @@ async function copyToClipboard(text) {
     return success;
 }
 
-/**
- * Copy SQL results to clipboard
- */
-function copySqlResults() {
-    const resultsEl = document.getElementById('sqlResults');
-    if (!resultsEl) return;
-
-    const table = resultsEl.querySelector('table');
-    if (!table) {
-        showToast('Error', 'No results to copy', 'error');
-        return;
-    }
-
-    // Extract table data as TSV
-    let text = '';
-    const rows = table.querySelectorAll('tr');
-    rows.forEach(row => {
-        const cells = row.querySelectorAll('th, td');
-        text += Array.from(cells).map(cell => cell.textContent.trim()).join('\t') + '\n';
-    });
-
-    copyToClipboard(text);
-}
-
-/**
- * Export SQL results as CSV
- */
-function exportSqlAsCsv() {
-    const resultsEl = document.getElementById('sqlResults');
-    if (!resultsEl) return;
-
-    const table = resultsEl.querySelector('table');
-    if (!table) {
-        showToast('Error', 'No results to export', 'error');
-        return;
-    }
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-    exportTableAsCsv(table, `sql_results_${timestamp}.csv`);
-}
 
 /**
  * Copy JSON to clipboard

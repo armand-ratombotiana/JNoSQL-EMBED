@@ -222,21 +222,7 @@
         }
         .tab:hover { color: var(--text-primary); background: var(--bg-tertiary); }
         .tab.active { background: var(--accent); color: white; }
-        .tab-sql { color: var(--accent-light); }
-        
-        /* SQL Syntax Highlighting */
-        .sql-keyword { color: var(--accent-light); font-weight: 600; }
-        .sql-string { color: var(--success-light); }
-        .sql-number { color: var(--warning); }
-        .sql-comment { color: var(--text-muted); font-style: italic; }
-        
-        /* SQL Results Table */
-        .sql-table-wrapper { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
-        .sql-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        .sql-table th { background: var(--bg-tertiary); padding: 10px 12px; text-align: left; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid var(--border); white-space: nowrap; }
-        .sql-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .sql-table tr:hover td { background: var(--bg-tertiary); }
-        .sql-table .null { color: var(--text-muted); font-style: italic; }
+
         
         /* Cards */
         .card {
@@ -727,10 +713,7 @@
                 Vectors
             </button>
             <button class="tab" onclick="showTab('backup')" id="tabBtn-backup">Backup</button>
-            <button class="tab tab-sql" onclick="showTab('sql')" id="tabBtn-sql">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
-                SQL
-            </button>
+
             <button class="tab" onclick="showTab('hybrid')" id="tabBtn-hybrid">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
                 Hybrid Query
@@ -1193,84 +1176,7 @@
             </div>
         </div>
 
-        <!-- SQL Tab (H2 Console) -->
-        <div id="tab-sql" class="tab-content">
-            <div class="grid grid-2" style="margin-bottom: 24px;">
-                <div class="card" style="grid-column: 1 / -1;">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
-                            H2 SQL Console
-                        </div>
-                        <span class="badge badge-info">H2 Database</span>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">SQL Query</label>
-                        <textarea id="sqlQuery" class="form-input" style="min-height: 120px; font-family: 'JetBrains Mono', monospace;" placeholder="SELECT * FROM doc_store WHERE collection = 'users';&#10;INSERT INTO kv_store (collection, key_name, value) VALUES ('mycoll', 'key1', 'value1');&#10;SHOW TABLES;"></textarea>
-                    </div>
-                    <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-                        <button class="btn btn-success" onclick="executeSql()" title="Execute (Ctrl+Enter)">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                            Execute
-                            <span class="shortcut-hint" style="margin-left: 4px;"><kbd>Ctrl</kbd>+<kbd>Enter</kbd></span>
-                        </button>
-                        <button class="btn btn-ghost" onclick="clearSql()">Clear</button>
-                        <button class="btn btn-sm btn-ghost" onclick="toggleQueryHistory()" title="Query History (Ctrl+H)">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            History
-                            <span class="shortcut-hint" style="margin-left: 4px;"><kbd>Ctrl</kbd>+<kbd>H</kbd></span>
-                        </button>
-                    </div>
-                    <div id="sqlMessage"></div>
-                </div>
-            </div>
-            <div class="grid grid-2">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-                            Results
-                        </div>
-                        <span class="badge badge-success" id="sqlRowCount">0 rows</span>
-                    </div>
-                    <div class="result-actions" id="sqlResultActions" style="display: none; margin-bottom: 12px;">
-                        <div class="result-actions-left">
-                            <span class="result-count" id="sqlResultCount">0 rows</span>
-                        </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn-copy" onclick="copySqlResults()" title="Copy to clipboard">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                                Copy
-                            </button>
-                            <button class="btn-copy" onclick="exportSqlAsCsv()" title="Export as CSV">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                                Export CSV
-                            </button>
-                        </div>
-                    </div>
-                    <div id="sqlResults" style="max-height: 400px; overflow: auto;"></div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-                            Table Browser
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Select Table</label>
-                        <select id="sqlTableSelect" class="form-input" onchange="browseSqlTable()">
-                            <option value="">Choose a table...</option>
-                            <option value="doc_store">doc_store (Documents)</option>
-                            <option value="kv_store">kv_store (Key-Value)</option>
-                            <option value="col_store">col_store (Column Family)</option>
-                            <option value="meta_store">meta_store (Metadata)</option>
-                        </select>
-                    </div>
-                    <div id="sqlTableBrowser" style="max-height: 350px; overflow: auto;"></div>
-                </div>
-            </div>
-        </div>
+
 
         <!-- Vector Search Tab -->
         <div id="tab-vectors" class="tab-content">
@@ -1364,8 +1270,7 @@
                     <div class="form-group">
                         <label class="form-label">Query Mode</label>
                         <select id="hybridMode" class="form-input" onchange="toggleHybridMode()">
-                            <option value="sql">SQL (H2 Engine)</option>
-                            <option value="nosql">NoSQL (Document)</option>
+                            <option value="nosql" selected>NoSQL (Document)</option>
                             <option value="vector">Vector Search</option>
                         </select>
                     </div>
@@ -1418,36 +1323,22 @@
                         Results
                     </div>
                 </div>
-                <div id="hybridResults" class="sql-table-wrapper"></div>
+                <div id="hybridResults" class="table-wrapper"></div>
             </div>
         </div>
 
         <!-- Schema Browser Tab -->
         <div id="tab-schema" class="tab-content">
-            <div class="grid grid-2">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3zM9 9h6v6H9z"/></svg>
-                            Collections
-                        </div>
-                        <button class="btn btn-sm btn-primary" onclick="refreshSchema()">Refresh</button>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3zM9 9h6v6H9z"/></svg>
+                        Collections
                     </div>
-                    <div id="schemaCollections" class="metric-list">
-                        <div class="empty-state">Loading collections...</div>
-                    </div>
+                    <button class="btn btn-sm btn-primary" onclick="refreshSchema()">Refresh</button>
                 </div>
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
-                            Tables (H2)
-                        </div>
-                        <button class="btn btn-sm btn-primary" onclick="refreshTables()">Refresh</button>
-                    </div>
-                    <div id="schemaTables" class="metric-list">
-                        <div class="empty-state">Loading tables...</div>
-                    </div>
+                <div id="schemaCollections" class="metric-list">
+                    <div class="empty-state">Loading collections...</div>
                 </div>
             </div>
             <div class="card" style="margin-top: 24px;">
@@ -1679,103 +1570,11 @@ async function runBenchmarks() {
     if (result) showToast('Benchmarks complete', JSON.stringify(result).slice(0, 120), 'success');
 }
 
-// ── SQL Tab helpers ──────────────────────────────────────────────────────────
-
-async function executeSql() {
-    const sql = document.getElementById('sqlQuery')?.value?.trim();
-    if (!sql) { showMessage('sqlMessage', 'Enter a SQL query first', 'warning', false); return; }
-
-    const start = Date.now();
-    const result = await fetchJSON(`${API}/sql`, {
-        method: 'POST',
-        body: JSON.stringify({ sql })
-    });
-    if (!result) return;
-
-    const ms = Date.now() - start;
-    const rowCount = document.getElementById('sqlRowCount');
-    const resultsEl = document.getElementById('sqlResults');
-    const actionsEl = document.getElementById('sqlResultActions');
-
-    if (result.success === false || result.error) {
-        showMessage('sqlMessage', result.message || result.error || 'Query failed', 'error', false);
-        if (rowCount) rowCount.textContent = '0 rows';
-        if (actionsEl) actionsEl.style.display = 'none';
-        return;
-    }
-
-    const rows = result.rows || [];
-    const cols = result.columns || (rows.length > 0 ? Object.keys(rows[0]) : []);
-    if (rowCount) rowCount.textContent = `${rows.length} rows`;
-    if (actionsEl) actionsEl.style.display = rows.length ? 'flex' : 'none';
-
-    if (rows.length === 0) {
-        if (resultsEl) resultsEl.innerHTML = `<p style="color:var(--text-muted);padding:16px;">Query executed successfully — ${result.affected || 0} row(s) affected in ${ms}ms</p>`;
-        showMessage('sqlMessage', `Executed in ${ms}ms`, 'success', false);
-        addToQueryHistory(sql, 'sql', 0, ms);
-        return;
-    }
-
-    const table = document.createElement('table');
-    table.className = 'sql-table';
-    const thead = document.createElement('thead');
-    thead.innerHTML = '<tr>' + cols.map(c => `<th>${escapeHtml(String(c))}</th>`).join('') + '</tr>';
-    table.appendChild(thead);
-    const tbody = document.createElement('tbody');
-    rows.forEach(row => {
-        const tr = document.createElement('tr');
-        cols.forEach(c => {
-            const td = document.createElement('td');
-            const val = row[c];
-            if (val === null || val === undefined) {
-                td.textContent = 'NULL';
-                td.className = 'null';
-            } else {
-                td.textContent = String(val);
-            }
-            tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    if (resultsEl) {
-        resultsEl.innerHTML = '';
-        const wrapper = document.createElement('div');
-        wrapper.className = 'sql-table-wrapper';
-        wrapper.appendChild(table);
-        resultsEl.appendChild(wrapper);
-    }
-    showMessage('sqlMessage', `${rows.length} rows in ${ms}ms`, 'success', false);
-    addToQueryHistory(sql, 'sql', rows.length, ms);
-}
-
-function clearSql() {
-    const q = document.getElementById('sqlQuery');
-    if (q) q.value = '';
-    const r = document.getElementById('sqlResults');
-    if (r) r.innerHTML = '';
-    const m = document.getElementById('sqlMessage');
-    if (m) m.innerHTML = '';
-    const a = document.getElementById('sqlResultActions');
-    if (a) a.style.display = 'none';
-    const rc = document.getElementById('sqlRowCount');
-    if (rc) rc.textContent = '0 rows';
-}
-
-async function browseSqlTable() {
-    const table = document.getElementById('sqlTableSelect')?.value;
-    if (!table) return;
-    const sqlInput = document.getElementById('sqlQuery');
-    if (sqlInput) sqlInput.value = `SELECT * FROM ${table} LIMIT 100;`;
-    await executeSql();
-}
-
 // ── Hybrid Query helpers ─────────────────────────────────────────────────────
 
 function toggleHybridMode() {
     const mode = document.getElementById('hybridMode')?.value;
     const placeholder = {
-        sql:    'SELECT * FROM doc_store LIMIT 10;',
         nosql:  '{"collection":"users","filter":{"age":{"$gt":18}}}',
         vector: '{"index":"embeddings","query":[0.1,0.2,0.3],"k":5}'
     };
@@ -1797,16 +1596,14 @@ function clearHybridQuery() {
 }
 
 async function executeHybridQuery() {
-    const mode  = document.getElementById('hybridMode')?.value || 'sql';
+    const mode  = document.getElementById('hybridMode')?.value || 'nosql';
     const query = document.getElementById('hybridQuery')?.value?.trim();
     if (!query) { showMessage('hybridMessage', 'Enter a query first', 'warning', false); return; }
 
     const start = Date.now();
     let result;
 
-    if (mode === 'sql') {
-        result = await fetchJSON(`${API}/sql`, { method: 'POST', body: JSON.stringify({ sql: query }) });
-    } else if (mode === 'nosql') {
+    if (mode === 'nosql') {
         let parsed = {};
         try { parsed = JSON.parse(query); } catch(_) { showMessage('hybridMessage', 'Invalid JSON query', 'error', false); return; }
         const col = parsed.collection || 'default';
@@ -1842,7 +1639,7 @@ async function executeHybridQuery() {
         } else {
             const cols = Object.keys(rows[0]);
             const table = document.createElement('table');
-            table.className = 'sql-table';
+            table.className = 'table';
             table.innerHTML = '<thead><tr>' + cols.map(c => `<th>${escapeHtml(c)}</th>`).join('') + '</tr></thead>';
             const tbody = document.createElement('tbody');
             rows.forEach(row => {
@@ -1877,21 +1674,6 @@ async function refreshSchema() {
     el.innerHTML = data.collections.map(c =>
         `<div class="metric-item"><span class="metric-label">${escapeHtml(c.name || c)}</span>
          <span class="badge badge-info">${c.count || 0} docs</span></div>`
-    ).join('');
-}
-
-async function refreshTables() {
-    const el = document.getElementById('schemaTables');
-    if (el) el.innerHTML = '<div class="empty-state">Loading…</div>';
-    const data = await fetchJSON(`${API}/sql/schema`);
-    if (!el) return;
-    if (!data || !data.tables || data.tables.length === 0) {
-        el.innerHTML = '<div class="empty-state"><p>No tables found</p></div>';
-        return;
-    }
-    el.innerHTML = data.tables.map(t =>
-        `<div class="metric-item"><span class="metric-label">${escapeHtml(t.name || t)}</span>
-         <span class="badge badge-info">${t.rowCount || 0} rows</span></div>`
     ).join('');
 }
 
