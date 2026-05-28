@@ -1295,8 +1295,14 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Query</label>
-                        <textarea id="hybridQuery" class="form-input" style="min-height: 150px; font-family: 'JetBrains Mono', monospace;" placeholder="Enter your query..."></textarea>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                            <label class="form-label" style="margin-bottom:0;">Query</label>
+                            <span style="font-size:0.75rem; color:var(--text-muted); font-weight:500;">Quick Templates:</span>
+                        </div>
+                        <div id="queryTemplatesContainer" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">
+                            <!-- Loaded dynamically via JS -->
+                        </div>
+                        <textarea id="hybridQuery" class="form-input" style="min-height: 180px; font-family: 'JetBrains Mono', monospace;" placeholder="Enter your query..."></textarea>
                     </div>
                     <div style="display: flex; gap: 12px; margin-top: 16px;">
                         <button class="btn btn-primary" onclick="executeHybridQuery()">
@@ -1591,14 +1597,104 @@ async function runBenchmarks() {
 
 // ── Hybrid Query helpers ─────────────────────────────────────────────────────
 
+const queryTemplates = {
+    nosql: [
+        {
+            name: "Find All",
+            label: "Find all in 'users'",
+            code: JSON.stringify({
+                collection: "users",
+                filter: {}
+            }, null, 2)
+        },
+        {
+            name: "Find by Field",
+            label: "Find where role is 'admin'",
+            code: JSON.stringify({
+                collection: "users",
+                filter: {
+                    role: "admin"
+                }
+            }, null, 2)
+        },
+        {
+            name: "Range Query",
+            label: "Find age > 21",
+            code: JSON.stringify({
+                collection: "users",
+                filter: {
+                    age: {
+                        "$gt": 21
+                    }
+                }
+            }, null, 2)
+        },
+        {
+            name: "Logical OR",
+            label: "Match status active OR role admin",
+            code: JSON.stringify({
+                collection: "users",
+                filter: {
+                    "$or": [
+                        { "status": "active" },
+                        { "role": "admin" }
+                    ]
+                }
+            }, null, 2)
+        }
+    ],
+    vector: [
+        {
+            name: "Simple Vector Search",
+            label: "Cosine distance nearest neighbor match",
+            code: JSON.stringify({
+                index: "product_embeddings",
+                query: [0.15, -0.42, 0.88, 0.03],
+                k: 3
+            }, null, 2)
+        },
+        {
+            name: "Face Match",
+            label: "Query embeddings for profile photo facial matching",
+            code: JSON.stringify({
+                index: "face_features",
+                query: [0.99, -0.01, 0.55, 0.12, -0.33],
+                k: 5
+            }, null, 2)
+        }
+    ]
+};
+
 function toggleHybridMode() {
-    const mode = document.getElementById('hybridMode')?.value;
+    const mode = document.getElementById('hybridMode')?.value || 'nosql';
     const placeholder = {
         nosql:  '{"collection":"users","filter":{"age":{"$gt":18}}}',
         vector: '{"index":"embeddings","query":[0.1,0.2,0.3],"k":5}'
     };
     const hq = document.getElementById('hybridQuery');
     if (hq && placeholder[mode]) hq.placeholder = placeholder[mode];
+
+    // Populate Templates list
+    const container = document.getElementById('queryTemplatesContainer');
+    if (!container) return;
+
+    const templates = queryTemplates[mode] || [];
+    container.innerHTML = templates.map((t, idx) => {
+        return `<button class="btn btn-ghost btn-sm" onclick="applyQueryTemplate('${mode}', ${idx})" style="padding: 4px 8px; font-size: 0.72rem; font-weight: 600; border: 1px solid var(--border); border-radius: 4px;" title="${escapeHtml(t.label)}">
+            ${escapeHtml(t.name)}
+        </button>`;
+    }).join('');
+}
+
+function applyQueryTemplate(mode, idx) {
+    const t = queryTemplates[mode]?.[idx];
+    if (!t) return;
+    const hq = document.getElementById('hybridQuery');
+    if (hq) {
+        hq.value = t.code;
+        hq.dispatchEvent(new Event('input'));
+        showToast('Template Loaded', `Loaded '${t.name}' query template`, 'success', 2000);
+    }
 }
 
 function clearHybridQuery() {
@@ -2291,21 +2387,88 @@ function showTab(name) {
             renderFilteredDocs(filtered);
         }
 
+        // Global loaded documents cache
+        window.__loadedDocuments = Object.create(null);
+
+        function cacheDocuments(docs) {
+            docs.forEach(d => {
+                if (d && d.id) {
+                    window.__loadedDocuments[d.id] = d;
+                }
+            });
+        }
+
+        function copyDocumentJson(id) {
+            const d = window.__loadedDocuments[id];
+            if (!d) return;
+            const fields = d.fields || d || {};
+            copyToClipboard(JSON.stringify(fields, null, 2));
+        }
+
+        function editDocument(id) {
+            const d = window.__loadedDocuments[id];
+            if (!d) return;
+            const fields = d.fields || d || {};
+            
+            // Set field values in Create/Update Document panel
+            const docIdEl = document.getElementById('docId');
+            const docFieldsEl = document.getElementById('docFields');
+            if (docIdEl && docFieldsEl) {
+                docIdEl.value = d.id;
+                docFieldsEl.value = JSON.stringify(fields, null, 2);
+                
+                // Scroll smoothly to panel
+                docIdEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                showToast('Document Loaded', `Loaded document ${id} into fields for editing`, 'info', 2500);
+            }
+        }
+
         function renderFilteredDocs(docs) {
+            cacheDocuments(docs);
             const listEl = document.getElementById('docsList');
             if (docs.length === 0) { listEl.innerHTML = '<div class="empty-state"><p>No matches</p></div>'; return; }
             if (docView === 'table') {
                 const headers = [...new Set(docs.flatMap(d => Object.keys(d.fields || d || {})))];
-                listEl.innerHTML = `<div class="table-wrapper"><table><thead><tr><th>ID</th>${headers.map(h => `<th>${h}</th>`).join('')}<th></th></tr></thead><tbody>
+                listEl.innerHTML = `<div class="table-wrapper"><table><thead><tr><th>ID</th>${headers.map(h => `<th>${h}</th>`).join('')}<th style="text-align:right;">Actions</th></tr></thead><tbody>
                     ${docs.map(d => {
                         const fields = d.fields || d || {};
-                        return `<tr><td style="color:var(--accent-light);font-family:'JetBrains Mono',monospace;font-size:0.8rem">${d.id || 'N/A'}</td>${headers.map(h => `<td>${fields[h] ?? ''}</td>`).join('')}<td><button class="btn btn-sm btn-danger" onclick="deleteDoc('${d.id}')">X</button></td></tr>`;
+                        return `<tr>
+                            <td style="color:var(--accent-light);font-family:'JetBrains Mono',monospace;font-size:0.8rem">${d.id || 'N/A'}</td>
+                            ${headers.map(h => `<td>${fields[h] ?? ''}</td>`).join('')}
+                            <td style="text-align:right; white-space:nowrap;">
+                                <button class="btn btn-sm btn-ghost" onclick="copyDocumentJson('${d.id}')" style="padding: 4px 6px; margin-right: 4px; border: 1px solid var(--border);" title="Copy document JSON">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                </button>
+                                <button class="btn btn-sm btn-warning" onclick="editDocument('${d.id}')" style="padding: 4px 6px; margin-right: 4px;" title="Edit document">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteDoc('${d.id}')" style="padding: 4px 6px;" title="Delete document">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                </button>
+                            </td>
+                        </tr>`;
                     }).join('')}
                 </tbody></table></div>`;
             } else {
                 listEl.innerHTML = docs.map(d => {
                     const fields = d.fields || d || {};
-                    return `<div class="doc-item"><div class="doc-header"><span class="doc-id">${d.id || 'N/A'}</span><button class="btn btn-sm btn-danger" onclick="deleteDoc('${d.id}')">X</button></div><div class="doc-fields">${Object.entries(fields).map(([k,v]) => `<span class="doc-field"><strong>${k}:</strong> ${v}</span>`).join('')}</div></div>`;
+                    return `<div class="doc-item">
+                        <div class="doc-header">
+                            <span class="doc-id">${d.id || 'N/A'}</span>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn btn-sm btn-ghost" onclick="copyDocumentJson('${d.id}')" style="padding: 4px 6px; border: 1px solid var(--border);" title="Copy document JSON">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                </button>
+                                <button class="btn btn-sm btn-warning" onclick="editDocument('${d.id}')" style="padding: 4px 6px;" title="Edit document">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteDoc('${d.id}')" style="padding: 4px 6px;" title="Delete document">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="doc-fields">${Object.entries(fields).map(([k,v]) => `<span class="doc-field"><strong>${k}:</strong> ${v}</span>`).join('')}</div>
+                    </div>`;
                 }).join('');
             }
         }
@@ -2317,18 +2480,51 @@ function showTab(name) {
             const start = currentPage * PAGE_SIZE;
             const pageDocs = currentDocs.slice(start, start + PAGE_SIZE);
             if (pageDocs.length === 0) { listEl.innerHTML = '<div class="empty-state"><h3>No Documents</h3><p>Create your first document above</p></div>'; renderPagination(); return; }
+            
+            cacheDocuments(pageDocs);
+            
             if (docView === 'table') {
                 const headers = [...new Set(pageDocs.flatMap(d => Object.keys(d.fields || d || {})))];
-                listEl.innerHTML = `<div class="table-wrapper"><table><thead><tr><th>ID</th>${headers.map(h => `<th>${h}</th>`).join('')}<th></th></tr></thead><tbody>
+                listEl.innerHTML = `<div class="table-wrapper"><table><thead><tr><th>ID</th>${headers.map(h => `<th>${h}</th>`).join('')}<th style="text-align:right;">Actions</th></tr></thead><tbody>
                     ${pageDocs.map(d => {
                         const fields = d.fields || d || {};
-                        return `<tr><td style="color:var(--accent-light);font-family:'JetBrains Mono',monospace;font-size:0.8rem">${d.id || 'N/A'}</td>${headers.map(h => `<td>${fields[h] ?? ''}</td>`).join('')}<td><button class="btn btn-sm btn-danger" onclick="deleteDoc('${d.id}')">X</button></td></tr>`;
+                        return `<tr>
+                            <td style="color:var(--accent-light);font-family:'JetBrains Mono',monospace;font-size:0.8rem">${d.id || 'N/A'}</td>
+                            ${headers.map(h => `<td>${fields[h] ?? ''}</td>`).join('')}
+                            <td style="text-align:right; white-space:nowrap;">
+                                <button class="btn btn-sm btn-ghost" onclick="copyDocumentJson('${d.id}')" style="padding: 4px 6px; margin-right: 4px; border: 1px solid var(--border);" title="Copy document JSON">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                </button>
+                                <button class="btn btn-sm btn-warning" onclick="editDocument('${d.id}')" style="padding: 4px 6px; margin-right: 4px;" title="Edit document">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteDoc('${d.id}')" style="padding: 4px 6px;" title="Delete document">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                </button>
+                            </td>
+                        </tr>`;
                     }).join('')}
                 </tbody></table></div>`;
             } else {
                 listEl.innerHTML = pageDocs.map(d => {
                     const fields = d.fields || d || {};
-                    return `<div class="doc-item"><div class="doc-header"><span class="doc-id">${d.id || 'N/A'}</span><button class="btn btn-sm btn-danger" onclick="deleteDoc('${d.id}')">X</button></div><div class="doc-fields">${Object.entries(fields).map(([k,v]) => `<span class="doc-field"><strong>${k}:</strong> ${v}</span>`).join('')}</div></div>`;
+                    return `<div class="doc-item">
+                        <div class="doc-header">
+                            <span class="doc-id">${d.id || 'N/A'}</span>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn btn-sm btn-ghost" onclick="copyDocumentJson('${d.id}')" style="padding: 4px 6px; border: 1px solid var(--border);" title="Copy document JSON">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                </button>
+                                <button class="btn btn-sm btn-warning" onclick="editDocument('${d.id}')" style="padding: 4px 6px;" title="Edit document">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteDoc('${d.id}')" style="padding: 4px 6px;" title="Delete document">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="doc-fields">${Object.entries(fields).map(([k,v]) => `<span class="doc-field"><strong>${k}:</strong> ${v}</span>`).join('')}</div>
+                    </div>`;
                 }).join('');
             }
             renderPagination();
@@ -2385,6 +2581,7 @@ function showTab(name) {
         checkAuth();
         initUserMenu();
         startMetricsStream();
+        toggleHybridMode();
     </script>
     <script src="js/enhancements.js"></script>
 </body>
