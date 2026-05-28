@@ -81,18 +81,7 @@ class DeepInfrastructureTest {
                 "Accessing collection on closed DB must throw");
     }
 
-    @Test @Order(5)
-    void db_isH2EngineReturnsFalseForInMemory() {
-        assertFalse(db.isH2Engine(),
-                "Default embed() uses InMemory engine, not H2");
-    }
 
-    @Test @Order(6)
-    void db_h2EngineThrowsWhenNotH2() {
-        assertThrows(UnsupportedOperationException.class,
-                () -> db.h2Engine(),
-                "h2Engine() must throw when engine is not H2");
-    }
 
     @Test @Order(7)
     void db_mvccNotNull() {

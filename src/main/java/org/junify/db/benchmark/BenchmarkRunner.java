@@ -181,7 +181,6 @@ public class BenchmarkRunner {
                     case "FILE" -> StorageEngineType.FILE;
                     case "LSM_TREE" -> StorageEngineType.LSM_TREE;
                     case "B_TREE" -> StorageEngineType.B_TREE;
-                    case "H2" -> StorageEngineType.H2;
                     default -> StorageEngineType.IN_MEMORY;
                 };
                 case "--threads" -> options.threads = Integer.parseInt(args[++i]);

@@ -11,7 +11,7 @@ import org.junify.db.nosql.kv.HashBucket;
 import org.junify.db.nosql.kv.KeyValueBucket;
 import org.junify.db.nosql.kv.ListBucket;
 import org.junify.db.nosql.kv.SetBucket;
-import org.junify.db.storage.spi.H2StorageEngine;
+
 import org.junify.db.storage.spi.StorageEngine;
 import org.junify.db.transaction.mvcc.MVCCManager;
 import org.junify.db.transaction.mvcc.Transaction;
@@ -133,16 +133,7 @@ public class JunifyDB implements Closeable {
         return cdcManager;
     }
 
-    public H2StorageEngine h2Engine() {
-        if (engine instanceof H2StorageEngine h2) {
-            return h2;
-        }
-        throw new UnsupportedOperationException("SQL execution is only available with H2 storage engine");
-    }
 
-    public boolean isH2Engine() {
-        return engine instanceof H2StorageEngine;
-    }
 
     public JunifyDBServer startServer(int port) throws IOException {
         checkOpen();
@@ -207,7 +198,7 @@ public class JunifyDB implements Closeable {
                     System.out.println("Options:");
                     System.out.println("  --port <port>          Server port (default: 8080)");
                     System.out.println("  --data-dir <dir>       Data directory (default: data)");
-                    System.out.println("  --engine <type>         Storage engine: FILE, IN_MEMORY, LSM_TREE, B_TREE, H2 (default: FILE)");
+                    System.out.println("  --engine <type>         Storage engine: FILE, IN_MEMORY, LSM_TREE, B_TREE (default: FILE)");
                     System.out.println("  --sync                 Enable synchronous flush (default)");
                     System.out.println("  --async                Enable asynchronous flush");
                     System.out.println("  --flush-interval <ms>  Flush interval in ms (default: 1000)");
@@ -226,7 +217,6 @@ public class JunifyDB implements Closeable {
                     case "FILE" -> JunifyDBConfig.StorageEngineType.FILE;
                     case "LSM_TREE" -> JunifyDBConfig.StorageEngineType.LSM_TREE;
                     case "B_TREE" -> JunifyDBConfig.StorageEngineType.B_TREE;
-                    case "H2" -> JunifyDBConfig.StorageEngineType.H2;
                     default -> JunifyDBConfig.StorageEngineType.IN_MEMORY;
                 })
                 .persistTo(dataDir)

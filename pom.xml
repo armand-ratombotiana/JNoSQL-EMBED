@@ -9,8 +9,8 @@
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>JunifyDB</name>
-    <description>The embedded multi-model database for the JVM</description>
+    <name>JunifyDB NoSQL</name>
+    <description>Embedded multi-model NoSQL database for the JVM — Document, KV, ColumnFamily, Vector</description>
     <url>https://github.com/junifydb/JunifyDB</url>
 
     <properties>
@@ -35,25 +35,11 @@
             <version>${jackson.version}</version>
         </dependency>
 
-        <!-- H2 Database - High-performance embedded SQL database -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <version>2.4.240</version>
-        </dependency>
-
         <!-- Jakarta CDI API for dependency injection -->
         <dependency>
             <groupId>jakarta.enterprise</groupId>
             <artifactId>jakarta.enterprise.cdi-api</artifactId>
             <version>4.0.1</version>
-        </dependency>
-
-        <!-- Jakarta Persistence API (JPA 3.1) -->
-        <dependency>
-            <groupId>jakarta.persistence</groupId>
-            <artifactId>jakarta.persistence-api</artifactId>
-            <version>3.1.0</version>
         </dependency>
 
         <dependency>

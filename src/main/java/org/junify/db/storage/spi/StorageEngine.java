@@ -10,7 +10,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Storage Engine SPI — Unified interface for dual-engine (SQL + NoSQL) routing.
+ * Storage Engine SPI — Unified interface for NoSQL data storage.
  * 
  * Features:
  * - Default methods for zero-copy record I/O
@@ -177,12 +177,7 @@ public interface StorageEngine {
         return false;
     }
 
-    /**
-     * Check if engine supports SQL.
-     */
-    default boolean supportsSQL() {
-        return false;
-    }
+
 
     /**
      * Check if engine is persistent (vs in-memory).

@@ -1,4 +1,4 @@
-package org.junify.db.sql.query;
+package org.junify.db.nosql.query;
 
 import org.junify.db.nosql.document.Document;
 import org.junify.db.nosql.document.DocumentCollection;

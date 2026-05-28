@@ -18,7 +18,7 @@ import org.junify.db.core.util.JsonSerde;
 import org.junify.db.nosql.kv.HashBucket;
 import org.junify.db.nosql.kv.ListBucket;
 import org.junify.db.nosql.kv.SetBucket;
-import org.junify.db.storage.spi.SchemaManager;
+
 
 import java.io.IOException;
 import javax.net.ssl.SSLContext;
@@ -258,82 +258,7 @@ public class JunifyDBServer {
 
     
 
-    /**
-     * Initialize default admin user if not exists.
-     */
-    private void initializeAdminUser() {
-        try {
-            // Check if db_users table exists
-            var tableCheck = db.h2Engine().executeSql(
-                "SELECT COUNT(*) as cnt FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'DB_USERS'"
-            );
-            boolean tableExists = false;
-            if (tableCheck.success() && tableCheck.rows() != null && !tableCheck.rows().isEmpty()) {
-                var cnt = tableCheck.rows().get(0).get("CNT");
-                tableExists = cnt instanceof Number && ((Number) cnt).intValue() > 0;
-            }
 
-            if (!tableExists) {
-                System.out.println("[Auth] db_users table not yet created - will be created by UserManager on first access");
-                return;
-            }
-
-            // Check if admin user exists
-            var checkResult = db.h2Engine().executeSql(
-                "SELECT COUNT(*) as cnt FROM db_users WHERE username = 'admin'"
-            );
-            boolean adminExists = false;
-            if (checkResult.success() && checkResult.rows() != null && !checkResult.rows().isEmpty()) {
-                var cnt = checkResult.rows().get(0).get("CNT");
-                adminExists = cnt instanceof Number && ((Number) cnt).intValue() > 0;
-            }
-
-            if (!adminExists) {
-                // Create default admin user
-                String salt = java.util.UUID.randomUUID().toString().substring(0, 8);
-                String password = "admin123";
-                String hash = hashPassword(password, salt);
-
-                var insertResult = db.h2Engine().executeSql(
-                    "INSERT INTO db_users (username, password_hash, salt, role, created_at, enabled) VALUES (?, ?, ?, ?, ?, ?)",
-                    "admin", hash, salt, "ADMIN", System.currentTimeMillis(), true
-                );
-
-                if (insertResult.success()) {
-                    System.out.println("=================================================");
-                    System.out.println("  DEFAULT ADMIN USER CREATED");
-                    System.out.println("=================================================");
-                    System.out.println("  Username: admin");
-                    System.out.println("  Password: admin123");
-                    System.out.println("  Role: ADMIN");
-                    System.out.println("=================================================");
-                    System.out.println("  IMPORTANT: Change password after first login!");
-                    System.out.println("=================================================");
-                }
-            } else {
-                System.out.println("[Auth] Admin user already exists");
-            }
-        } catch (Exception e) {
-            System.err.println("[Auth] Failed to initialize admin user: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Hash password using SHA-256 with salt.
-     */
-    private String hashPassword(String password, String salt) {
-        try {
-            var md = java.security.MessageDigest.getInstance("SHA-256");
-            var bytes = md.digest((password + salt).getBytes());
-            var sb = new StringBuilder();
-            for (var b : bytes) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (Exception e) {
-            throw new RuntimeException("SHA-256 not available", e);
-        }
-    }
 
     private void startHttpsServer() {
         try {
@@ -381,16 +306,6 @@ public class JunifyDBServer {
      */
     private void registerHandlers(HttpServer httpServer) {
         httpServer.createContext("/", new StaticHandler());
-        try {
-            var h2 = db.h2Engine();
-            httpServer.createContext("/api/auth/", new AuthenticationHandler(
-                h2,
-                new org.junify.db.storage.spi.UserManager(h2),
-                new java.util.concurrent.ConcurrentHashMap<>()
-            ));
-        } catch (Exception ex) {
-            logger.info("[JunifyDBServer] Auth handler not available (H2 engine not active)");
-        }
         httpServer.createContext("/api/collections/", new CollectionsHandler());
         httpServer.createContext("/api/kv/", new KeyValueHandler());
         httpServer.createContext("/api/kv/lists/", new ListHandler());
@@ -406,11 +321,8 @@ public class JunifyDBServer {
         httpServer.createContext("/api/transactions", new TransactionHandler());
         httpServer.createContext("/api/schema/", new SchemaHandler());
         httpServer.createContext("/api/vectors/", new VectorHandler());
-        httpServer.createContext("/api/sql", new SqlHandler());
         httpServer.createContext("/api/bulk", new BulkHandler());
         httpServer.createContext("/api/cdc", new CDCHandler());
-        httpServer.createContext("/api/tables/", new TablesHandler());
-        httpServer.createContext("/api/constraints/", new ConstraintsHandler());
         httpServer.createContext("/api/audit/logs", new AuditLogHandler());
         if (corsEnabled) {
             httpServer.createContext("/api/cors", new CorsPreflightHandler());
@@ -1742,13 +1654,7 @@ private class StaticHandler implements HttpHandler {
             // /api/schema/ with no collection - return full schema info
             if (parts.length < 4 || parts[3].isEmpty()) {
                 if ("GET".equals(exchange.getRequestMethod())) {
-                    var h2Engine = db.h2Engine();
-                    if (h2Engine != null) {
-                        var schemaInfo = h2Engine.schemaManager().getSchemaInfo();
-                        sendJson(exchange, 200, schemaInfo);
-                    } else {
-                        sendJson(exchange, 500, Map.of("error", "H2 engine not available"));
-                    }
+                    sendJson(exchange, 200, Map.of("tables", java.util.List.of()));
                 } else {
                     sendJson(exchange, 405, Map.of("error", "Method not allowed"));
                 }
@@ -1758,25 +1664,7 @@ private class StaticHandler implements HttpHandler {
             var collectionName = parts[3];
 
             if ("GET".equals(exchange.getRequestMethod())) {
-                // Check if it's a specific table schema request
-                var h2Engine = db.h2Engine();
-                if (h2Engine == null) {
-                    sendJson(exchange, 500, Map.of("error", "H2 engine not available"));
-                    return;
-                }
-                var schemaInfo = h2Engine.schemaManager().getSchemaInfo();
-                @SuppressWarnings("unchecked")
-                var tables = (java.util.List<Map<String, Object>>) schemaInfo.get("tables");
-                var tableInfo = tables.stream()
-                    .filter(t -> collectionName.equals(t.get("name")))
-                    .findFirst()
-                    .orElse(null);
-                
-                if (tableInfo != null) {
-                    sendJson(exchange, 200, tableInfo);
-                } else {
-                    sendJson(exchange, 404, Map.of("error", "Table not found: " + collectionName));
-                }
+                sendJson(exchange, 404, Map.of("error", "Table not found: " + collectionName));
             } else if ("POST".equals(exchange.getRequestMethod())) {
                 var body = readBody(exchange);
                 var data = JsonSerde.fromJson(body, Map.class);
@@ -1983,4 +1871,131 @@ private class StaticHandler implements HttpHandler {
         }
     }
 
-    private class BulkHandler implements H
+    private class BulkHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
+            var path = exchange.getRequestURI().getPath();
+            var parts = path.split("/");
+            if (parts.length < 4) {
+                sendJson(exchange, 400, Map.of("error", "Usage: /api/bulk/{collection}"));
+                return;
+            }
+            var collectionName = parts[3];
+            var collection = db.documentCollection(collectionName);
+            
+            if ("POST".equals(exchange.getRequestMethod())) {
+                var body = readBody(exchange);
+                var docs = JsonSerde.fromJson(body, java.util.List.class);
+                var count = 0;
+                if (docs instanceof java.util.List) {
+                    for (Object doc : (java.util.List<?>) docs) {
+                        if (doc instanceof java.util.Map) {
+                            var docMap = (java.util.Map<?, ?>) doc;
+                            var docEntity = new org.junify.db.nosql.document.Document();
+                            docEntity.id(java.util.UUID.randomUUID().toString());
+                            var fields = new java.util.HashMap<String, Object>();
+                            for (var entry : docMap.entrySet()) {
+                                fields.put(String.valueOf(entry.getKey()), entry.getValue());
+                            }
+                            docEntity.getFields().putAll(fields);
+                            collection.insert(docEntity);
+                            count++;
+                        }
+                    }
+                }
+                sendJson(exchange, 201, Map.of(
+                    "status", "success",
+                    "collection", collectionName,
+                    "inserted", count
+                ));
+            } else if ("DELETE".equals(exchange.getRequestMethod())) {
+                var count = 0;
+                for (var doc : collection.findAll()) {
+                    collection.deleteById(doc.getId());
+                    count++;
+                }
+                sendJson(exchange, 200, Map.of(
+                    "status", "success",
+                    "collection", collectionName,
+                    "deleted", count
+                ));
+            } else {
+                sendJson(exchange, 405, Map.of("error", "Only POST or DELETE allowed"));
+            }
+        }
+    }
+
+    private class CDCHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!isAuthValid(exchange)) { sendAuthError(exchange); return; }
+            var path = exchange.getRequestURI().getPath();
+            var parts = path.split("/");
+            
+            if (parts.length == 3) {
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    var status = db.cdcManager().getStatus();
+                    sendJson(exchange, 200, status);
+                    return;
+                }
+            }
+            
+            if (parts.length >= 4) {
+                var action = parts[3];
+                
+                if ("connectors".equals(action) && parts.length >= 5) {
+                    var connectorName = parts[4];
+                    
+                    if ("POST".equals(exchange.getRequestMethod())) {
+                        var body = readBody(exchange);
+                        var data = JsonSerde.fromJson(body, Map.class);
+                        var type = data.get("type").toString();
+                        
+                        if ("file".equals(type)) {
+                            var outputDir = java.nio.file.Paths.get(data.get("outputDir").toString());
+                            db.cdcManager().addFileConnector(connectorName, outputDir);
+                            sendJson(exchange, 201, Map.of("status", "connected", "type", "file", "name", connectorName));
+                        } else if ("kafka".equals(type)) {
+                            var bootstrapServers = data.get("bootstrapServers").toString();
+                            var topic = data.get("topic").toString();
+                            db.cdcManager().addKafkaConnector(connectorName, bootstrapServers, topic);
+                            sendJson(exchange, 201, Map.of("status", "connected", "type", "kafka", "name", connectorName));
+                        } else {
+                            sendJson(exchange, 400, Map.of("error", "Unknown connector type"));
+                        }
+                        return;
+                    } else if ("DELETE".equals(exchange.getRequestMethod())) {
+                        db.cdcManager().removeFileConnector(connectorName);
+                        db.cdcManager().removeKafkaConnector(connectorName);
+                        sendJson(exchange, 200, Map.of("status", "disconnected", "name", connectorName));
+                        return;
+                    }
+                }
+                
+                if ("events".equals(action)) {
+                    var since = exchange.getRequestHeaders().getFirst("Since");
+                    var events = since != null 
+                        ? db.cdcManager().processor().getEventsSince(Long.parseLong(since))
+                        : db.cdcManager().processor().getEventLog();
+                    sendJson(exchange, 200, Map.of("events", events));
+                    return;
+                }
+                
+                if ("enable".equals(action)) {
+                    db.cdcManager().processor().enable();
+                    sendJson(exchange, 200, Map.of("status", "enabled"));
+                    return;
+                }
+                
+                if ("disable".equals(action)) {
+                    db.cdcManager().processor().disable();
+                    sendJson(exchange, 200, Map.of("status", "disabled"));
+                    return;
+                }
+            }
+            
+            sendJson(exchange, 400, Map.of("error", "Usage: GET /api/cdc, POST/DELETE /api/cdc/connectors/{name}, GET /api/cdc/events"));
+        }
+    }
+}

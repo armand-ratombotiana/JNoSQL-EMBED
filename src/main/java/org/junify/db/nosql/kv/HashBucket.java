@@ -44,7 +44,7 @@ public class HashBucket {
      * @param value The field value
      * @return 1 if field is new, 0 if field was updated
      */
-    public int hset(String key, String field, String value) {
+    public synchronized int hset(String key, String field, String value) {
         var hash = getHash(key);
         boolean isNew = !hash.containsKey(field);
         hash.put(field, value);
@@ -59,7 +59,7 @@ public class HashBucket {
      * @param fieldValues Field-value pairs (must be even number of arguments)
      * @return Number of fields that were added (not updated)
      */
-    public int hset(String key, Map<String, String> fieldValues) {
+    public synchronized int hset(String key, Map<String, String> fieldValues) {
         var hash = getHash(key);
         int added = 0;
         for (var entry : fieldValues.entrySet()) {
@@ -120,7 +120,7 @@ public class HashBucket {
      * @param fields The field names to delete
      * @return Number of fields that were deleted
      */
-    public int hdel(String key, String... fields) {
+    public synchronized int hdel(String key, String... fields) {
         if (fields == null || fields.length == 0) {
             return 0;
         }
@@ -193,7 +193,7 @@ public class HashBucket {
      * @param delta The amount to increment (can be negative)
      * @return New value after increment
      */
-    public long hincrby(String key, String field, long delta) {
+    public synchronized long hincrby(String key, String field, long delta) {
         var hash = getHash(key);
         String currentValue = hash.get(field);
         long value = currentValue != null ? Long.parseLong(currentValue) : 0;
@@ -211,7 +211,7 @@ public class HashBucket {
      * @param delta The amount to increment
      * @return New value as string
      */
-    public String hincrbyfloat(String key, String field, double delta) {
+    public synchronized String hincrbyfloat(String key, String field, double delta) {
         var hash = getHash(key);
         String currentValue = hash.get(field);
         double value = currentValue != null ? Double.parseDouble(currentValue) : 0.0;
@@ -230,7 +230,7 @@ public class HashBucket {
      * @param value The field value
      * @return 1 if field was set, 0 if field already existed
      */
-    public int hsetnx(String key, String field, String value) {
+    public synchronized int hsetnx(String key, String field, String value) {
         var hash = getHash(key);
         if (hash.containsKey(field)) {
             return 0;

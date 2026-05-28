@@ -420,61 +420,7 @@ class FullFeatureTest {
         assertTrue(cf.getRow("row2").isEmpty());
     }
 
-    // ===========================================================================================
-    // 7. SQL / H2 ENGINE — Backend
-    // NOTE: SQL tests require H2 engine. They are skipped when running with IN_MEMORY engine.
-    // ===========================================================================================
 
-    @Test @Order(70)
-    void sql_createTableAndInsert() {
-        Assumptions.assumeTrue(db.isH2Engine(), "SQL tests require H2 storage engine");
-        var h2 = db.h2Engine();
-        h2.executeSql("CREATE TABLE IF NOT EXISTS ft_users (id INT PRIMARY KEY, name VARCHAR(100))");
-        var result = h2.executeSql("INSERT INTO ft_users VALUES (1, 'Alice')");
-        assertTrue(result.success(), "INSERT should succeed");
-    }
-
-    @Test @Order(71)
-    void sql_selectQuery() {
-        Assumptions.assumeTrue(db.isH2Engine(), "SQL tests require H2 storage engine");
-        var h2 = db.h2Engine();
-        h2.executeSql("CREATE TABLE IF NOT EXISTS ft_items (id INT PRIMARY KEY, label VARCHAR(100))");
-        h2.executeSql("INSERT INTO ft_items VALUES (1, 'Widget')");
-        var result = h2.executeSql("SELECT * FROM ft_items WHERE id = 1");
-        assertTrue(result.success());
-        assertFalse(result.rows().isEmpty());
-        assertEquals("Widget", result.rows().get(0).get("LABEL"));
-    }
-
-    @Test @Order(72)
-    void sql_updateAndDelete() {
-        Assumptions.assumeTrue(db.isH2Engine(), "SQL tests require H2 storage engine");
-        var h2 = db.h2Engine();
-        h2.executeSql("CREATE TABLE IF NOT EXISTS ft_ops (id INT PRIMARY KEY, val INT)");
-        h2.executeSql("INSERT INTO ft_ops VALUES (100, 1)");
-        var upd = h2.executeSql("UPDATE ft_ops SET val = 42 WHERE id = 100");
-        assertTrue(upd.success());
-        var del = h2.executeSql("DELETE FROM ft_ops WHERE id = 100");
-        assertTrue(del.success());
-    }
-
-    @Test @Order(73)
-    void sql_showTables() {
-        Assumptions.assumeTrue(db.isH2Engine(), "SQL tests require H2 storage engine");
-        var h2 = db.h2Engine();
-        var result = h2.executeSql("SHOW TABLES");
-        // SHOW TABLES might return empty in H2 — just ensure no exception
-        assertNotNull(result);
-    }
-
-    @Test @Order(74)
-    void sql_dropTable() {
-        Assumptions.assumeTrue(db.isH2Engine(), "SQL tests require H2 storage engine");
-        var h2 = db.h2Engine();
-        h2.executeSql("CREATE TABLE IF NOT EXISTS ft_drop_me (id INT PRIMARY KEY)");
-        var result = h2.executeSql("DROP TABLE IF EXISTS ft_drop_me");
-        assertTrue(result.success());
-    }
 
     // ===========================================================================================
     // 8. TRANSACTIONS — Backend MVCC
@@ -742,27 +688,7 @@ class FullFeatureTest {
         assertTrue(ct != null && ct.contains("text/html"), "Content-Type should be text/html");
     }
 
-    @Test @Order(191)
-    void static_loginHtml() throws Exception {
-        HttpURLConnection c = (HttpURLConnection)
-                new URL("http://localhost:" + port + "/login.html").openConnection();
-        c.setConnectTimeout(5_000);
-        c.setReadTimeout(5_000);
-        int code = c.getResponseCode();
-        c.disconnect();
-        assertEquals(200, code, "login.html should return 200");
-    }
 
-    @Test @Order(192)
-    void static_resetPasswordHtml() throws Exception {
-        HttpURLConnection c = (HttpURLConnection)
-                new URL("http://localhost:" + port + "/reset-password.html").openConnection();
-        c.setConnectTimeout(5_000);
-        c.setReadTimeout(5_000);
-        int code = c.getResponseCode();
-        c.disconnect();
-        assertEquals(200, code, "reset-password.html should return 200");
-    }
 
     @Test @Order(193)
     void static_nonExistentFileReturns404() throws Exception {
@@ -864,33 +790,7 @@ class FullFeatureTest {
                 "CF delete: " + r.code + " " + r.body);
     }
 
-    // ===========================================================================================
-    // 23. HTTP — SQL ENDPOINT
-    // NOTE: HTTP SQL tests require H2 engine. They are skipped otherwise.
-    // ===========================================================================================
 
-    @Test @Order(230)
-    void http_sql_select() throws Exception {
-        Assumptions.assumeTrue(db.isH2Engine(), "HTTP SQL tests require H2 storage engine");
-        db.h2Engine().executeSql(
-                "CREATE TABLE IF NOT EXISTS http_sql_t (id INT PRIMARY KEY, name VARCHAR(50))");
-        db.h2Engine().executeSql("INSERT INTO http_sql_t VALUES (1, 'HTTPUser')");
-
-        Resp r = POST("/api/sql", "SELECT * FROM http_sql_t");
-        assertEquals(200, r.code, "SQL select: " + r.body);
-        assertTrue(r.body.contains("HTTPUser") || r.body.contains("rows"),
-                "SQL body unexpected: " + r.body);
-    }
-
-    @Test @Order(231)
-    void http_sql_create() throws Exception {
-        // HTTP SQL endpoint returns 400 with a descriptive error when H2 is not the engine.
-        // That is a valid, documented behavior — not a failure.
-        Resp r = POST("/api/sql",
-                "CREATE TABLE IF NOT EXISTS http_sql_create (id INT PRIMARY KEY)");
-        assertTrue(r.code == 200 || r.code == 201 || r.code == 400,
-                "SQL create: " + r.code + " " + r.body);
-    }
 
     // ===========================================================================================
     // 24. TRANSACTIONS ENDPOINT — HTTP

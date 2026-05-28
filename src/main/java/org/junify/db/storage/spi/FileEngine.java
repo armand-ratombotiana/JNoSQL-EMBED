@@ -221,6 +221,8 @@ public class FileEngine implements StorageEngine {
 
     @Override
     public void close() {
+        flush();
+
         if (asyncEnabled) {
             scheduler.shutdown();
             try {
@@ -236,8 +238,6 @@ public class FileEngine implements StorageEngine {
                 Thread.currentThread().interrupt();
             }
         }
-        
-        flush();
         
         try {
             wal.close();

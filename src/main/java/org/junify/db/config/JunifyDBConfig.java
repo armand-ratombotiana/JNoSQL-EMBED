@@ -17,8 +17,7 @@ public record JunifyDBConfig(
         IN_MEMORY,
         FILE,
         LSM_TREE,
-        B_TREE,
-        H2;
+        B_TREE;
 
         public StorageEngine create(Path dataDir, boolean autoFlush, int flushIntervalMs) {
             return switch (this) {
@@ -26,7 +25,6 @@ public record JunifyDBConfig(
                 case FILE -> new org.junify.db.storage.spi.FileEngine(dataDir, flushIntervalMs, autoFlush);
                 case LSM_TREE -> new org.junify.db.storage.spi.LSMTreeEngine(dataDir, 1024 * 1024, 64 * 1024 * 1024);
                 case B_TREE -> new org.junify.db.storage.spi.BTreeEngine(dataDir);
-                case H2 -> new org.junify.db.storage.spi.H2StorageEngine(dataDir);
             };
         }
     }
