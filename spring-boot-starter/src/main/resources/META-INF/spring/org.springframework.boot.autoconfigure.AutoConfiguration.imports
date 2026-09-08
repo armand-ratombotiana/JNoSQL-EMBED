@@ -1,2 +1,1 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-org.jnosql.embed.spring.JNoSQLAutoConfiguration
+org.junify.db.spring.boot.JunifyDBAutoConfiguration

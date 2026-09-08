@@ -723,17 +723,6 @@
             <button class="tab" onclick="showTab('query')" id="tabBtn-query">Query</button>
             <button class="tab" onclick="showTab('kv')" id="tabBtn-kv">Key-Value</button>
             <button class="tab" onclick="showTab('columns')" id="tabBtn-columns">Columns</button>
-            <button class="tab" onclick="showTab('indexes')" id="tabBtn-indexes">Indexes</button>
-            <button class="tab" onclick="showTab('transactions')" id="tabBtn-transactions">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                Transactions
-            </button>
-            <button class="tab" onclick="showTab('vectors')" id="tabBtn-vectors">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                Vectors
-            </button>
-            <button class="tab" onclick="showTab('backup')" id="tabBtn-backup">Backup</button>
-
             <button class="tab" onclick="showTab('hybrid')" id="tabBtn-hybrid">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
                 Hybrid Query
@@ -741,6 +730,16 @@
             <button class="tab" onclick="showTab('schema')" id="tabBtn-schema">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M3 3h18v18H3zM9 9h6v6H9z"/></svg>
                 Schema
+            </button>
+            <button class="tab" onclick="showTab('transactions')" id="tabBtn-transactions">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Transactions
+            </button>
+            <button class="tab" onclick="showTab('indexes')" id="tabBtn-indexes">Indexes</button>
+            <button class="tab" onclick="showTab('backup')" id="tabBtn-backup">Backup</button>
+            <button class="tab" onclick="showTab('vectors')" id="tabBtn-vectors">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                Vectors
             </button>
             <button class="tab" onclick="showTab('logs')" id="tabBtn-logs">Logs</button>
         </div>
@@ -817,28 +816,6 @@
                     <div id="collectionsList">
                         <div class="empty-state">
                             <p>No collections yet</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            Transactions
-                        </div>
-                    </div>
-                    <div class="metric-list">
-                        <div class="metric-item">
-                            <span class="metric-label">Total</span>
-                            <span class="metric-value" id="metricTransactions">0</span>
-                        </div>
-                        <div class="metric-item">
-                            <span class="metric-label">Committed</span>
-                            <span class="metric-value" style="color: var(--success);" id="metricCommits">0</span>
-                        </div>
-                        <div class="metric-item">
-                            <span class="metric-label">Rolled Back</span>
-                            <span class="metric-value" style="color: var(--error);" id="metricRollbacks">0</span>
                         </div>
                     </div>
                 </div>
@@ -1406,9 +1383,6 @@
     <p>JunifyDB v1.0.0 | Built with Java 21 | <a href="https://github.com/junifydb/JunifyDB" target="_blank">GitHub</a></p>
 </footer>
 
-<!-- Enhancements: must be loaded AFTER the main script so inline functions are defined first -->
-<script src="js/enhancements.js"></script>
-
 <!-- Query History Side Panel -->
 <div class="query-history-overlay" id="queryHistoryOverlay" onclick="closeQueryHistory()"></div>
 <div class="query-history-panel" id="queryHistoryPanel" role="complementary" aria-label="Query History">
@@ -1426,13 +1400,16 @@
 
 <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
 
-    <div class="modal-overlay" id="confirmModal">
+    <div class="modal-overlay" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
         <div class="modal">
-            <h3 id="modalTitle">Confirm</h3>
-            <p id="modalMessage"></p>
+            <div class="modal-header">
+                <div class="modal-icon warning" id="confirmModalIcon"></div>
+                <span class="modal-title" id="confirmModalTitle">Confirm</span>
+            </div>
+            <div class="modal-body" id="confirmModalMessage">Are you sure?</div>
             <div class="modal-actions">
-                <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-danger" id="modalConfirm">Confirm</button>
+                <button class="btn btn-ghost" id="cancelBtn" type="button">Cancel</button>
+                <button class="btn btn-danger" id="confirmBtn" type="button">Confirm</button>
             </div>
         </div>
     </div>
@@ -1443,6 +1420,7 @@
         let currentDocs = [];
         let docView = 'grid';
         let currentPage = 0;
+        let editingDocId = null;
         const PAGE_SIZE = 20;
 let isLightTheme = localStorage.getItem('theme') === 'light';
 if (isLightTheme) document.body.classList.add('light-theme');
@@ -1485,15 +1463,17 @@ window._apiKey = sessionStorage.getItem('apiKey') || localStorage.getItem('apiKe
 
         // Update UI with new metrics (called by SSE)
         function updateMetricsUI(m) {
-            document.getElementById('metricTotalOps').textContent = (m.totalOperations ?? 0).toLocaleString();
-            document.getElementById('metricInserts').textContent = (m.inserts ?? 0).toLocaleString();
-            document.getElementById('metricReads').textContent = (m.reads ?? 0).toLocaleString();
-            document.getElementById('metricQueries').textContent = (m.queries ?? 0).toLocaleString();
-            document.getElementById('metricTransactions').textContent = (m.transactions ?? 0).toLocaleString();
-            document.getElementById('metricCommits').textContent = (m.transactionCommits ?? 0).toLocaleString();
-            document.getElementById('metricRollbacks').textContent = (m.transactionRollbacks ?? 0).toLocaleString();
+            setText('metricTotalOps', (m.totalOperations ?? 0).toLocaleString());
+            setText('metricInserts', (m.inserts ?? 0).toLocaleString());
+            setText('metricReads', (m.reads ?? 0).toLocaleString());
+            setText('metricQueries', (m.queries ?? 0).toLocaleString());
             const cols = m.collections ? Object.keys(m.collections).length : 0;
-            document.getElementById('collectionCount').textContent = cols;
+            setText('collectionCount', cols);
+        }
+
+        function setText(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
         }
 
         function toggleTheme() {
@@ -2152,14 +2132,27 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function showTab(name) {
+    const allowedTabs = new Set([
+        'overview',
+        'collections',
+        'query',
+        'kv',
+        'columns',
+        'hybrid',
+        'schema',
+        'logs',
+        'transactions',
+        'indexes',
+        'vectors',
+        'backup'
+    ]);
+    if (!allowedTabs.has(name)) name = 'overview';
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
     const content = document.getElementById('tab-' + name);
     if (content) content.classList.add('active');
     const btn = document.getElementById('tabBtn-' + name);
     if (btn) btn.classList.add('active');
-            document.getElementById('tab-' + name).classList.add('active');
-            if (event && event.target) event.target.classList.add('active');
             if (name === 'overview') {
                 startMetricsStream();
                 loadMetrics();
@@ -2167,8 +2160,10 @@ function showTab(name) {
                 loadCollections();
             }
             if (name === 'query') { loadCollectionList(); }
+            if (name === 'transactions') { loadTransactions(); }
             if (name === 'indexes') { loadCollectionListForIdx(); }
             if (name === 'backup') { loadBackupInfo(); }
+            if (name === 'vectors') { loadVectors(); }
         }
 
         function showToast(title, message, type = 'info') {
@@ -2198,6 +2193,11 @@ function showTab(name) {
             renderLogs();
         }
 
+        function clearLogs() {
+            logs = [];
+            renderLogs();
+        }
+
         function renderLogs() {
             const filter = document.getElementById('logFilter')?.value || '';
             const filtered = filter ? logs.filter(l => l.type === filter) : logs;
@@ -2218,24 +2218,22 @@ function showTab(name) {
             }
         }
 
-        function showMessage(id, msg, type = 'error') {
+        function showMessage(id, msg, type = 'error', autoDismiss = true, showToastAlso = true) {
             const el = document.getElementById(id);
+            if (!el) return;
             const icons = { error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
                           success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>',
                           warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
                           info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' };
             el.innerHTML = `<div class="msg msg-${type}">${icons[type] || icons.info}<span>${msg}</span></div>`;
-            setTimeout(() => el.innerHTML = '', type === 'error' ? 12000 : 5000);
+            if (autoDismiss) setTimeout(() => el.innerHTML = '', type === 'error' ? 12000 : 5000);
         }
 
         function showModal(title, message, onConfirm) {
-            document.getElementById('modalTitle').textContent = title;
-            document.getElementById('modalMessage').textContent = message;
-            document.getElementById('confirmModal').classList.add('active');
-            document.getElementById('modalConfirm').onclick = () => { closeModal(); onConfirm(); };
+            showConfirmDialog(title, message, onConfirm);
         }
 
-        function closeModal() { document.getElementById('confirmModal').classList.remove('active'); }
+        function closeModal() { hideConfirmDialog(); }
 
         async function checkHealth() {
             const health = await fetchJSON(`${API}/health`);
@@ -2327,6 +2325,690 @@ function showTab(name) {
             }
         }
 
+        function renderKeyValueResult(data) {
+            const target = document.getElementById('kvResult');
+            if (!target) return;
+            target.innerHTML = data
+                ? `<pre style="white-space:pre-wrap;word-break:break-word;background:var(--bg-tertiary);padding:12px;border-radius:12px;border:1px solid var(--border);">${escapeHtml(JSON.stringify(data, null, 2))}</pre>`
+                : '<div class="empty-state"><p>No value loaded</p></div>';
+        }
+
+        function renderColumnFamilyResult(data) {
+            const target = document.getElementById('cfResult');
+            if (!target) return;
+            target.innerHTML = data
+                ? `<pre style="white-space:pre-wrap;word-break:break-word;background:var(--bg-tertiary);padding:12px;border-radius:12px;border:1px solid var(--border);">${escapeHtml(JSON.stringify(data, null, 2))}</pre>`
+                : '<div class="empty-state"><p>No row loaded</p></div>';
+        }
+
+        async function kvPut() {
+            const bucket = document.getElementById('bucketName').value.trim();
+            const key = document.getElementById('kvKey').value.trim();
+            const value = document.getElementById('kvValue').value;
+            if (!bucket || !key) {
+                showMessage('kvMessage', 'Bucket and key are required', 'warning', false);
+                return;
+            }
+
+            const response = await fetchJSON(`${API}/kv/${encodeURIComponent(bucket)}/${encodeURIComponent(key)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ value })
+            });
+            if (!response) {
+                showMessage('kvMessage', 'Key-value write failed', 'error', false);
+                return;
+            }
+
+            showMessage('kvMessage', `Stored ${key} in ${bucket}`, 'success', false);
+            renderKeyValueResult(response);
+        }
+
+        async function kvGet() {
+            const bucket = document.getElementById('bucketName').value.trim();
+            const key = document.getElementById('kvKey').value.trim();
+            if (!bucket || !key) {
+                showMessage('kvMessage', 'Bucket and key are required', 'warning', false);
+                return;
+            }
+
+            const response = await fetchJSON(`${API}/kv/${encodeURIComponent(bucket)}/${encodeURIComponent(key)}`);
+            if (!response) {
+                showMessage('kvMessage', `${key} not found in ${bucket}`, 'warning', false);
+                renderKeyValueResult(null);
+                return;
+            }
+
+            showMessage('kvMessage', `Loaded ${key} from ${bucket}`, 'info', false);
+            renderKeyValueResult(response);
+        }
+
+        async function kvExists() {
+            const bucket = document.getElementById('bucketName').value.trim();
+            const key = document.getElementById('kvKey').value.trim();
+            if (!bucket || !key) {
+                showMessage('kvMessage', 'Bucket and key are required', 'warning', false);
+                return;
+            }
+
+            const response = await fetch(`${API}/kv/${encodeURIComponent(bucket)}/${encodeURIComponent(key)}`);
+            if (!response.ok) {
+                showMessage('kvMessage', `${key} does not exist in ${bucket}`, 'warning', false);
+                renderKeyValueResult(null);
+                return;
+            }
+
+            const data = await response.json().catch(() => null);
+            showMessage('kvMessage', `${key} exists in ${bucket}`, 'success', false);
+            renderKeyValueResult(data);
+        }
+
+        async function kvDelete() {
+            const bucket = document.getElementById('bucketName').value.trim();
+            const key = document.getElementById('kvKey').value.trim();
+            if (!bucket || !key) {
+                showMessage('kvMessage', 'Bucket and key are required', 'warning', false);
+                return;
+            }
+
+            const response = await fetch(`${API}/kv/${encodeURIComponent(bucket)}/${encodeURIComponent(key)}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) {
+                showMessage('kvMessage', `Could not delete ${key}`, 'error', false);
+                return;
+            }
+
+            showMessage('kvMessage', `Deleted ${key} from ${bucket}`, 'success', false);
+            renderKeyValueResult(null);
+        }
+
+        async function cfPut() {
+            const family = document.getElementById('cfName').value.trim();
+            const key = document.getElementById('cfKey').value.trim();
+            const columnsText = document.getElementById('cfColumns').value.trim();
+            if (!family || !key) {
+                showMessage('cfMessage', 'Column family and row key are required', 'warning', false);
+                return;
+            }
+            if (!columnsText) {
+                showMessage('cfMessage', 'Columns JSON is required', 'warning', false);
+                return;
+            }
+
+            let columns;
+            try {
+                columns = JSON.parse(columnsText);
+            } catch (e) {
+                showMessage('cfMessage', 'Invalid JSON: ' + e.message, 'error', false);
+                return;
+            }
+
+            const response = await fetchJSON(`${API}/columns/${encodeURIComponent(family)}/${encodeURIComponent(key)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(columns)
+            });
+            if (!response) {
+                showMessage('cfMessage', 'Column family write failed', 'error', false);
+                return;
+            }
+
+            showMessage('cfMessage', `Stored row ${key} in ${family}`, 'success', false);
+            renderColumnFamilyResult(response);
+        }
+
+        async function cfGet() {
+            const family = document.getElementById('cfName').value.trim();
+            const key = document.getElementById('cfKey').value.trim();
+            if (!family || !key) {
+                showMessage('cfMessage', 'Column family and row key are required', 'warning', false);
+                return;
+            }
+
+            const response = await fetchJSON(`${API}/columns/${encodeURIComponent(family)}/${encodeURIComponent(key)}`);
+            if (!response) {
+                showMessage('cfMessage', `${key} not found in ${family}`, 'warning', false);
+                renderColumnFamilyResult(null);
+                return;
+            }
+
+            showMessage('cfMessage', `Loaded row ${key} from ${family}`, 'info', false);
+            renderColumnFamilyResult(response);
+        }
+
+        async function cfDelete() {
+            const family = document.getElementById('cfName').value.trim();
+            const key = document.getElementById('cfKey').value.trim();
+            if (!family || !key) {
+                showMessage('cfMessage', 'Column family and row key are required', 'warning', false);
+                return;
+            }
+
+            const response = await fetch(`${API}/columns/${encodeURIComponent(family)}/${encodeURIComponent(key)}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) {
+                showMessage('cfMessage', `Could not delete row ${key}`, 'error', false);
+                return;
+            }
+
+            showMessage('cfMessage', `Deleted row ${key} from ${family}`, 'success', false);
+            renderColumnFamilyResult(null);
+        }
+
+        function parseVectorInput(value) {
+            if (!value) return [];
+            return value
+                .split(',')
+                .map(v => Number(v.trim()))
+                .filter(v => Number.isFinite(v));
+        }
+
+        function renderIndexEntries(collectionName, indexes) {
+            const target = document.getElementById('indexList');
+            if (!target) return;
+
+            const entries = Object.entries(indexes || {});
+            if (entries.length === 0) {
+                target.innerHTML = '<div class="empty-state"><p>No indexes found</p></div>';
+                return;
+            }
+
+            target.innerHTML = entries.map(([field, meta]) => {
+                const summary = meta && typeof meta === 'object'
+                    ? meta
+                    : { value: meta };
+                const indexedCount =
+                    summary.totalIndexed ??
+                    summary.size ??
+                    summary.indexedTerms?.length ??
+                    (summary.index ? Object.keys(summary.index).length : 0);
+                const details = escapeHtml(JSON.stringify(meta, null, 2));
+                return `
+                    <div class="metric-item" style="align-items: flex-start; flex-direction: column; gap: 8px;">
+                        <div style="display:flex; width:100%; justify-content:space-between; gap:12px;">
+                            <span class="metric-label">${escapeHtml(field)}</span>
+                            <span class="badge badge-info">${escapeHtml(String(indexedCount ?? 0))} docs</span>
+                        </div>
+                        <div style="font-size:0.8rem;color:var(--text-muted);">
+                            ${escapeHtml(collectionName)} collection index
+                        </div>
+                        <pre style="width:100%;margin:0;white-space:pre-wrap;word-break:break-word;background:var(--bg-tertiary);padding:12px;border-radius:12px;border:1px solid var(--border);">${details}</pre>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderBackupSummary(data) {
+            const target = document.getElementById('backupMessage');
+            if (!target) return;
+
+            const collections = data?.collections || {};
+            const names = Object.keys(collections);
+            if (names.length === 0) {
+                target.innerHTML = '<div class="empty-state"><p>No collections detected for backup</p></div>';
+                return;
+            }
+
+            target.innerHTML = `
+                <div class="metric-list">
+                    ${names.map(name => `
+                        <div class="metric-item">
+                            <span class="metric-label">${escapeHtml(name)}</span>
+                            <span class="badge badge-info">${escapeHtml(String(collections[name]))}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderVectorResults(results) {
+            const target = document.getElementById('vectorResults');
+            if (!target) return;
+            if (!Array.isArray(results) || results.length === 0) {
+                target.innerHTML = '<div class="empty-state"><p>No results</p></div>';
+                return;
+            }
+
+            target.innerHTML = `
+                <div class="metric-list">
+                    ${results.map((id, idx) => `
+                        <div class="metric-item">
+                            <span class="metric-label">#${idx + 1}</span>
+                            <span style="font-family:'JetBrains Mono', monospace;">${escapeHtml(String(id))}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderVectorStats(data) {
+            const target = document.getElementById('vectorStats');
+            if (!target) return;
+            target.innerHTML = `
+                <div class="metric-list">
+                    <div class="metric-item">
+                        <span class="metric-label">Index</span>
+                        <span class="badge badge-info">${escapeHtml(String(data?.index ?? data?.name ?? 'default'))}</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Dimensions</span>
+                        <span>${escapeHtml(String(data?.dimensions ?? 0))}</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Size</span>
+                        <span>${escapeHtml(String(data?.size ?? 0))}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function createIndex() {
+            const collection = document.getElementById('idxColName').value.trim();
+            const field = document.getElementById('idxField').value.trim();
+            if (!collection || !field) {
+                showMessage('idxMessage', 'Collection and field are required', 'warning', false);
+                return;
+            }
+
+            const response = await fetchJSON(`${API}/indexes/${encodeURIComponent(collection)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ field })
+            });
+            if (!response) {
+                showMessage('idxMessage', 'Could not create index', 'error', false);
+                return;
+            }
+
+            showMessage('idxMessage', `Index created for ${collection}.${field}`, 'success', false);
+            document.getElementById('idxViewCol').value = collection;
+            loadIndexes();
+        }
+
+        async function loadIndexes() {
+            const collection = document.getElementById('idxViewCol').value.trim() || document.getElementById('idxColName').value.trim();
+            if (!collection) {
+                showMessage('idxMessage', 'Enter a collection name to load indexes', 'warning', false);
+                return;
+            }
+
+            const response = await fetchJSON(`${API}/indexes/${encodeURIComponent(collection)}`);
+            if (!response) return;
+
+            renderIndexEntries(collection, response.indexes || {});
+            showMessage('idxMessage', `Loaded indexes for ${collection}`, 'info', false);
+        }
+
+        async function loadBackupInfo() {
+            const response = await fetchJSON(`${API}/backup`);
+            if (!response) return;
+
+            const diskUsage = response.diskUsage || {};
+            setText('diskFiles', diskUsage.fileCount ?? 0);
+            setText('diskSize', diskUsage.totalMB || '0 MB');
+            renderBackupSummary(response);
+        }
+
+        async function createBackup() {
+            const response = await fetchJSON(`${API}/backup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}'
+            });
+            if (!response) {
+                showMessage('backupMessage', 'Backup creation failed', 'error', false);
+                return;
+            }
+
+            showMessage('backupMessage', `Backup created: ${response.file}`, 'success', false);
+            showToast('Backup Created', response.file || 'Backup completed', 'success');
+            loadBackupInfo();
+        }
+
+        async function restoreBackup() {
+            const backupFile = document.getElementById('restoreFile').value.trim();
+            if (!backupFile) {
+                showMessage('backupMessage', 'Enter a backup file path', 'warning', false);
+                return;
+            }
+
+            const response = await fetchJSON(`${API}/backup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ backupFile })
+            });
+            if (!response) {
+                showMessage('backupMessage', 'Restore failed', 'error', false);
+                return;
+            }
+
+            showMessage('backupMessage', `Restored from ${backupFile}`, 'success', false);
+            showToast('Backup Restored', backupFile, 'success');
+            loadBackupInfo();
+            loadMetrics();
+            loadCollections();
+        }
+
+        async function loadTransactions() {
+            const [metrics, tx] = await Promise.all([
+                fetchJSON(`${API}/metrics`),
+                fetchJSON(`${API}/transactions`)
+            ]);
+
+            if (metrics) {
+                setText('txCommits', metrics.transactionCommits ?? 0);
+                setText('txRollbacks', metrics.transactionRollbacks ?? 0);
+                setText('txMVCC', metrics.transactions ?? 0);
+            }
+
+            if (tx) {
+                setText('txActive', tx.activeTransactions ?? 0);
+                const ids = Array.isArray(tx.ids) && tx.ids.length ? tx.ids.join(', ') : 'No active transactions';
+                const list = document.getElementById('activeTransactions');
+                if (list) list.textContent = ids;
+            }
+        }
+
+        async function beginTransaction() {
+            const collection = document.getElementById('txColName').value.trim();
+            const isolationLevel = document.getElementById('txIsolation').value;
+            const response = await fetchJSON(`${API}/transactions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'begin',
+                    collection,
+                    isolationLevel
+                })
+            });
+            if (!response) {
+                showToast('Transaction', 'Could not start transaction', 'error');
+                return;
+            }
+
+            showToast('Transaction Started', `Transaction ${response.transactionId}`, 'success');
+            loadTransactions();
+        }
+
+        function renderVectorResultsMessage(message, type = 'info') {
+            showMessage('vectorMessage', message, type, false);
+        }
+
+        async function loadVectors() {
+            const indexName = document.getElementById('vectorIndexName').value.trim() || 'default';
+            const response = await fetchJSON(`${API}/vectors/${encodeURIComponent(indexName)}/`);
+            if (!response) return;
+            renderVectorStats(response);
+        }
+
+        async function addVector() {
+            const indexName = document.getElementById('vectorIndexName').value.trim() || 'default';
+            const vectorId = document.getElementById('vectorId').value.trim();
+            const dimensions = Number(document.getElementById('vectorDimensions').value || 0);
+            const vector = parseVectorInput(document.getElementById('vectorValues').value);
+
+            if (!vectorId) {
+                renderVectorResultsMessage('Document ID is required', 'warning');
+                return;
+            }
+            if (dimensions > 0 && vector.length !== dimensions) {
+                renderVectorResultsMessage(`Expected ${dimensions} values, got ${vector.length}`, 'warning');
+                return;
+            }
+            if (vector.length === 0) {
+                renderVectorResultsMessage('Enter comma-separated vector values', 'warning');
+                return;
+            }
+
+            const response = await fetchJSON(`${API}/vectors/${encodeURIComponent(indexName)}/${encodeURIComponent(vectorId)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: vectorId, vector })
+            });
+            if (!response) {
+                renderVectorResultsMessage('Vector insert failed', 'error');
+                return;
+            }
+
+            renderVectorResultsMessage(`Vector ${vectorId} added to ${indexName}`, 'success');
+            loadVectors();
+        }
+
+        async function searchVectors() {
+            const indexName = document.getElementById('vectorIndexName').value.trim() || 'default';
+            const k = Math.max(1, Number(document.getElementById('vectorSearchK').value || 5));
+            const accuracy = Math.min(1, Math.max(0.1, Number(document.getElementById('vectorSearchAccuracy').value || 1.0)));
+            const vector = parseVectorInput(document.getElementById('vectorValues').value);
+
+            if (vector.length === 0) {
+                renderVectorResultsMessage('Enter a query vector first', 'warning');
+                return;
+            }
+
+            const response = await fetchJSON(`${API}/vectors/${encodeURIComponent(indexName)}/search`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vector, k, accuracy })
+            });
+            if (!response) {
+                renderVectorResultsMessage('Vector search failed', 'error');
+                return;
+            }
+
+            renderVectorResults(response.results || []);
+            renderVectorResultsMessage(`Returned ${Array.isArray(response.results) ? response.results.length : 0} result(s)`, 'success');
+        }
+
+        async function deleteVector() {
+            const indexName = document.getElementById('vectorIndexName').value.trim() || 'default';
+            const vectorId = document.getElementById('vectorId').value.trim();
+            if (!vectorId) {
+                renderVectorResultsMessage('Document ID is required', 'warning');
+                return;
+            }
+
+            const response = await fetch(`${API}/vectors/${encodeURIComponent(indexName)}/${encodeURIComponent(vectorId)}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) {
+                renderVectorResultsMessage(`Could not delete vector ${vectorId}`, 'error');
+                return;
+            }
+
+            renderVectorResultsMessage(`Vector ${vectorId} removed from ${indexName}`, 'success');
+            loadVectors();
+        }
+
+        function buildQueryPayload(serverCompatible = true) {
+            const field = document.getElementById('queryField').value.trim();
+            const rawValue = document.getElementById('queryValue').value.trim();
+            const op = document.getElementById('queryOp').value;
+            if (!field) return {};
+
+            let value = rawValue;
+            try {
+                value = JSON.parse(rawValue);
+            } catch (_) {
+                if (!Number.isNaN(Number(rawValue)) && rawValue !== '') value = Number(rawValue);
+            }
+
+            if (serverCompatible) {
+                if (op === 'gt' || op === 'lt' || op === 'gte' || op === 'lte') {
+                    return { [field]: { [`$${op}`]: Number(value) } };
+                }
+                if (op === 'ne') return { [field]: { "$ne": value } };
+                if (op === 'in') return { [field]: Array.isArray(value) ? value : rawValue.split(',').map(v => v.trim()) };
+                return { [field]: value };
+            }
+
+            const payload = {
+                collection: document.getElementById('queryCol').value || '',
+                field,
+                op,
+                value,
+                mode: op === 'like' ? 'client-side' : 'server-side'
+            };
+
+            if (op === 'in') {
+                payload.filter = { [field]: Array.isArray(value) ? value : rawValue.split(',').map(v => v.trim()) };
+            } else if (op === 'gt' || op === 'lt' || op === 'gte' || op === 'lte' || op === 'ne') {
+                payload.filter = { [field]: { [`$${op}`]: value } };
+            } else {
+                payload.filter = { [field]: value };
+            }
+
+            const sort = document.getElementById('querySort').value;
+            const skip = Math.max(0, Number(document.getElementById('querySkip').value || 0));
+            const limit = Math.max(1, Number(document.getElementById('queryLimit').value || 100));
+            if (sort) payload.sort = sort;
+            if (skip) payload.skip = skip;
+            if (limit) payload.limit = limit;
+            return payload;
+        }
+
+        function queryHistoryLabel(col, field, op, rawValue, sort, skip, limit) {
+            const filter = field ? `${field} ${op} ${rawValue}` : 'all documents';
+            const modifiers = [
+                sort ? `sort ${sort}` : '',
+                skip ? `skip ${skip}` : '',
+                limit ? `limit ${limit}` : ''
+            ].filter(Boolean).join(', ');
+            return `${col}: ${filter}${modifiers ? ` (${modifiers})` : ''}`;
+        }
+
+        async function executeQuery() {
+            const col = document.getElementById('queryCol').value;
+            if (!col) { showMessage('queryMessage', 'Select a collection first', 'warning'); return; }
+
+            const field = document.getElementById('queryField').value.trim();
+            const op = document.getElementById('queryOp').value;
+            const rawValue = document.getElementById('queryValue').value.trim();
+            const clientSideOps = new Set(['like']);
+            let results;
+
+            if (!field || clientSideOps.has(op)) {
+                const docs = await fetchJSON(`${API}/collections/${encodeURIComponent(col)}`);
+                results = (Array.isArray(docs) ? docs : []).map(doc => doc.fields || doc || {});
+                if (field) {
+                    results = results.filter(row => matchesQuery(row, field, op, rawValue));
+                }
+            } else {
+                const payload = buildQueryPayload();
+                if ((op === 'gt' || op === 'lt' || op === 'gte' || op === 'lte') && Number.isNaN(Number(rawValue))) {
+                    showMessage('queryMessage', `${op} queries require a numeric value`, 'warning', false);
+                    return;
+                }
+                results = await fetchJSON(`${API}/collections/${encodeURIComponent(col)}/query`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                if (!Array.isArray(results)) results = results ? [results] : [];
+            }
+
+            const sort = document.getElementById('querySort').value;
+            if (sort && field) {
+                results.sort((a, b) => {
+                    const left = a?.[field];
+                    const right = b?.[field];
+                    return sort === 'asc'
+                        ? String(left).localeCompare(String(right), undefined, { numeric: true })
+                        : String(right).localeCompare(String(left), undefined, { numeric: true });
+                });
+            }
+
+            const skip = Math.max(0, Number(document.getElementById('querySkip').value || 0));
+            const limit = Math.max(1, Number(document.getElementById('queryLimit').value || 100));
+            const visibleResults = results.slice(skip, skip + limit);
+            renderQueryResults(visibleResults);
+            showMessage('queryMessage', `Returned ${visibleResults.length} of ${results.length} matching documents`, 'success', false);
+            if (typeof addToQueryHistory === 'function') {
+                addToQueryHistory(queryHistoryLabel(col, field, op, rawValue, sort, skip, limit), 'query', visibleResults.length, 0, {
+                    collection: col,
+                    field,
+                    op,
+                    value: rawValue,
+                    sort,
+                    skip,
+                    limit
+                });
+            }
+        }
+
+        function matchesQuery(row, field, op, rawValue) {
+            const actual = row?.[field];
+            if (op === 'like') return String(actual ?? '').toLowerCase().includes(rawValue.toLowerCase());
+            if (op === 'ne') return String(actual ?? '') !== rawValue;
+            if (op === 'in') return rawValue.split(',').map(v => v.trim()).includes(String(actual ?? ''));
+
+            const actualNumber = Number(actual);
+            const expectedNumber = Number(rawValue);
+            if (!Number.isNaN(actualNumber) && !Number.isNaN(expectedNumber)) {
+                if (op === 'gte') return actualNumber >= expectedNumber;
+                if (op === 'lte') return actualNumber <= expectedNumber;
+            }
+
+            return String(actual ?? '') === rawValue;
+        }
+
+        function renderQueryResults(rows) {
+            const target = document.getElementById('queryResults');
+            if (!rows.length) {
+                target.innerHTML = '<div class="empty-state"><p>No matching documents</p></div>';
+                return;
+            }
+
+            const headers = [...new Set(rows.flatMap(row => Object.keys(row || {})))];
+            target.innerHTML = `<div class="table-wrapper"><table><thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>
+                ${rows.map(row => `<tr>${headers.map(h => `<td>${escapeHtml(formatFieldValue(row?.[h]))}</td>`).join('')}</tr>`).join('')}
+            </tbody></table></div>`;
+        }
+
+        function clearQuery() {
+            document.getElementById('queryField').value = '';
+            document.getElementById('queryValue').value = '';
+            document.getElementById('querySort').value = '';
+            document.getElementById('queryLimit').value = '100';
+            document.getElementById('querySkip').value = '0';
+            document.getElementById('queryResults').innerHTML = '';
+            document.getElementById('queryMessage').innerHTML = '';
+        }
+
+        function explainQuery() {
+            const payload = buildQueryPayload(false);
+            showMessage('queryMessage', `<strong>Query payload:</strong><pre style="margin-top:8px;white-space:pre-wrap;">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`, 'info', false);
+        }
+
+        function renderPagination() {
+            const el = document.getElementById('docPagination');
+            if (!el) return;
+            const totalPages = Math.ceil(currentDocs.length / PAGE_SIZE);
+            if (totalPages <= 1) { el.innerHTML = ''; return; }
+            el.innerHTML = `
+                <button class="btn btn-sm btn-ghost" onclick="currentPage=Math.max(0,currentPage-1);renderDocs()" ${currentPage === 0 ? 'disabled' : ''}>Prev</button>
+                <span class="metric-label">Page ${currentPage + 1} of ${totalPages}</span>
+                <button class="btn btn-sm btn-ghost" onclick="currentPage=Math.min(${totalPages - 1},currentPage+1);renderDocs()" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>Next</button>
+            `;
+        }
+
+        async function deleteAllDocs() {
+            const col = document.getElementById('colName').value.trim();
+            if (!col) { showMessage('docMessage', 'Select a collection first', 'warning'); return; }
+            showModal('Delete all documents?', `This will delete every document in ${col}.`, async () => {
+                await fetchJSON(`${API}/bulk/${encodeURIComponent(col)}`, { method: 'DELETE' });
+                currentDocs = [];
+                editingDocId = null;
+                document.getElementById('docJson').value = '';
+                document.getElementById('docJson').dispatchEvent(new Event('input'));
+                closeModal();
+                loadMetrics();
+                loadCollections();
+                loadDocuments();
+                showToast('Deleted', `All documents deleted from ${col}`, 'success');
+            });
+        }
+
         async function createDocument() {
             const col = document.getElementById('colName').value.trim();
             const json = document.getElementById('docJson').value.trim();
@@ -2356,7 +3038,9 @@ function showTab(name) {
                 const result = await response.json();
                 showMessage('docMessage', `Created: ${result.id}`, 'success');
                 showToast('Success', `Document created in ${col}`, 'success');
+                editingDocId = null;
                 document.getElementById('docJson').value = '';
+                document.getElementById('docJson').dispatchEvent(new Event('input'));
                 loadMetrics();
                 loadCollections();
                 loadDocuments();
@@ -2409,17 +3093,15 @@ function showTab(name) {
             const d = window.__loadedDocuments[id];
             if (!d) return;
             const fields = d.fields || d || {};
-            
-            // Set field values in Create/Update Document panel
-            const docIdEl = document.getElementById('docId');
-            const docFieldsEl = document.getElementById('docFields');
-            if (docIdEl && docFieldsEl) {
-                docIdEl.value = d.id;
-                docFieldsEl.value = JSON.stringify(fields, null, 2);
-                
-                // Scroll smoothly to panel
-                docIdEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                showToast('Document Loaded', `Loaded document ${id} into fields for editing`, 'info', 2500);
+
+            editingDocId = d.id;
+            const docJsonEl = document.getElementById('docJson');
+            if (docJsonEl) {
+                docJsonEl.value = JSON.stringify(fields, null, 2);
+                docJsonEl.dispatchEvent(new Event('input'));
+                docJsonEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                showMessage('docMessage', `Editing document: ${d.id}`, 'info', false);
+                showToast('Document Loaded', `Loaded document ${id} into the JSON editor`, 'info', 2500);
             }
         }
 
@@ -2429,20 +3111,21 @@ function showTab(name) {
             if (docs.length === 0) { listEl.innerHTML = '<div class="empty-state"><p>No matches</p></div>'; return; }
             if (docView === 'table') {
                 const headers = [...new Set(docs.flatMap(d => Object.keys(d.fields || d || {})))];
-                listEl.innerHTML = `<div class="table-wrapper"><table><thead><tr><th>ID</th>${headers.map(h => `<th>${h}</th>`).join('')}<th style="text-align:right;">Actions</th></tr></thead><tbody>
+                listEl.innerHTML = `<div class="table-wrapper"><table><thead><tr><th>ID</th>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}<th style="text-align:right;">Actions</th></tr></thead><tbody>
                     ${docs.map(d => {
                         const fields = d.fields || d || {};
+                        const docArg = docIdArg(d.id);
                         return `<tr>
-                            <td style="color:var(--accent-light);font-family:'JetBrains Mono',monospace;font-size:0.8rem">${d.id || 'N/A'}</td>
-                            ${headers.map(h => `<td>${fields[h] ?? ''}</td>`).join('')}
+                            <td style="color:var(--accent-light);font-family:'JetBrains Mono',monospace;font-size:0.8rem">${escapeHtml(d.id || 'N/A')}</td>
+                            ${headers.map(h => `<td>${escapeHtml(formatFieldValue(fields[h]))}</td>`).join('')}
                             <td style="text-align:right; white-space:nowrap;">
-                                <button class="btn btn-sm btn-ghost" onclick="copyDocumentJson('${d.id}')" style="padding: 4px 6px; margin-right: 4px; border: 1px solid var(--border);" title="Copy document JSON">
+                                <button class="btn btn-sm btn-ghost" onclick="copyDocumentJson(${docArg})" style="padding: 4px 6px; margin-right: 4px; border: 1px solid var(--border);" title="Copy document JSON">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                                 </button>
-                                <button class="btn btn-sm btn-warning" onclick="editDocument('${d.id}')" style="padding: 4px 6px; margin-right: 4px;" title="Edit document">
+                                <button class="btn btn-sm btn-warning" onclick="editDocument(${docArg})" style="padding: 4px 6px; margin-right: 4px;" title="Edit document">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                 </button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteDoc('${d.id}')" style="padding: 4px 6px;" title="Delete document">
+                                <button class="btn btn-sm btn-danger" onclick="deleteDoc(${docArg})" style="padding: 4px 6px;" title="Delete document">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                                 </button>
                             </td>
@@ -2452,25 +3135,36 @@ function showTab(name) {
             } else {
                 listEl.innerHTML = docs.map(d => {
                     const fields = d.fields || d || {};
+                    const docArg = docIdArg(d.id);
                     return `<div class="doc-item">
                         <div class="doc-header">
-                            <span class="doc-id">${d.id || 'N/A'}</span>
+                            <span class="doc-id">${escapeHtml(d.id || 'N/A')}</span>
                             <div style="display:flex; gap:6px;">
-                                <button class="btn btn-sm btn-ghost" onclick="copyDocumentJson('${d.id}')" style="padding: 4px 6px; border: 1px solid var(--border);" title="Copy document JSON">
+                                <button class="btn btn-sm btn-ghost" onclick="copyDocumentJson(${docArg})" style="padding: 4px 6px; border: 1px solid var(--border);" title="Copy document JSON">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                                 </button>
-                                <button class="btn btn-sm btn-warning" onclick="editDocument('${d.id}')" style="padding: 4px 6px;" title="Edit document">
+                                <button class="btn btn-sm btn-warning" onclick="editDocument(${docArg})" style="padding: 4px 6px;" title="Edit document">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                 </button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteDoc('${d.id}')" style="padding: 4px 6px;" title="Delete document">
+                                <button class="btn btn-sm btn-danger" onclick="deleteDoc(${docArg})" style="padding: 4px 6px;" title="Delete document">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                                 </button>
                             </div>
                         </div>
-                        <div class="doc-fields">${Object.entries(fields).map(([k,v]) => `<span class="doc-field"><strong>${k}:</strong> ${v}</span>`).join('')}</div>
+                        <div class="doc-fields">${Object.entries(fields).map(([k,v]) => `<span class="doc-field"><strong>${escapeHtml(k)}:</strong> ${escapeHtml(formatFieldValue(v))}</span>`).join('')}</div>
                     </div>`;
                 }).join('');
             }
+        }
+
+        function formatFieldValue(value) {
+            if (value === null || value === undefined) return '';
+            if (typeof value === 'object') return JSON.stringify(value);
+            return String(value);
+        }
+
+        function docIdArg(id) {
+            return `decodeURIComponent('${encodeURIComponent(String(id ?? ''))}')`;
         }
 
         function renderDocs() {
@@ -2485,20 +3179,21 @@ function showTab(name) {
             
             if (docView === 'table') {
                 const headers = [...new Set(pageDocs.flatMap(d => Object.keys(d.fields || d || {})))];
-                listEl.innerHTML = `<div class="table-wrapper"><table><thead><tr><th>ID</th>${headers.map(h => `<th>${h}</th>`).join('')}<th style="text-align:right;">Actions</th></tr></thead><tbody>
+                listEl.innerHTML = `<div class="table-wrapper"><table><thead><tr><th>ID</th>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}<th style="text-align:right;">Actions</th></tr></thead><tbody>
                     ${pageDocs.map(d => {
                         const fields = d.fields || d || {};
+                        const docArg = docIdArg(d.id);
                         return `<tr>
-                            <td style="color:var(--accent-light);font-family:'JetBrains Mono',monospace;font-size:0.8rem">${d.id || 'N/A'}</td>
-                            ${headers.map(h => `<td>${fields[h] ?? ''}</td>`).join('')}
+                            <td style="color:var(--accent-light);font-family:'JetBrains Mono',monospace;font-size:0.8rem">${escapeHtml(d.id || 'N/A')}</td>
+                            ${headers.map(h => `<td>${escapeHtml(formatFieldValue(fields[h]))}</td>`).join('')}
                             <td style="text-align:right; white-space:nowrap;">
-                                <button class="btn btn-sm btn-ghost" onclick="copyDocumentJson('${d.id}')" style="padding: 4px 6px; margin-right: 4px; border: 1px solid var(--border);" title="Copy document JSON">
+                                <button class="btn btn-sm btn-ghost" onclick="copyDocumentJson(${docArg})" style="padding: 4px 6px; margin-right: 4px; border: 1px solid var(--border);" title="Copy document JSON">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                                 </button>
-                                <button class="btn btn-sm btn-warning" onclick="editDocument('${d.id}')" style="padding: 4px 6px; margin-right: 4px;" title="Edit document">
+                                <button class="btn btn-sm btn-warning" onclick="editDocument(${docArg})" style="padding: 4px 6px; margin-right: 4px;" title="Edit document">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                 </button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteDoc('${d.id}')" style="padding: 4px 6px;" title="Delete document">
+                                <button class="btn btn-sm btn-danger" onclick="deleteDoc(${docArg})" style="padding: 4px 6px;" title="Delete document">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                                 </button>
                             </td>
@@ -2508,22 +3203,23 @@ function showTab(name) {
             } else {
                 listEl.innerHTML = pageDocs.map(d => {
                     const fields = d.fields || d || {};
+                    const docArg = docIdArg(d.id);
                     return `<div class="doc-item">
                         <div class="doc-header">
-                            <span class="doc-id">${d.id || 'N/A'}</span>
+                            <span class="doc-id">${escapeHtml(d.id || 'N/A')}</span>
                             <div style="display:flex; gap:6px;">
-                                <button class="btn btn-sm btn-ghost" onclick="copyDocumentJson('${d.id}')" style="padding: 4px 6px; border: 1px solid var(--border);" title="Copy document JSON">
+                                <button class="btn btn-sm btn-ghost" onclick="copyDocumentJson(${docArg})" style="padding: 4px 6px; border: 1px solid var(--border);" title="Copy document JSON">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                                 </button>
-                                <button class="btn btn-sm btn-warning" onclick="editDocument('${d.id}')" style="padding: 4px 6px;" title="Edit document">
+                                <button class="btn btn-sm btn-warning" onclick="editDocument(${docArg})" style="padding: 4px 6px;" title="Edit document">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                 </button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteDoc('${d.id}')" style="padding: 4px 6px;" title="Delete document">
+                                <button class="btn btn-sm btn-danger" onclick="deleteDoc(${docArg})" style="padding: 4px 6px;" title="Delete document">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                                 </button>
                             </div>
                         </div>
-                        <div class="doc-fields">${Object.entries(fields).map(([k,v]) => `<span class="doc-field"><strong>${k}:</strong> ${v}</span>`).join('')}</div>
+                        <div class="doc-fields">${Object.entries(fields).map(([k,v]) => `<span class="doc-field"><strong>${escapeHtml(k)}:</strong> ${escapeHtml(formatFieldValue(v))}</span>`).join('')}</div>
                     </div>`;
                 }).join('');
             }
@@ -2541,9 +3237,9 @@ function showTab(name) {
         async function updateDocument() {
             const col = document.getElementById('colName').value.trim();
             if (!col) { showMessage('docMessage', 'Select a collection first'); return; }
-            const id = document.getElementById('docId').value.trim();
-            if (!id) { showMessage('docMessage', 'Document ID is required for update'); return; }
-            const rawFields = document.getElementById('docFields').value.trim();
+            const id = editingDocId;
+            if (!id) { showMessage('docMessage', 'Select a document to edit first'); return; }
+            const rawFields = document.getElementById('docJson').value.trim();
             if (!rawFields) { showMessage('docMessage', 'Fields JSON is required'); return; }
             try {
                 const fields = JSON.parse(rawFields);
@@ -2568,6 +3264,9 @@ function showTab(name) {
                 }
                 log(`Updated document ${id} in ${col}`);
                 showToast('Updated', `Document ${id} updated successfully`, 'success');
+                editingDocId = null;
+                document.getElementById('docJson').value = '';
+                document.getElementById('docJson').dispatchEvent(new Event('input'));
                 loadDocuments();
             } catch (e) {
                 showMessage('docMessage', 'Invalid JSON: ' + e.message);

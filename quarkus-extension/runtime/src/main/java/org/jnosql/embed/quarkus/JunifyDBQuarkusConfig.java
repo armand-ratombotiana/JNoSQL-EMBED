@@ -1,101 +1,39 @@
 package org.jnosql.embed.quarkus;
 
-import io.quarkus.arc.config.ConfigProperties;
+import io.smallrye.config.ConfigMapping;
+import io.smallrye.config.WithDefault;
 import org.junify.db.config.JunifyDBConfig.StorageEngineType;
 
 import java.util.Optional;
 
-@ConfigProperties(prefix = "junifydb")
-public class JunifyDBQuarkusConfig {
+/**
+ * Quarkus SmallRye Config mapping for the {@code junifydb.*} prefix.
+ *
+ * <p>Usage in {@code application.properties}:
+ * <pre>
+ * junifydb.engine=IN_MEMORY
+ * junifydb.data-dir=data
+ * junifydb.auto-flush=true
+ * </pre>
+ */
+@ConfigMapping(prefix = "junifydb")
+public interface JunifyDBQuarkusConfig {
 
-    private StorageEngineType engine = StorageEngineType.IN_MEMORY;
-    private String dataDir = "data";
-    private boolean autoFlush = true;
-    private int flushIntervalMs = 1000;
-    private boolean enableServer = false;
-    private int port = 8080;
-    private Optional<String> apiKey = Optional.empty();
-    private boolean enableCors = true;
-    private String corsAllowedOrigins = "*";
-    private int rateLimit = 1000;
+    @WithDefault("IN_MEMORY")
+    StorageEngineType engine();
 
-    public StorageEngineType getEngine() {
-        return engine;
-    }
+    @WithDefault("data")
+    String dataDir();
 
-    public void setEngine(StorageEngineType engine) {
-        this.engine = engine;
-    }
+    @WithDefault("true")
+    boolean autoFlush();
 
-    public String getDataDir() {
-        return dataDir;
-    }
+    @WithDefault("1000")
+    int flushIntervalMs();
 
-    public void setDataDir(String dataDir) {
-        this.dataDir = dataDir;
-    }
-
-    public boolean isAutoFlush() {
-        return autoFlush;
-    }
-
-    public void setAutoFlush(boolean autoFlush) {
-        this.autoFlush = autoFlush;
-    }
-
-    public int getFlushIntervalMs() {
-        return flushIntervalMs;
-    }
-
-    public void setFlushIntervalMs(int flushIntervalMs) {
-        this.flushIntervalMs = flushIntervalMs;
-    }
-
-    public boolean isEnableServer() {
-        return enableServer;
-    }
-
-    public void setEnableServer(boolean enableServer) {
-        this.enableServer = enableServer;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    public void setPort(int port) {
-        this.port = port;
-    }
-
-    public Optional<String> getApiKey() {
-        return apiKey;
-    }
-
-    public void setApiKey(Optional<String> apiKey) {
-        this.apiKey = apiKey;
-    }
-
-    public boolean isEnableCors() {
-        return enableCors;
-    }
-
-    public void setEnableCors(boolean enableCors) {
-        this.enableCors = enableCors;
-    }
-
-    public String getCorsAllowedOrigins() {
-        return corsAllowedOrigins;
-    }
-
-    public void setCorsAllowedOrigins(String corsAllowedOrigins) {
-        this.corsAllowedOrigins = corsAllowedOrigins;
-    }
-
-    public int getRateLimit() {
-        return rateLimit;
-    }
-
-    public void setRateLimit(int rateLimit) {
-        this.rateLimit = rateLimit;
-    }
+    /** Expose as bean-style getter for compatibility with existing recorder code. */
+    default StorageEngineType getEngine() { return engine(); }
+    default String getDataDir() { return dataDir(); }
+    default boolean isAutoFlush() { return autoFlush(); }
+    default int getFlushIntervalMs() { return flushIntervalMs(); }
 }

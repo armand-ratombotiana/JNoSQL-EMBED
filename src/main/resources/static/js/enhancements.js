@@ -135,6 +135,8 @@ function showConfirmDialog(title, message, onConfirm, type = 'warning', confirmT
     const confirmEl = document.getElementById('confirmBtn');
     const cancelEl  = document.getElementById('cancelBtn');
 
+    wireConfirmModal(modalOverlay);
+
     if (iconEl)    iconEl.innerHTML        = icons[safeType];
     if (titleEl)   titleEl.textContent     = title;
     if (msgEl)     msgEl.textContent       = message;
@@ -179,6 +181,30 @@ function confirmAction() {
 }
 
 /**
+ * Wire confirmation dialog controls once, regardless of whether the modal
+ * came from the HTML shell or was created lazily by this script.
+ */
+function wireConfirmModal(modalOverlay) {
+    if (!modalOverlay || modalOverlay.dataset.wired === 'true') return;
+
+    const confirmEl = document.getElementById('confirmBtn');
+    const cancelEl = document.getElementById('cancelBtn');
+
+    if (confirmEl) {
+        confirmEl.addEventListener('click', confirmAction);
+    }
+    if (cancelEl) {
+        cancelEl.addEventListener('click', hideConfirmDialog);
+    }
+
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) hideConfirmDialog();
+    });
+
+    modalOverlay.dataset.wired = 'true';
+}
+
+/**
  * Create confirmation modal HTML — uses event listeners, no inline onclick
  */
 function createConfirmModal() {
@@ -202,15 +228,7 @@ function createConfirmModal() {
         </div>
     `;
     document.body.appendChild(modal);
-
-    // Wire up buttons via addEventListener (no inline onclick)
-    document.getElementById('cancelBtn').addEventListener('click', hideConfirmDialog);
-    document.getElementById('confirmBtn').addEventListener('click', confirmAction);
-
-    // Close on backdrop click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) hideConfirmDialog();
-    });
+    wireConfirmModal(modal);
 
     // Close on Escape is handled by the global keydown listener in initKeyboardShortcuts
 }
@@ -408,11 +426,12 @@ const MAX_HISTORY_ITEMS = 50;
  * @param {string} type - Query type (sql, hybrid, nosql, vector)
  * @param {number} rows - Number of rows returned
  * @param {number} executionTime - Execution time in ms
+ * @param {Object} metadata - Optional UI state needed to reload the query
  */
-function addToQueryHistory(query, type, rows = 0, executionTime = 0) {
+function addToQueryHistory(query, type, rows = 0, executionTime = 0, metadata = null) {
     if (!query || typeof query !== 'string') return;
 
-    const historyKey = type === 'sql' ? SQL_HISTORY_KEY : HYBRID_HISTORY_KEY;
+    const historyKey = (type === 'sql' || type === 'query') ? SQL_HISTORY_KEY : HYBRID_HISTORY_KEY;
     let history;
     try {
         history = JSON.parse(localStorage.getItem(historyKey) || '[]');
@@ -429,6 +448,7 @@ function addToQueryHistory(query, type, rows = 0, executionTime = 0) {
         type,
         rows:          Number(rows)         || 0,
         executionTime: Number(executionTime) || 0,
+        metadata: metadata && typeof metadata === 'object' ? metadata : null,
         timestamp: new Date().toISOString()
     });
 
@@ -450,7 +470,7 @@ function addToQueryHistory(query, type, rows = 0, executionTime = 0) {
  * @returns {Array} History items
  */
 function getQueryHistory(type = 'sql') {
-    const historyKey = type === 'sql' ? SQL_HISTORY_KEY : HYBRID_HISTORY_KEY;
+    const historyKey = (type === 'sql' || type === 'query') ? SQL_HISTORY_KEY : HYBRID_HISTORY_KEY;
     try {
         const parsed = JSON.parse(localStorage.getItem(historyKey) || '[]');
         return Array.isArray(parsed) ? parsed : [];
@@ -504,6 +524,8 @@ function updateQueryHistoryPanel() {
         return;
     }
 
+    listEl.innerHTML = '';
+
     // Build items using DOM creation (no innerHTML with user data for item rows)
     const fragment = document.createDocumentFragment();
     allHistory.forEach((item, idx) => {
@@ -522,7 +544,7 @@ function updateQueryHistoryPanel() {
 
         const timeDiv = document.createElement('div');
         timeDiv.className = 'time';
-        timeDiv.textContent = `${timeStr} — ${dateStr}`;
+        timeDiv.textContent = `${timeStr} - ${dateStr}`;
 
         const queryDiv = document.createElement('div');
         queryDiv.className = 'query';
@@ -602,6 +624,35 @@ function loadQueryFromHistory(key) {
     if (!item) return;
 
     const type = item.type || 'nosql';
+
+    if (type === 'query' && item.metadata) {
+        const state = item.metadata;
+        const applyQueryState = () => {
+            const setValue = (id, value) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (id === 'queryCol' && value && !Array.from(el.options).some(option => option.value === value)) {
+                    el.add(new Option(value, value));
+                }
+                el.value = value ?? '';
+            };
+            setValue('queryCol', state.collection);
+            setValue('queryField', state.field);
+            setValue('queryOp', state.op || 'eq');
+            setValue('queryValue', state.value);
+            setValue('querySort', state.sort);
+            setValue('querySkip', state.skip ?? 0);
+            setValue('queryLimit', state.limit ?? 100);
+        };
+        if (typeof showTab === 'function') showTab('query');
+        if (typeof loadCollectionList === 'function') {
+            Promise.resolve(loadCollectionList()).finally(applyQueryState);
+        } else {
+            applyQueryState();
+        }
+        closeQueryHistory();
+        return;
+    }
 
     const hq = document.getElementById('hybridQuery');
     const hm = document.getElementById('hybridMode');
@@ -840,11 +891,18 @@ function toggleMobileNav() {
  * @param {string} elementId - Message element ID
  * @param {string} message - Message text
  * @param {'success'|'error'|'warning'|'info'} type - Message type
+ * @param {boolean} autoDismiss - Whether the inline message should clear itself
  * @param {boolean} showToastAlso - Also show toast notification
  */
-function showMessage(elementId, message, type = 'info', showToastAlso = true) {
+function showMessage(elementId, message, type = 'info', autoDismiss = true, showToastAlso = true) {
     const el = document.getElementById(elementId);
     if (!el) return;
+
+    // Preserve legacy 4-arg calls: showMessage(id, msg, type, false)
+    // should mean "do not auto-dismiss and do not toast".
+    if (arguments.length === 4) {
+        showToastAlso = autoDismiss !== false;
+    }
 
     const validTypes = ['success', 'error', 'warning', 'info'];
     const safeType   = validTypes.includes(type) ? type : 'info';
@@ -856,16 +914,24 @@ function showMessage(elementId, message, type = 'info', showToastAlso = true) {
         info:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'
     };
 
-    // Use DOM construction for the text node to avoid XSS via innerHTML
+    // Preserve the legacy inline message contract: callers may pass trusted HTML.
     el.innerHTML = '';
     const wrapper = document.createElement('div');
     wrapper.className = `msg msg-${safeType}`;
     wrapper.setAttribute('role', safeType === 'error' ? 'alert' : 'status');
     wrapper.innerHTML = icons[safeType]; // SVG is trusted static content
     const span = document.createElement('span');
-    span.textContent = message; // textContent = safe
+    span.innerHTML = message;
     wrapper.appendChild(span);
     el.appendChild(wrapper);
+
+    if (autoDismiss) {
+        setTimeout(() => {
+            if (el.firstChild === wrapper) {
+                el.innerHTML = '';
+            }
+        }, safeType === 'error' ? 12000 : 5000);
+    }
 
     if (showToastAlso !== false) {
         const toastTitles = { success: 'Success', error: 'Error', warning: 'Warning', info: 'Info' };
@@ -910,7 +976,114 @@ function initEnhancements() {
     // Populate history panel if it already exists in DOM
     updateQueryHistoryPanel();
 
-    console.info('[JunifyDB] Console Enhancements v2.0 initialized');
+    // Set up real-time JSON validation for console textareas
+    setupJsonValidation();
+
+    console.info('[JunifyDB] Console Enhancements v3.0 initialized');
+}
+
+/**
+ * Setup Real-time JSON validation and formatting for textareas
+ */
+function setupJsonValidation() {
+    const targets = [
+        { id: 'docJson' }
+    ];
+
+    targets.forEach(target => {
+        const textarea = document.getElementById(target.id);
+        if (!textarea) return;
+
+        // Ensure we wrap the textarea's label to place validation badge & format button next to it
+        const parent = textarea.parentElement;
+        const label = parent.querySelector('.form-label');
+        if (label) {
+            // Check if wrapper already exists to prevent double insertion
+            if (parent.querySelector('.json-status-wrapper')) return;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'json-status-wrapper';
+            wrapper.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-left: auto;';
+
+            const badge = document.createElement('span');
+            badge.className = 'badge badge-ghost json-badge';
+            badge.id = `${target.id}-json-badge`;
+            badge.style.cssText = 'font-size: 0.65rem; padding: 2px 8px; text-transform: uppercase; font-weight: 700; transition: all 0.2s;';
+            badge.textContent = 'Empty';
+
+            const formatBtn = document.createElement('button');
+            formatBtn.type = 'button';
+            formatBtn.className = 'btn-copy';
+            formatBtn.style.cssText = 'padding: 2px 6px; font-size: 0.7rem; cursor: pointer; border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text-secondary); border-radius: 4px; transition: all 0.2s; height: 20px; display: inline-flex; align-items: center;';
+            formatBtn.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><path d="M21 16V8a2 2 0 0 0-2-2h-2m-9 0H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2m4-12v12m4-12v12"/></svg> Format';
+            formatBtn.onclick = () => formatJsonTextarea(target.id);
+
+            wrapper.appendChild(badge);
+            wrapper.appendChild(formatBtn);
+
+            // Turn label parent or header container flex
+            const headerContainer = document.createElement('div');
+            headerContainer.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; width: 100%;';
+            label.style.marginBottom = '0';
+
+            parent.insertBefore(headerContainer, label);
+            headerContainer.appendChild(label);
+            headerContainer.appendChild(wrapper);
+        }
+
+        // Add real-time keyup validation
+        const validate = () => {
+            const val = textarea.value.trim();
+            const badge = document.getElementById(`${target.id}-json-badge`);
+            if (!badge) return;
+
+            if (!val) {
+                badge.textContent = 'Empty';
+                badge.className = 'badge badge-ghost json-badge';
+                textarea.style.borderColor = 'var(--border)';
+                textarea.style.boxShadow = '';
+                return;
+            }
+
+            try {
+                JSON.parse(val);
+                badge.textContent = 'Valid JSON';
+                badge.className = 'badge badge-success json-badge';
+                textarea.style.borderColor = 'var(--success)';
+                textarea.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.15)';
+            } catch (err) {
+                badge.textContent = 'Invalid JSON';
+                badge.className = 'badge badge-error json-badge';
+                textarea.style.borderColor = 'var(--error)';
+                textarea.style.boxShadow = '0 0 0 3px rgba(244, 63, 94, 0.15)';
+            }
+        };
+
+        textarea.addEventListener('input', validate);
+        // Initial run
+        validate();
+    });
+}
+
+/**
+ * Format & pretty-print the content of a JSON textarea
+ * @param {string} textareaId
+ */
+function formatJsonTextarea(textareaId) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+    const val = textarea.value.trim();
+    if (!val) return;
+
+    try {
+        const obj = JSON.parse(val);
+        textarea.value = JSON.stringify(obj, null, 2);
+        // Trigger input event to re-validate badge
+        textarea.dispatchEvent(new Event('input'));
+        showToast('JSON Formatted', 'JSON structured & pretty-printed', 'success', 2000);
+    } catch (err) {
+        showToast('JSON Parse Error', err.message || 'Could not parse JSON for formatting', 'error', 4000);
+    }
 }
 
 // Auto-initialize when DOM is ready — guard against double-init

@@ -10,63 +10,74 @@
     <packaging>jar</packaging>
 
     <name>JunifyDB Micronaut Integration</name>
-    <description>Micronaut integration for JunifyDB</description>
+    <description>Micronaut integration for JunifyDB embedded NoSQL</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <micronaut.version>4.2.0</micronaut.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.micronaut.platform</groupId>
+                <artifactId>micronaut-platform</artifactId>
+                <version>${micronaut.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
+        <!-- JunifyDB core — the only mandatory dependency -->
         <dependency>
             <groupId>org.junify.db</groupId>
-            <artifactId>junifydb-core</artifactId>
+            <artifactId>junify-db-core</artifactId>
             <version>1.0.0</version>
         </dependency>
 
+        <!-- Micronaut DI + lifecycle -->
         <dependency>
             <groupId>io.micronaut</groupId>
             <artifactId>micronaut-inject</artifactId>
-            <version>4.2.0</version>
+            <version>${micronaut.version}</version>
         </dependency>
-
         <dependency>
             <groupId>io.micronaut</groupId>
             <artifactId>micronaut-runtime</artifactId>
-            <version>4.2.0</version>
+            <version>${micronaut.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>io.micronaut.data</groupId>
-            <artifactId>micronaut-data-hibernate-jpa</artifactId>
-            <version>4.2.0</version>
-        </dependency>
-
+        <!-- JSR-330 + Jakarta annotation support -->
         <dependency>
             <groupId>jakarta.annotation</groupId>
             <artifactId>jakarta.annotation-api</artifactId>
             <version>2.1.1</version>
         </dependency>
+        <dependency>
+            <groupId>jakarta.inject</groupId>
+            <artifactId>jakarta.inject-api</artifactId>
+            <version>2.0.1</version>
+        </dependency>
 
+        <!-- Jakarta Persistence (for JunifyDBEntityManager which implements EntityManager) -->
         <dependency>
             <groupId>jakarta.persistence</groupId>
             <artifactId>jakarta.persistence-api</artifactId>
             <version>3.1.0</version>
         </dependency>
 
+        <!-- Jakarta Transaction API - provides @Transactional -->
         <dependency>
-            <groupId>jakarta.nosql</groupId>
-            <artifactId>jakarta.nosql-api</artifactId>
-            <version>2.0.0</version>
+            <groupId>jakarta.transaction</groupId>
+            <artifactId>jakarta.transaction-api</artifactId>
+            <version>2.0.1</version>
         </dependency>
 
-        <dependency>
-            <groupId>io.micronaut.serde</groupId>
-            <artifactId>micronaut-serde-core</artifactId>
-            <version>2.3.0</version>
-        </dependency>
-
+        <!-- Logging backend for standalone Micronaut apps -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
@@ -74,6 +85,7 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Test -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -81,4 +93,30 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>17</release>
+                    <!-- Micronaut annotation processor for @Factory, @Singleton etc. -->
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>io.micronaut</groupId>
+                            <artifactId>micronaut-inject-java</artifactId>
+                            <version>${micronaut.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+        </plugins>
+    </build>
 </project>

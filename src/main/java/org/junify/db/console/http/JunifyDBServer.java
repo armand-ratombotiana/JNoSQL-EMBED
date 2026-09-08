@@ -576,10 +576,9 @@ private class StaticHandler implements HttpHandler {
                             var body = readBody(exchange);
                             var data = JsonSerde.fromJson(body, Map.class);
 
-                            // Simple query format: {"field": "value"} for equality
-                            // Or: {"$gt": {"field": 30}} for greater than
-                            // Or: {"$lt": {"field": 50}} for less than
-                            org.junify.db.nosql.document.Query query = null;
+                            // Support the legacy top-level $gt/$lt/$eq payloads used by the UI
+                            // and the shared QueryParser format for richer queries.
+                            org.junify.db.nosql.document.Query query = org.junify.db.nosql.document.Query.all();
 
                             if (data.containsKey("$gt")) {
                                 var gtData = (Map<String, Object>) data.get("$gt");
@@ -598,16 +597,7 @@ private class StaticHandler implements HttpHandler {
                                     query = org.junify.db.nosql.document.Query.eq(entry.getKey(), entry.getValue());
                                 }
                             } else {
-                                // Default: simple equality query
-                                for (Object entryObj : data.entrySet()) {
-                                    var entry = (java.util.Map.Entry<String, Object>) entryObj;
-                                    query = org.junify.db.nosql.document.Query.eq(entry.getKey(), entry.getValue());
-                                    break; // Only first field for simple query
-                                }
-                            }
-
-                            if (query == null) {
-                                query = org.junify.db.nosql.document.Query.all();
+                                query = org.junify.db.nosql.document.QueryParser.parse(data);
                             }
 
                             var results = collection.find(query);

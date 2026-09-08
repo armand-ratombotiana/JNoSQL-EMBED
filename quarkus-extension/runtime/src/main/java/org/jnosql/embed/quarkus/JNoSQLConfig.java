@@ -1,36 +1,27 @@
 package org.jnosql.embed.quarkus;
 
-import io.quarkus.arc.config.ConfigProperties;
-import org.jnosql.embed.config.JNoSQLConfig.StorageEngineType;
+import io.smallrye.config.ConfigMapping;
+import io.smallrye.config.WithDefault;
+import org.junify.db.config.JunifyDBConfig.StorageEngineType;
 
-@ConfigProperties(prefix = "jnosql")
-public class JNoSQLConfig {
+/**
+ * Quarkus SmallRye Config mapping for the legacy {@code jnosql.*} prefix.
+ * New applications should use {@link JunifyDBQuarkusConfig} ({@code junifydb.*}).
+ */
+@ConfigMapping(prefix = "jnosql")
+public interface JNoSQLConfig {
 
-    private StorageEngineType storageEngine = StorageEngineType.IN_MEMORY;
-    private String dataDir = "data";
-    private boolean autoFlush = true;
+    @WithDefault("IN_MEMORY")
+    StorageEngineType storageEngine();
 
-    public StorageEngineType getStorageEngine() {
-        return storageEngine;
-    }
+    @WithDefault("data")
+    String dataDir();
 
-    public void setStorageEngine(StorageEngineType storageEngine) {
-        this.storageEngine = storageEngine;
-    }
+    @WithDefault("true")
+    boolean autoFlush();
 
-    public String getDataDir() {
-        return dataDir;
-    }
-
-    public void setDataDir(String dataDir) {
-        this.dataDir = dataDir;
-    }
-
-    public boolean isAutoFlush() {
-        return autoFlush;
-    }
-
-    public void setAutoFlush(boolean autoFlush) {
-        this.autoFlush = autoFlush;
-    }
+    /** Bean-style accessors for compatibility with recorder code. */
+    default StorageEngineType getStorageEngine() { return storageEngine(); }
+    default String getDataDir() { return dataDir(); }
+    default boolean isAutoFlush() { return autoFlush(); }
 }

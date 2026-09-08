@@ -8,8 +8,17 @@ import jakarta.inject.Singleton;
 import org.junify.db.JunifyDB;
 import org.junify.db.nosql.document.DocumentCollection;
 import org.junify.db.nosql.kv.KeyValueBucket;
-import org.junify.db.storage.spi.H2StorageEngine;
 
+/**
+ * CDI producer for JunifyDB beans in a Quarkus application.
+ *
+ * <p>Produces a singleton {@link JunifyDB} instance configured from
+ * {@link JunifyDBQuarkusConfig}, plus convenience {@link DocumentCollection}
+ * and {@link KeyValueBucket} beans for the "default" namespace.
+ *
+ * <p>All beans are marked {@code @DefaultBean} so applications can override
+ * them with their own {@code @Produces} methods.
+ */
 @ApplicationScoped
 public class JunifyDBProducer {
 
@@ -20,33 +29,27 @@ public class JunifyDBProducer {
     @Singleton
     @DefaultBean
     public JunifyDB createDatabase() {
-        var builder = JunifyDB.embed()
-            .storageEngine(config.getEngine())
-            .persistTo(config.getDataDir())
-            .autoFlush(config.isAutoFlush())
-            .flushIntervalMs(config.getFlushIntervalMs());
-
-        return JunifyDB.create(builder.buildConfig());
+        return JunifyDB.create(
+                JunifyDB.embed()
+                        .storageEngine(config.getEngine())
+                        .persistTo(config.getDataDir())
+                        .autoFlush(config.isAutoFlush())
+                        .flushIntervalMs(config.getFlushIntervalMs())
+                        .buildConfig()
+        );
     }
 
     @Produces
     @ApplicationScoped
-    public DocumentCollection documentCollection(JunifyDB db) {
+    @DefaultBean
+    public DocumentCollection defaultDocumentCollection(JunifyDB db) {
         return db.documentCollection("default");
     }
 
     @Produces
     @ApplicationScoped
-    public KeyValueBucket keyValueBucket(JunifyDB db) {
+    @DefaultBean
+    public KeyValueBucket defaultKeyValueBucket(JunifyDB db) {
         return db.keyValueBucket("default");
-    }
-
-    @Produces
-    @Singleton
-    public H2StorageEngine h2StorageEngine(JunifyDB db) {
-        if (db.h2Engine() != null) {
-            return db.h2Engine();
-        }
-        return null;
     }
 }

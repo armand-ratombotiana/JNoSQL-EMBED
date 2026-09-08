@@ -1,6 +1,5 @@
-﻿package org.junify.db.quarkus.deployment;
+package org.junify.db.quarkus.deployment;
 
-import io.quarkus.arc.deployment.BeanContainerListenerBuildItem;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
@@ -8,11 +7,12 @@ import io.quarkus.deployment.builditem.FeatureBuildItem;
 import org.junify.db.quarkus.JunifyConfig;
 import org.junify.db.quarkus.JunifyRecorder;
 
-import java.util.Arrays;
-
+/**
+ * Quarkus build-time processor for the {@code junify.*} extension.
+ */
 class JunifyExtensionProcessor {
 
-    private static final String FEATURE = "Junify-embed";
+    private static final String FEATURE = "junify-embed";
 
     @BuildStep
     FeatureBuildItem feature() {
@@ -21,11 +21,7 @@ class JunifyExtensionProcessor {
 
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
-    BeanContainerListenerBuildItem container(
-            JunifyRecorder recorder,
-            JunifyConfig config) {
-        return new BeanContainerListenerBuildItem(
-                recorder.createJunify(config)
-        );
+    void initialize(JunifyRecorder recorder, JunifyConfig config) {
+        recorder.createDatabase(config);
     }
 }

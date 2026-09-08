@@ -3,39 +3,18 @@ package org.junify.db.micronaut;
 import org.junify.db.JunifyDB;
 import org.junify.db.nosql.document.Document;
 import org.junify.db.nosql.document.DocumentCollection;
-import org.junify.db.adapter.jpa.JunifyDBRepository;
-import io.micronaut.data.repository.reactive.ReactiveCrudRepository;
-import io.micronaut.data.annotation.Id;
-import io.micronaut.data.annotation.GeneratedValue;
-import io.micronaut.data.model.query.builder.sql.SqlQueryBuilder;
-import io.micronaut.data.annotation.Query;
-import io.micronaut.data.annotation.MappedEntity;
-import io.micronaut.data.annotation.TypeDef;
-import io.micronaut.data.model.DataType;
-import io.micronaut.validation.Validated;
 
 import jakarta.inject.Singleton;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import jakarta.persistence.*;
+import jakarta.persistence.Id;
 
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.concurrent CompletableFuture;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-@Singleton
-public class JunifyDBRepositoryFactory {
-
-    @Inject
-    JunifyDB junifyDB;
-
-    public <T, ID> JunifyDBMicronautRepository<T, ID> createRepository(
-            Class<T> entityClass, Class<ID> idClass) {
-        return new JunifyDBMicronautRepository<>(junifyDB, entityClass, idClass);
-    }
-}
 
 @Singleton
 public class JunifyDBMicronautRepository<T, ID> {
@@ -171,11 +150,6 @@ public class JunifyDBMicronautRepository<T, ID> {
             return jpaEntity.name();
         }
 
-        var nosqlEntity = entityClass.getAnnotation(jakarta.nosql.Entity.class);
-        if (nosqlEntity != null && !nosqlEntity.value().isEmpty()) {
-            return nosqlEntity.value();
-        }
-
         return entityClass.getSimpleName().toLowerCase();
     }
 
@@ -184,7 +158,7 @@ public class JunifyDBMicronautRepository<T, ID> {
             field.setAccessible(true);
 
             if (field.isAnnotationPresent(jakarta.persistence.Id.class) ||
-                field.isAnnotationPresent(jakarta.nosql.Id.class) ||
+                
                 field.isAnnotationPresent(Id.class)) {
                 try {
                     @SuppressWarnings("unchecked")
@@ -203,7 +177,7 @@ public class JunifyDBMicronautRepository<T, ID> {
             field.setAccessible(true);
 
             if (field.isAnnotationPresent(jakarta.persistence.Id.class) ||
-                field.isAnnotationPresent(jakarta.nosql.Id.class) ||
+                
                 field.isAnnotationPresent(Id.class)) {
                 try {
                     field.set(entity, id);
@@ -267,7 +241,7 @@ public class JunifyDBMicronautRepository<T, ID> {
             if (id != null) {
                 for (Field field : entityClass.getDeclaredFields()) {
                     if (field.isAnnotationPresent(jakarta.persistence.Id.class) ||
-                        field.isAnnotationPresent(jakarta.nosql.Id.class) ||
+                        
                         field.isAnnotationPresent(Id.class)) {
                         field.setAccessible(true);
                         field.set(entity, convertValue(id, field.getType()));
@@ -286,11 +260,6 @@ public class JunifyDBMicronautRepository<T, ID> {
         var jpaCol = field.getAnnotation(jakarta.persistence.Column.class);
         if (jpaCol != null && !jpaCol.name().isEmpty()) {
             return jpaCol.name();
-        }
-
-        var nosqlCol = field.getAnnotation(jakarta.nosql.Column.class);
-        if (nosqlCol != null && !nosqlCol.value().isEmpty()) {
-            return nosqlCol.value();
         }
 
         return field.getName();

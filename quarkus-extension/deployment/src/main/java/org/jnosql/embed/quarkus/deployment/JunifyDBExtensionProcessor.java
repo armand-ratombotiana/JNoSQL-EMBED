@@ -1,18 +1,23 @@
 package org.jnosql.embed.quarkus.deployment;
 
-import io.quarkus.arc.deployment.BeanContainerListenerBuildItem;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBuildItem;
-import org.jnosql.embed.quarkus.JNoSQLRecorder;
-import org.jnosql.embed.quarkus.JunifyDBQuarkusConfig;
 import org.jnosql.embed.quarkus.JunifyDBProducer;
+import org.jnosql.embed.quarkus.JunifyDBQuarkusConfig;
+import org.jnosql.embed.quarkus.JunifyDBRecorder;
 
-import java.util.Arrays;
+import java.util.List;
 
+/**
+ * Quarkus build-time extension processor for JunifyDB.
+ *
+ * <p>Registers {@link JunifyDBProducer} as a non-removable CDI bean and
+ * records the database initialization for the runtime-init phase.
+ */
 class JunifyDBExtensionProcessor {
 
     private static final String FEATURE = "junifydb-embed";
@@ -23,42 +28,21 @@ class JunifyDBExtensionProcessor {
     }
 
     @BuildStep
-    AdditionalBeanBuildItem beans() {
+    AdditionalBeanBuildItem registerBeans() {
         return AdditionalBeanBuildItem.unremovableOf(JunifyDBProducer.class);
     }
 
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
-    BeanContainerListenerBuildItem initialize(
-            JunifyDBRecorder recorder,
-            JunifyDBQuarkusConfig config) {
-        
+    void initialize(JunifyDBRecorder recorder, JunifyDBQuarkusConfig config) {
         recorder.createDatabase(config);
-        
-        if (config.isEnableServer()) {
-            recorder.startServer(null, config);
-        }
-        
-        return new BeanContainerListenerBuildItem(
-            container -> {
-                // Container is ready
-            }
-        );
     }
 
-    @BuildStep
-    @Record(ExecutionTime.RUNTIME_STOP)
-    void shutdown(JunifyDBRecorder recorder) {
-        recorder.stopServer(null);
-    }
 
     @BuildStep
     NativeImageResourceBuildItem nativeResources() {
-        return new NativeImageResourceBuildItem(
-            Arrays.asList(
-                "org.junify.db.core.util.JsonSerde",
-                "org.junify.db.storage.spi.H2StorageEngine"
-            )
-        );
+        return new NativeImageResourceBuildItem(List.of(
+                "org/junify/db/core/util/JsonSerde.class"
+        ));
     }
 }

@@ -1,45 +1,25 @@
 # JunifyDB
 
-> The embedded multi-model NoSQL database for the JVM with SQL support.
+JunifyDB is an embedded NoSQL database for Java applications.
 
-JunifyDB (formerly JNoSQL-EMBED) is a lightweight embedded NoSQL database written entirely in Java that implements the Jakarta NoSQL specification. Think of it as **H2 for the NoSQL world** — a fast, tiny database you can embed directly into JVM applications.
+The goal is simple: provide the NoSQL equivalent of H2 for Java developers. Add a dependency, choose in-memory or local file storage, and use document/key-value data structures directly inside Spring Boot, Quarkus, Micronaut, tests, CLI tools, or desktop applications.
 
-## Features
+JunifyDB is designed around the Jakarta NoSQL / JNoSQL philosophy: Java-first APIs, embeddable runtime, simple persistence, and framework integration without requiring a separate database server.
 
-### Multi-Model Support
-- **Document Store**: JSON-like documents with rich query API
-- **Key-Value Store**: Fast in-memory or persistent caching
-- **Column-Family**: Wide-column store for sparse data
-- **SQL (H2)**: Full relational queries with JOINs, views, triggers
+## Project Focus
 
-### Storage Engines
-- **In-Memory**: Fastest for ephemeral data and testing
-- **File-based**: Persistent JSON storage with WAL
-- **B-Tree**: Sorted indexes with range queries
-- **LSM-Tree**: Optimized for writes with bloom filter
-- **H2**: Full SQL with JDBC compatibility
+- Embedded database, not a required external service.
+- JNoSQL-style document, key-value, and column-family APIs.
+- In-memory mode for tests, demos, and temporary application state.
+- File-backed mode for local persistence.
+- Framework starters/extensions for Spring Boot, Quarkus, and Micronaut.
+- Developer console for inspecting and editing embedded data during development.
 
-### Advanced Features
-- **ACID Transactions**: MVCC with savepoints
-- **Full-Text Search**: TF-IDF ranking with highlighting
-- **Vector Search**: HNSW for similarity search
-- **CDC**: Change Data Capture for Kafka/File output
-- **Replication**: Master-slave async replication
-- **Query Cache**: LRU with TTL support
-
-### Security
-- **API Key Authentication**: Per-endpoint auth
-- **Rate Limiting**: 1000 req/min per IP
-- **CORS**: Cross-origin support
-- **Compression**: GZIP response compression
-
-### Framework Integration
-- Spring Boot Starter
-- Quarkus Extension
+Advanced features such as metrics, CDC, text search, vector search, and the REST console are useful, but the core product promise is the embedded Java developer experience.
 
 ## Installation
 
-### Maven
+### Core
 
 ```xml
 <dependency>
@@ -49,163 +29,173 @@ JunifyDB (formerly JNoSQL-EMBED) is a lightweight embedded NoSQL database writte
 </dependency>
 ```
 
-### Gradle
+### Spring Boot Starter
 
-```kotlin
-implementation("org.junify.db:junify-db-core:1.0.0")
+```xml
+<dependency>
+    <groupId>org.junify.db</groupId>
+    <artifactId>junify-db-spring-boot-starter</artifactId>
+    <version>1.0.0</version>
+</dependency>
 ```
+
+Quarkus and Micronaut integrations are present in this repository and are being aligned to the same embedded-first contract.
 
 ## Quick Start
 
-### Embedded Database
+### Embedded In-Memory Database
 
 ```java
-var db = JunifyDB.embed()
-    .storageEngine("IN_MEMORY") // or FILE, H2, B_TREE, LSM_TREE
-    .persistTo("data")
-    .build();
+import org.junify.db.JunifyDB;
+import org.junify.db.config.JunifyDBConfig.StorageEngineType;
+import org.junify.db.nosql.document.Document;
+
+try (var db = JunifyDB.create(JunifyDB.embed()
+        .storageEngine(StorageEngineType.IN_MEMORY)
+        .buildConfig())) {
+
+    var users = db.documentCollection("users");
+
+    var alice = new Document();
+    alice.id("user-1");
+    alice.add("name", "Alice");
+    alice.add("email", "alice@example.com");
+    alice.add("age", 30);
+
+    users.insert(alice);
+
+    var loaded = users.findById("user-1");
+    System.out.println(loaded.get("name"));
+}
 ```
 
-### Document Store
+### File-Backed Embedded Database
 
 ```java
-var users = db.documentCollection("users");
+try (var db = JunifyDB.create(JunifyDB.embed()
+        .storageEngine(StorageEngineType.FILE)
+        .persistTo("data")
+        .autoFlush(true)
+        .buildConfig())) {
 
-// Insert
-var user = new Document();
-user.id("user-1");
-user.add("name", "Alice");
-user.add("email", "alice@example.com");
-user.add("age", 30);
-users.insert(user);
-
-// Query
-var results = users.find(
-    Query.builder()
-        .add("age", QueryCondition.GREATER_THAN, 25)
-        .build()
-);
-
-// Stream
-users.stream()
-    .filter(d -> d.get("name").equals("Alice"))
-    .forEach(System.out::println);
+    db.keyValueBucket("sessions").put("session-1", "active");
+}
 ```
 
-### Key-Value Store
+### Key-Value API
 
 ```java
 var cache = db.keyValueBucket("cache");
 
-// Put
-cache.put("user:1", "{\"name\": \"Alice\"}");
-cache.put("user:2", "{\"name\": \"Bob\"}");
-
-// Get
-var value = cache.get("user:1");
-
-// TTL
-cache.put("session:abc", "data", 3600); // 1 hour TTL
+cache.put("feature:signup", "enabled");
+var value = cache.get("feature:signup");
+cache.delete("feature:signup");
 ```
 
-### SQL (H2)
+### Column-Family API
 
 ```java
-var h2 = db.h2Engine();
-
-// Create table
-h2.executeSql("""
-    CREATE TABLE users (
-        id INT PRIMARY KEY,
-        name VARCHAR(255),
-        email VARCHAR(255)
-    )
-    """);
-
-// Insert
-h2.executeSql("INSERT INTO users VALUES (1, 'Alice', 'alice@example.com')");
-
-// Query
-var result = h2.executeSql("SELECT * FROM users WHERE name = 'Alice'");
-result.rows().forEach(row -> System.out.println(row));
+var profiles = db.columnFamily("profiles");
+profiles.put("user-1", "name", "Alice");
+profiles.put("user-1", "country", "MG");
 ```
 
-### REST API
+## Spring Boot
+
+Add the starter and configure JunifyDB with normal Spring Boot properties:
+
+```yaml
+junifydb:
+  enabled: true
+  storage-engine: IN_MEMORY
+  data-dir: data
+  auto-flush: true
+  flush-interval-ms: 1000
+```
+
+Inject either the database or the convenience template:
+
+```java
+import org.junify.db.nosql.document.Document;
+import org.junify.db.spring.boot.JunifyDBTemplate;
+import org.springframework.stereotype.Service;
+
+@Service
+class UserStore {
+    private final JunifyDBTemplate db;
+
+    UserStore(JunifyDBTemplate db) {
+        this.db = db;
+    }
+
+    void saveUser(String id, String name) {
+        var doc = new Document();
+        doc.id(id);
+        doc.add("name", name);
+        db.documents("users").insert(doc);
+    }
+}
+```
+
+## Developer Console
+
+JunifyDB can expose a local HTTP console for development and inspection:
 
 ```bash
-# Start server
-java -jar junify-db-core.jar --port 8080 --engine FILE --data-dir ./data
+java -jar target/junify-db-core-1.0.0.jar --port 8080 --engine FILE --data-dir ./data
+```
 
-# Health check
+Then open:
+
+```text
+http://localhost:8080
+```
+
+The console is intended as a developer convenience for viewing metrics, browsing collections, editing documents, and running simple queries.
+
+## REST API
+
+The embedded server exposes document and key-value endpoints when enabled:
+
+```bash
 curl http://localhost:8080/api/health
 
-# Create document
 curl -X POST http://localhost:8080/api/collections/users \
-    -H "Content-Type: application/json" \
-    -d '{"name": "Alice", "email": "alice@example.com"}'
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"Alice\",\"email\":\"alice@example.com\"}"
 
-# Query
 curl http://localhost:8080/api/collections/users
-
-# SQL
-curl -X POST http://localhost:8080/api/sql \
-    -H "Content-Type: application/json" \
-    -d 'SELECT * FROM users'
 ```
 
-## Configuration
+## Storage Modes
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--port` | 8080 | HTTP server port |
-| `--engine` | FILE | Storage engine (FILE, IN_MEMORY, B_TREE, LSM_TREE, H2) |
-| `--data-dir` | data | Data directory |
-| `--sync` | true | Synchronous flush |
-| `--async` | false | Asynchronous flush |
-| `--flush-interval` | 1000 | Flush interval (ms) |
-| `--api-key` | - | API key for authentication |
+| Mode | Use Case |
+| --- | --- |
+| `IN_MEMORY` | Tests, demos, short-lived app state |
+| `FILE` | Simple local persistence |
+| `B_TREE` | Sorted access patterns and range-oriented workloads |
+| `LSM_TREE` | Write-heavy local workloads |
 
-## API Endpoints
+## Framework Roadmap
 
-| Endpoint | Method | Description |
-|---------|--------|-------------|
-| `/api/health` | GET | Health check with system metrics |
-| `/api/collections/{name}` | GET/POST | Document CRUD |
-| `/api/collections/{name}/{id}` | GET/PUT/DELETE | Single document |
-| `/api/kv/{bucket}/{key}` | GET/PUT/DELETE | Key-Value operations |
-| `/api/columns/{name}/{key}` | GET/PUT/DELETE | Column-family ops |
-| `/api/bulk/{collection}` | POST | Batch operations |
-| `/api/sql` | POST | SQL execution (H2) |
-| `/api/cdc` | GET/POST | CDC management |
-| `/api/schema` | GET | List tables |
-| `/api/tables/{name}` | GET/POST/DELETE | Table management |
+| Framework | Status | Goal |
+| --- | --- | --- |
+| Spring Boot | Starter aligned to embedded JunifyDB API | Add dependency, inject `JunifyDB` or `JunifyDBTemplate` |
+| Quarkus | Extension sources present | CDI producer and build-time config |
+| Micronaut | Integration sources present | Factory/repository beans with Micronaut configuration |
 
-## Benchmarks
+## Build And Test
 
 ```bash
-# Run benchmark
-java -cp target/junify-db-core-1.0.0.jar org.junify.db.benchmark.BenchmarkRunner \
-    --ops 10000 --engine IN_MEMORY --workload all
-```
-
-## Testing
-
-```bash
-# Run all tests
 mvn test
-
-# Run specific test
-mvn test -Dtest=SchemaManagerTest
 ```
 
-## Building
+Build the Spring Boot starter after installing the core artifact locally:
 
 ```bash
-# Build JAR
-mvn package -DskipTests
-
-# Build with tests
-mvn package
+mvn install -DskipTests
+cd spring-boot-starter
+mvn test
 ```
 
 ## License

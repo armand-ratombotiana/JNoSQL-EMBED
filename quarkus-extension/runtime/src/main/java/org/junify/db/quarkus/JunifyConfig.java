@@ -1,36 +1,25 @@
-﻿package org.junify.db.quarkus;
+package org.junify.db.quarkus;
 
-import io.quarkus.arc.config.ConfigProperties;
-import org.junify.db.config.JunifyConfig.StorageEngineType;
+import io.smallrye.config.ConfigMapping;
+import io.smallrye.config.WithDefault;
+import org.junify.db.config.JunifyDBConfig.StorageEngineType;
 
-@ConfigProperties(prefix = "Junify")
-public class JunifyConfig {
+/**
+ * Quarkus SmallRye Config mapping for the {@code junify.*} prefix.
+ */
+@ConfigMapping(prefix = "junify")
+public interface JunifyConfig {
 
-    private StorageEngineType storageEngine = StorageEngineType.IN_MEMORY;
-    private String dataDir = "data";
-    private boolean autoFlush = true;
+    @WithDefault("IN_MEMORY")
+    StorageEngineType storageEngine();
 
-    public StorageEngineType getStorageEngine() {
-        return storageEngine;
-    }
+    @WithDefault("data")
+    String dataDir();
 
-    public void setStorageEngine(StorageEngineType storageEngine) {
-        this.storageEngine = storageEngine;
-    }
+    @WithDefault("true")
+    boolean autoFlush();
 
-    public String getDataDir() {
-        return dataDir;
-    }
-
-    public void setDataDir(String dataDir) {
-        this.dataDir = dataDir;
-    }
-
-    public boolean isAutoFlush() {
-        return autoFlush;
-    }
-
-    public void setAutoFlush(boolean autoFlush) {
-        this.autoFlush = autoFlush;
-    }
+    default StorageEngineType getStorageEngine() { return storageEngine(); }
+    default String getDataDir() { return dataDir(); }
+    default boolean isAutoFlush() { return autoFlush(); }
 }

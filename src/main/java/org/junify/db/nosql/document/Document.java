@@ -148,6 +148,11 @@ public class Document implements UnifiedRecord {
         return fields.containsKey(key);
     }
 
+    /** Alias for {@link #has(String)} — Map-style compatibility. */
+    public boolean containsKey(String key) {
+        return fields.containsKey(key);
+    }
+
     public Document remove(String key) {
         fields.remove(key);
         return this;

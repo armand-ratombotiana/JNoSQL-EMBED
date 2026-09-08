@@ -1,6 +1,7 @@
 package org.junify.db.micronaut;
 
-import io.micronaut.context.annotation.*;
+import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Property;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import org.junify.db.JunifyDB;
@@ -9,8 +10,21 @@ import org.junify.db.config.JunifyDBConfig;
 import jakarta.inject.Singleton;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import java.util.Optional;
 
+/**
+ * Micronaut {@link Factory} that creates and manages the {@link JunifyDB} singleton.
+ *
+ * <p>Configuration is read from {@code application.yml} / {@code application.properties}
+ * using the {@code junifydb.*} prefix:
+ * <pre>
+ * junifydb:
+ *   enabled: true
+ *   engine: IN_MEMORY          # IN_MEMORY | FILE | LSM_TREE | B_TREE
+ *   data-dir: ./data/junifydb
+ *   auto-flush: true
+ *   flush-interval-ms: 1000
+ * </pre>
+ */
 @Factory
 public class JunifyDBFactory {
 
@@ -32,35 +46,15 @@ public class JunifyDBFactory {
     @Property(name = "junifydb.flush-interval-ms", defaultValue = "1000")
     private int flushIntervalMs = 1000;
 
-    @Property(name = "junifydb.enable-server", defaultValue = "false")
-    private boolean enableServer = false;
-
-    @Property(name = "junifydb.port", defaultValue = "8080")
-    private int port = 8080;
-
-    @Property(name = "junifydb.api-key")
-    private Optional<String> apiKey = Optional.empty();
-
-    @Property(name = "junifydb.enable-cors", defaultValue = "true")
-    private boolean enableCors = true;
-
-    @Property(name = "junifydb.cors-allowed-origins", defaultValue = "*")
-    private String corsAllowedOrigins = "*";
-
     @PostConstruct
     void initialize() {
         if (enabled) {
             var config = JunifyDBConfig.builder()
-                .storageEngine(parseEngine(engine))
-                .persistTo(dataDir)
-                .autoFlush(autoFlush)
-                .flushIntervalMs(flushIntervalMs)
-                .enableServer(enableServer)
-                .port(port)
-                .apiKey(apiKey.orElse(null))
-                .enableCors(enableCors)
-                .corsAllowedOrigins(corsAllowedOrigins)
-                .build();
+                    .storageEngine(parseEngine(engine))
+                    .persistTo(dataDir)
+                    .autoFlush(autoFlush)
+                    .flushIntervalMs(flushIntervalMs)
+                    .buildConfig();
 
             junifyDB = JunifyDB.create(config);
         }
@@ -70,25 +64,9 @@ public class JunifyDBFactory {
     @NonNull
     public JunifyDB junifyDB() {
         if (junifyDB == null) {
-            throw new IllegalStateException("JunifyDB not initialized. Check junifydb.enabled");
+            throw new IllegalStateException("JunifyDB is not initialized. Check that junifydb.enabled=true.");
         }
         return junifyDB;
-    }
-
-    @Singleton
-    @NonNull
-    public JunifyDBConfig junifyDBConfig() {
-        return JunifyDBConfig.builder()
-            .storageEngine(parseEngine(engine))
-            .persistTo(dataDir)
-            .autoFlush(autoFlush)
-            .flushIntervalMs(flushIntervalMs)
-            .enableServer(enableServer)
-            .port(port)
-            .apiKey(apiKey.orElse(null))
-            .enableCors(enableCors)
-            .corsAllowedOrigins(corsAllowedOrigins)
-            .build();
     }
 
     @PreDestroy
@@ -100,8 +78,8 @@ public class JunifyDBFactory {
 
     private JunifyDBConfig.StorageEngineType parseEngine(String engine) {
         try {
-            return JunifyDBConfig.StorageEngineType.valueOf(engine);
-        } catch (Exception e) {
+            return JunifyDBConfig.StorageEngineType.valueOf(engine.toUpperCase());
+        } catch (IllegalArgumentException e) {
             return JunifyDBConfig.StorageEngineType.IN_MEMORY;
         }
     }

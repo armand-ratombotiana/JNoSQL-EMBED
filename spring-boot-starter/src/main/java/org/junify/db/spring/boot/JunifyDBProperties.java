@@ -1,15 +1,24 @@
-﻿package org.junify.db.spring;
+package org.junify.db.spring.boot;
 
-import org.junify.db.config.JunifyConfig.StorageEngineType;
+import org.junify.db.config.JunifyDBConfig.StorageEngineType;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "Junify")
-public class JunifyProperties {
+@ConfigurationProperties(prefix = "junifydb")
+public class JunifyDBProperties {
 
+    private boolean enabled = true;
     private StorageEngineType storageEngine = StorageEngineType.IN_MEMORY;
     private String dataDir = "data";
     private boolean autoFlush = true;
     private int flushIntervalMs = 1000;
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
 
     public StorageEngineType getStorageEngine() {
         return storageEngine;
