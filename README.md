@@ -39,7 +39,38 @@ Advanced features such as metrics, CDC, text search, vector search, and the REST
 </dependency>
 ```
 
-Quarkus and Micronaut integrations are present in this repository and are being aligned to the same embedded-first contract.
+### Quarkus Extension
+
+```xml
+<dependency>
+    <groupId>org.junify.db</groupId>
+    <artifactId>junify-db-quarkus-extension-runtime</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+### Micronaut Integration
+
+```xml
+<dependency>
+    <groupId>org.junify.db</groupId>
+    <artifactId>junifydb-micronaut-integration</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+---
+
+## Demonstration Ecosystem
+
+A complete, production-grade demonstration suite implementing a canonical **E-Commerce & Order Management** domain is located in the [`demo/`](file:///c:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/demo) directory:
+
+- **[demo-common](file:///c:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/demo/demo-common)**: Canonical domain models and test fixtures using Java records.
+- **[spring-boot-demo](file:///c:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/demo/spring-boot-demo)**: Spring Boot 3.2.0 REST application using `JunifyDBTemplate`.
+- **[quarkus-demo](file:///c:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/demo/quarkus-demo)**: Quarkus 3.8.0 reactive application using CDI producers.
+- **[micronaut-demo](file:///c:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/demo/micronaut-demo)**: Micronaut 4.2.0 application using reflection-free Serde.
+- **[vertx-demo](file:///c:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/demo/vertx-demo)**: Eclipse Vert.x 4.5.4 reactive verticle demonstrating thread-safe worker execution.
+- **[end-to-end-validation](file:///c:/Users/jratombo-adm/Desktop/JNoSQL-EMBED/demo/end-to-end-validation)**: Multi-engine durability and cold restart matrix test suite.
 
 ## Quick Start
 

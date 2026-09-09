@@ -235,7 +235,7 @@ public class LSMTreeEngine implements StorageEngine {
     public void flush() {
         memtableLock.writeLock().lock();
         try {
-            if (dirty.getAndSet(false)) {
+            if (dirty.getAndSet(false) || !memtable.isEmpty()) {
                 writeMemtableToSSTable();
             }
         } finally {
@@ -252,6 +252,7 @@ public class LSMTreeEngine implements StorageEngine {
     @Override
     public void close() {
         if (closed) return;
+        flush();
         closed = true;
         
         scheduler.shutdown();
@@ -369,6 +370,9 @@ public class LSMTreeEngine implements StorageEngine {
             for (Path file : files) {
                 SSTable sstable = SSTable.read(file);
                 sstables.add(sstable);
+                for (String k : sstable.getAll().keySet()) {
+                    bloomFilter.add(k);
+                }
             }
         }
     }

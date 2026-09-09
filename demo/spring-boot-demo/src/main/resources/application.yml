@@ -1,0 +1,9 @@
+server:
+  port: 8081
+
+junifydb:
+  enabled: true
+  engine: IN_MEMORY
+  data-dir: data/spring-demo
+  auto-flush: true
+  flush-interval-ms: 1000

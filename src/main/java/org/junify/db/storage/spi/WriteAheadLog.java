@@ -234,10 +234,21 @@ public class WriteAheadLog {
             archiver.shutdownNow();
         }
         
-        logWriter.close();
+        if (logWriter != null) {
+            logWriter.close();
+        }
+        if (logFileOutputStream != null) {
+            logFileOutputStream.close();
+        }
     }
 
     public void truncate() throws IOException {
+        if (logWriter != null) {
+            logWriter.close();
+        }
+        if (logFileOutputStream != null) {
+            logFileOutputStream.close();
+        }
         Files.deleteIfExists(walFile);
         logSequence.set(0);
         initWriter();

@@ -187,8 +187,8 @@ public class BTreeEngine implements StorageEngine {
     @Override
     public void close() {
         if (closed) return;
-        closed = true;
         flush();
+        closed = true;
     }
 
     public List<String> rangeScan(String collection, String startKey, String endKey) {

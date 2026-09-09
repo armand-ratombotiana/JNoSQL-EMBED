@@ -1,0 +1,12 @@
+micronaut:
+  application:
+    name: micronaut-ecommerce-demo
+  server:
+    port: 8083
+
+junifydb:
+  enabled: true
+  engine: IN_MEMORY
+  data-dir: target/micronaut-data
+  auto-flush: true
+  flush-interval-ms: 1000
