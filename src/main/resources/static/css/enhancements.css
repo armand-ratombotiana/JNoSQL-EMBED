@@ -2,6 +2,471 @@
    JUNIFYDB WEB CONSOLE - UI/UX ENHANCEMENTS
    ========================================================================== */
 
+/* Console-wide polish */
+:root {
+    --focus-ring: 0 0 0 3px var(--accent-glow);
+    --surface-highlight: rgba(255, 255, 255, 0.035);
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+.skip-link {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 3000;
+    padding: 10px 14px;
+    color: #fff;
+    background: var(--accent);
+    border-radius: var(--radius-sm);
+    transform: translateY(-160%);
+    transition: transform 0.2s ease;
+}
+
+.skip-link:focus {
+    transform: translateY(0);
+    color: #fff;
+}
+
+body {
+    background:
+        radial-gradient(circle at 8% -10%, var(--accent-glow), transparent 32rem),
+        var(--bg-primary);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+    -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.header {
+    background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
+    box-shadow: 0 1px 0 var(--border), 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.header-content,
+.container {
+    width: min(100%, 1600px);
+}
+
+.console-intro {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 20px;
+    padding: 6px 2px 0;
+}
+
+.console-eyebrow {
+    margin-bottom: 4px;
+    color: var(--accent-light);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.console-intro h2 {
+    font-size: clamp(1.35rem, 2vw, 1.75rem);
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+}
+
+.console-intro > div > p:last-child {
+    margin-top: 6px;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.workspace-hint {
+    max-width: 260px;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    text-align: right;
+}
+
+.field-hint {
+    margin-top: 7px;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.logo-section {
+    min-width: 0;
+}
+
+.brand {
+    min-width: 0;
+}
+
+.brand h1,
+.brand p {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.header-actions {
+    flex-shrink: 0;
+}
+
+.user-menu {
+    min-height: 40px;
+    padding: 4px 8px 4px 4px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.user-menu:hover,
+.user-menu:focus-visible {
+    background: var(--bg-tertiary);
+    border-color: var(--border);
+}
+
+.dropdown-content {
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(12px);
+}
+
+.dropdown-item {
+    min-height: 40px;
+    border-radius: 6px;
+}
+
+.status-badge {
+    border: 1px solid var(--border);
+    box-shadow: inset 0 1px 0 var(--surface-highlight);
+}
+
+.action-row,
+.toolbar-row {
+    flex-wrap: wrap;
+}
+
+.action-row .btn {
+    flex: 0 0 auto;
+}
+
+.toolbar-row {
+    gap: 12px;
+}
+
+.auto-refresh-toggle {
+    border: 1px solid transparent;
+    font: inherit;
+}
+
+.auto-refresh-toggle:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.tabs {
+    position: sticky;
+    top: 81px;
+    z-index: 20;
+    scrollbar-gutter: stable;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 42px;
+}
+
+.tab.active {
+    box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.tab[aria-current="page"] {
+    font-weight: 700;
+}
+
+.status-badge[role="status"] {
+    min-width: 112px;
+    justify-content: center;
+}
+
+.tab-content {
+    animation: fadeIn 0.24s ease-out;
+}
+
+.card {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+
+.card-title {
+    letter-spacing: -0.01em;
+}
+
+.stat-card {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.7;
+}
+
+.stat-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+
+.form-input {
+    min-height: 44px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.form-label {
+    letter-spacing: 0.01em;
+}
+
+.form-group:focus-within .form-label {
+    color: var(--accent-light);
+}
+
+.view-toggle button {
+    min-width: 40px;
+    min-height: 36px;
+}
+
+.pagination .info {
+    font-variant-numeric: tabular-nums;
+}
+
+.metric-value {
+    overflow-wrap: anywhere;
+    text-align: right;
+}
+
+textarea.form-input {
+    line-height: 1.5;
+}
+
+#sqlQuery,
+#hybridQuery {
+    min-height: 180px;
+    padding: 16px;
+    tab-size: 2;
+    letter-spacing: -0.01em;
+    background: color-mix(in srgb, var(--bg-tertiary) 82%, #000 18%);
+}
+
+#sqlQuery:focus,
+#hybridQuery:focus {
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring), inset 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.result-actions {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    backdrop-filter: blur(10px);
+}
+
+.log-container {
+    border: 1px solid var(--border);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.log-entry {
+    display: grid;
+    grid-template-columns: minmax(84px, auto) 1fr;
+    gap: 12px;
+}
+
+.log-msg {
+    overflow-wrap: anywhere;
+}
+
+.btn {
+    min-height: 40px;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.btn-ghost {
+    box-shadow: none;
+}
+
+.table-wrapper,
+.sql-table-wrapper {
+    scrollbar-color: var(--border) transparent;
+    scrollbar-width: thin;
+}
+
+table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.empty-state {
+    min-height: 160px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-highlight);
+}
+
+.footer {
+    color: var(--text-muted);
+    text-align: center;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+.msg {
+    box-shadow: inset 0 1px 0 var(--surface-highlight);
+}
+
+.loading-overlay {
+    background: color-mix(in srgb, var(--bg-primary) 78%, transparent);
+}
+
+@media (max-width: 768px) {
+    .console-intro {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .workspace-hint {
+        max-width: none;
+        text-align: left;
+    }
+
+    .header {
+        position: sticky;
+    }
+
+    .header-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .status-badge {
+        margin-right: auto;
+    }
+
+    .tabs {
+        top: 111px;
+        margin-left: -8px;
+        margin-right: -8px;
+        border-radius: var(--radius-sm);
+    }
+
+    .tabs:not(.mobile-open) {
+        display: none;
+    }
+
+    .tabs.mobile-open {
+        display: flex;
+        animation: fadeIn 0.2s ease-out;
+    }
+
+    .container {
+        padding-top: 16px;
+    }
+
+    .card-header {
+        align-items: stretch;
+    }
+
+    .card-header > :last-child {
+        align-self: stretch;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-actions {
+        gap: 8px;
+    }
+
+    .header-actions .btn-ghost {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .action-row .btn {
+        flex: 1 1 calc(50% - 6px);
+    }
+
+    .toolbar-row {
+        align-items: stretch !important;
+        flex-direction: column;
+    }
+
+    .tabs {
+        top: 96px;
+    }
+
+    .tab {
+        min-height: 38px;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    th,
+    td {
+        padding: 11px 12px;
+    }
+
+    #sqlQuery,
+    #hybridQuery {
+        min-height: 150px;
+        font-size: 0.82rem;
+    }
+
+    .log-entry {
+        grid-template-columns: 1fr;
+        gap: 2px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 /* Loading Overlay */
 .loading-overlay {
     display: none;

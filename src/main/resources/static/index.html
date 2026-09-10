@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JunifyDB | Embedded Multi-Model Database</title>
     <link rel="icon" type="image/svg+xml" href="logo.svg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-primary: #0a0a0f;
@@ -683,9 +681,10 @@
     <link rel="stylesheet" href="css/enhancements.css">
 </head>
 <body>
+    <a class="skip-link" href="#consoleMain">Skip to console content</a>
     <header class="header">
         <div class="header-content">
-            <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="Toggle navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
+            <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="Toggle navigation" aria-expanded="false" aria-controls="consoleTabs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
             <div class="logo-section">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="48" height="48"><defs><linearGradient id="mainGrad" x1="0" y1="0" x2="100" y2="100"><stop offset="0" stop-color="#6366f1"/><stop offset="50" stop-color="#8b5cf6"/><stop offset="100" stop-color="#a855f7"/></linearGradient><radialGradient id="glowGrad" cx="50" cy="50" r="50"><stop offset="0" stop-color="#818cf8" stop-opacity="0.3"/><stop offset="100" stop-color="#818cf8" stop-opacity="0"/></radialGradient></defs><circle cx="200" cy="200" r="180" fill="url(#glowGrad)"/><rect x="50" y="50" width="300" height="300" rx="60" fill="url(#mainGrad)"/><g transform="translate(100,100)"><ellipse cx="100" cy="30" rx="70" ry="20" fill="none" stroke="#ffffff" stroke-width="8" opacity="0.9"/><path d="M30 30 L30 170 Q30 190 100 190 Q170 190 170 170 L170 30" fill="none" stroke="#ffffff" stroke-width="8" opacity="0.8"/><ellipse cx="100" cy="100" rx="70" ry="20" fill="none" stroke="#ffffff" stroke-width="8" opacity="0.6"/><ellipse cx="100" cy="170" rx="70" ry="20" fill="none" stroke="#ffffff" stroke-width="8" opacity="0.4"/></g><text x="200" y="310" font-family="Inter, Arial, sans-serif" font-size="110" font-weight="800" fill="#ffffff" text-anchor="middle">J</text><circle cx="200" cy="200" r="130" fill="none" stroke="#a78bfa" stroke-width="3" stroke-dasharray="20 10" opacity="0.5"/><circle cx="80" cy="80" r="12" fill="#ffffff" opacity="0.8"/><circle cx="320" cy="80" r="12" fill="#ffffff" opacity="0.8"/><circle cx="80" cy="320" r="12" fill="#ffffff" opacity="0.8"/><circle cx="320" cy="320" r="12" fill="#ffffff" opacity="0.8"/></svg>
                 <div class="brand">
@@ -694,19 +693,19 @@
                 </div>
             </div>
             <div class="header-actions">
-                <div class="status-badge">
+                <div class="status-badge" role="status" aria-live="polite">
                     <span class="status-dot" id="statusDot"></span>
                     <span id="statusText">Connecting...</span>
                 </div>
-                <a href="https://github.com/junifydb/JunifyDB" target="_blank" class="github-btn">
+                <a href="https://github.com/junifydb/JunifyDB" target="_blank" rel="noopener noreferrer" class="github-btn">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
                     GitHub
                 </a>
-                <button class="btn btn-ghost btn-sm" onclick="toggleTheme()">
+                <button class="btn btn-ghost btn-sm" onclick="toggleTheme()" aria-label="Toggle light and dark theme" title="Toggle theme">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
                 </button>
                 <!-- User Menu (Auth) -->
-                <div class="user-menu auth-guard" id="userMenu" onclick="toggleUserDropdown()" style="display: none;">
+                <div class="user-menu auth-guard" id="userMenu" onclick="toggleUserDropdown()" role="button" tabindex="0" aria-haspopup="menu" aria-expanded="false" style="display: none;">
                     <div class="user-avatar" id="userAvatar">U</div>
                     <div class="user-info">
                         <span class="user-name" id="userName">User</span>
@@ -727,7 +726,7 @@
                 </div>
 
                 <div class="dropdown">
-                    <button class="btn btn-ghost btn-sm">
+                    <button class="btn btn-ghost btn-sm" aria-label="Open console menu" title="Console menu">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/></svg>
                         Menu
                     </button>
@@ -752,9 +751,17 @@
         </div>
     </header>
 
-    <main class="container">
+    <main class="container" id="consoleMain">
+        <section class="console-intro" aria-labelledby="workspaceTitle">
+            <div>
+                <p class="console-eyebrow">JunifyDB Console</p>
+                <h2 id="workspaceTitle">Overview</h2>
+                <p id="workspaceDescription">Monitor database health, activity, and storage at a glance.</p>
+            </div>
+            <span class="workspace-hint">Use the sections below to manage your data</span>
+        </section>
         <!-- Tabs Navigation -->
-        <div class="tabs">
+        <div class="tabs" id="consoleTabs" role="tablist" aria-label="Console sections">
             <button class="tab active" onclick="showTab('overview')" id="tabBtn-overview">Overview</button>
             <button class="tab" onclick="showTab('collections')" id="tabBtn-collections">Collections</button>
             <button class="tab" onclick="showTab('query')" id="tabBtn-query">Query</button>
@@ -821,7 +828,7 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
                             System Resources
                         </div>
-                        <div class="auto-refresh-toggle" id="autoRefreshToggle" onclick="toggleAutoRefresh()" title="Auto-refresh metrics (5s interval)">
+                        <button class="auto-refresh-toggle" id="autoRefreshToggle" onclick="toggleAutoRefresh()" title="Auto-refresh metrics (5s interval)" aria-pressed="false" type="button">
                             <div class="toggle-switch" id="autoRefreshSwitch"></div>
                             <span>Auto-refresh</span>
                         </div>
@@ -931,9 +938,9 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Document JSON</label>
-                    <textarea id="docJson" class="form-input" placeholder='{"name": "John", "email": "john@example.com", "age": 30}'></textarea>
+                    <textarea id="docJson" class="form-input" spellcheck="false" autocomplete="off" placeholder='{"name": "John", "email": "john@example.com", "age": 30}'></textarea>
                 </div>
-                <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                <div class="action-row" style="display: flex; gap: 12px; margin-bottom: 20px;">
                     <button class="btn btn-success" onclick="createDocument()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
                         Create
@@ -943,21 +950,21 @@
                     <button class="btn btn-danger" onclick="deleteAllDocs()">Delete All</button>
                 </div>
                 <div id="docMessage"></div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div class="toolbar-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                     <div class="stat-card" style="padding: 10px 20px;">
                         <span class="stat-value" id="colDocCount" style="font-size: 1.2rem;">0</span>
                         <span class="stat-label" style="display: inline; margin-left: 8px;">Documents</span>
                     </div>
                     <div style="display: flex; gap: 12px; align-items: center;">
                         <div class="view-toggle">
-                            <button class="active" onclick="setDocView('grid')" id="gridViewBtn">
+                            <button class="active" onclick="setDocView('grid')" id="gridViewBtn" aria-label="Show documents as cards" aria-pressed="true" title="Card view">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                             </button>
-                            <button onclick="setDocView('table')" id="tableViewBtn">
+                            <button onclick="setDocView('table')" id="tableViewBtn" aria-label="Show documents as table" aria-pressed="false" title="Table view">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
                             </button>
                         </div>
-                        <input type="text" id="searchDocs" class="form-input" placeholder="Filter..." style="width: 200px; margin: 0;" onkeyup="filterDocuments()">
+                        <input type="search" id="searchDocs" class="form-input" aria-label="Filter documents" placeholder="Filter documents..." style="width: 200px; margin: 0;" onkeyup="filterDocuments()">
                         <button class="btn btn-sm btn-ghost" onclick="exportCollectionData()">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
                             Export
@@ -1025,7 +1032,7 @@
                         <input type="number" id="querySkip" class="form-input" value="0" min="0">
                     </div>
                 </div>
-                <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                <div class="action-row" style="display: flex; gap: 12px; margin-bottom: 20px;">
                     <button class="btn btn-success" onclick="executeQuery()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                         Execute Query
@@ -1064,7 +1071,7 @@
                     <label class="form-label">Value</label>
                     <textarea id="kvValue" class="form-input" placeholder="value" style="min-height: 60px;"></textarea>
                 </div>
-                <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                <div class="action-row" style="display: flex; gap: 12px; margin-bottom: 20px;">
                     <button class="btn btn-success" onclick="kvPut()">Put</button>
                     <button class="btn" onclick="kvGet()">Get</button>
                     <button class="btn btn-warning" onclick="kvExists()">Exists</button>
@@ -1249,7 +1256,8 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">SQL Query</label>
-                        <textarea id="sqlQuery" class="form-input" style="min-height: 120px; font-family: 'JetBrains Mono', monospace;" placeholder="SELECT * FROM doc_store WHERE collection = 'users';&#10;INSERT INTO kv_store (collection, key_name, value) VALUES ('mycoll', 'key1', 'value1');&#10;SHOW TABLES;"></textarea>
+                        <textarea id="sqlQuery" class="form-input" spellcheck="false" autocomplete="off" aria-describedby="sqlQueryHint" style="min-height: 120px; font-family: 'JetBrains Mono', monospace;" placeholder="SELECT * FROM doc_store WHERE collection = 'users';&#10;INSERT INTO kv_store (collection, key_name, value) VALUES ('mycoll', 'key1', 'value1');&#10;SHOW TABLES;"></textarea>
+                        <p class="field-hint" id="sqlQueryHint">Run with Ctrl+Enter. Queries execute against the embedded H2 database.</p>
                     </div>
                     <div style="display: flex; gap: 12px; margin-bottom: 20px;">
                         <button class="btn btn-success" onclick="executeSql()" title="Execute (Ctrl+Enter)">
@@ -1414,7 +1422,8 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Query</label>
-                        <textarea id="hybridQuery" class="form-input" style="min-height: 150px; font-family: 'JetBrains Mono', monospace;" placeholder="Enter your query..."></textarea>
+                        <textarea id="hybridQuery" class="form-input" spellcheck="false" autocomplete="off" aria-describedby="hybridQueryHint" style="min-height: 150px; font-family: 'JetBrains Mono', monospace;" placeholder="Enter your query..."></textarea>
+                        <p class="field-hint" id="hybridQueryHint">Choose a mode above, then enter a SQL, document, or vector query.</p>
                     </div>
                     <div style="display: flex; gap: 12px; margin-top: 16px;">
                         <button class="btn btn-primary" onclick="executeHybridQuery()">
@@ -1533,7 +1542,7 @@
         <p>JunifyDB v1.0.0 | Built with Java 21 | <a href="https://github.com/junifydb/JunifyDB" target="_blank">GitHub</a></p>
     </footer>
 
-    <div class="toast-container" id="toastContainer"></div>
+    <div class="toast-container" id="toastContainer" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <div class="modal-overlay" id="confirmModal">
         <div class="modal">
@@ -1555,38 +1564,69 @@
         const PAGE_SIZE = 20;
         let isLightTheme = false;
         let metricsEventSource = null;
+        let metricsRetryTimer = null;
 
         // Start SSE stream for real-time metrics
         function startMetricsStream() {
             if (metricsEventSource) return;
-            
-            metricsEventSource = new EventSource(`${API}/metrics/stream`);
-            
-            metricsEventSource.onmessage = (event) => {
-                try {
-                    const m = JSON.parse(event.data);
-                    updateMetricsUI(m);
-                } catch (e) {
-                    console.error('Failed to parse metrics:', e);
+
+            const apiKey = sessionStorage.getItem('apiKey');
+            if (!apiKey) return;
+
+            const controller = new AbortController();
+            metricsEventSource = controller;
+
+            fetch(`${API}/metrics/stream`, {
+                headers: { 'X-API-Key': apiKey },
+                signal: controller.signal
+            }).then(async (response) => {
+                if (response.status === 401) {
+                    clearSession();
+                    redirectToLogin();
+                    return;
                 }
-            };
-            
-            metricsEventSource.onerror = () => {
-                console.log('Metrics stream disconnected, retrying...');
-                metricsEventSource.close();
-                metricsEventSource = null;
-                setTimeout(startMetricsStream, 3000);
-            };
-            
-            console.log('[SSE] Metrics stream started');
+                if (!response.ok || !response.body) {
+                    throw new Error(`Metrics stream failed (HTTP ${response.status})`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                while (metricsEventSource === controller) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const events = buffer.split('\n\n');
+                    buffer = events.pop() || '';
+                    events.forEach((event) => {
+                        const data = event.split('\n')
+                            .filter(line => line.startsWith('data:'))
+                            .map(line => line.slice(5).trim())
+                            .join('');
+                        if (data) updateMetricsUI(JSON.parse(data));
+                    });
+                }
+            }).catch((error) => {
+                if (error.name !== 'AbortError') {
+                    console.warn('[SSE] Metrics stream disconnected; retrying shortly');
+                }
+            }).finally(() => {
+                if (metricsEventSource === controller) {
+                    metricsEventSource = null;
+                    metricsRetryTimer = setTimeout(startMetricsStream, 3000);
+                }
+            });
         }
 
         // Stop SSE stream
         function stopMetricsStream() {
             if (metricsEventSource) {
-                metricsEventSource.close();
+                metricsEventSource.abort();
                 metricsEventSource = null;
-                console.log('[SSE] Metrics stream stopped');
+            }
+            if (metricsRetryTimer) {
+                clearTimeout(metricsRetryTimer);
+                metricsRetryTimer = null;
             }
         }
 
@@ -1609,17 +1649,45 @@
             localStorage.setItem('theme', isLightTheme ? 'light' : 'dark');
         }
 
-        function showTab(name) {
+        function showTab(name, trigger) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-            document.getElementById('tab-' + name).classList.add('active');
-            if (event && event.target) event.target.classList.add('active');
+            const content = document.getElementById('tab-' + name);
+            const tab = trigger || document.getElementById('tabBtn-' + name);
+            if (!content || !tab) return;
+            content.classList.add('active');
+            tab.classList.add('active');
+            document.querySelectorAll('.tab').forEach(el => el.setAttribute('aria-selected', el === tab ? 'true' : 'false'));
+            document.querySelectorAll('.tab').forEach(el => el.setAttribute('aria-current', el === tab ? 'page' : 'false'));
+            document.querySelectorAll('.tab-content').forEach(el => el.setAttribute('aria-hidden', el !== content ? 'true' : 'false'));
+            document.querySelector('.tabs')?.classList.remove('mobile-open');
+            localStorage.setItem('junify.activeTab', name);
+            document.title = `${tab.textContent.trim().replace(/\s+/g, ' ')} | JunifyDB`;
+            const workspaceCopy = {
+                overview: ['Overview', 'Monitor database health, activity, and storage at a glance.'],
+                collections: ['Collections', 'Create, inspect, update, and export document data.'],
+                query: ['Query Builder', 'Build filtered document queries without writing raw SQL.'],
+                kv: ['Key-Value', 'Read and write values in key-value buckets.'],
+                columns: ['Column Families', 'Manage rows and columns in wide-column storage.'],
+                indexes: ['Indexes', 'Create and inspect indexes to improve lookup performance.'],
+                transactions: ['Transactions', 'Manage transaction boundaries and inspect active work.'],
+                vectors: ['Vector Search', 'Store embeddings and search for similar vectors.'],
+                backup: ['Backup & Restore', 'Protect database files and restore a previous snapshot.'],
+                sql: ['SQL Console', 'Run SQL directly against the embedded H2 database.'],
+                hybrid: ['Hybrid Query', 'Use SQL, document, and vector query modes from one editor.'],
+                schema: ['Schema Browser', 'Explore collections, tables, columns, and indexes.'],
+                logs: ['Activity Logs', 'Review recent operations, warnings, and errors.']
+            };
+            const [workspaceTitle, workspaceDescription] = workspaceCopy[name] || ['Console', 'Manage your JunifyDB instance.'];
+            document.getElementById('workspaceTitle').textContent = workspaceTitle;
+            document.getElementById('workspaceDescription').textContent = workspaceDescription;
             if (name === 'overview') {
                 startMetricsStream();
                 loadMetrics();
                 loadStats();
                 loadCollections();
             }
+
             if (name === 'query') { loadCollectionList(); }
             if (name === 'indexes') { loadCollectionListForIdx(); }
             if (name === 'backup') { loadBackupInfo(); }
@@ -1894,6 +1962,8 @@
             docView = view;
             document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
             document.getElementById('tableViewBtn').classList.toggle('active', view === 'table');
+            document.getElementById('gridViewBtn').setAttribute('aria-pressed', view === 'grid' ? 'true' : 'false');
+            document.getElementById('tableViewBtn').setAttribute('aria-pressed', view === 'table' ? 'true' : 'false');
             renderDocs();
         }
 
@@ -2784,7 +2854,47 @@
 
         // Initialize auth on page load
         document.addEventListener('DOMContentLoaded', function() {
-            checkAuth();
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.setAttribute('role', 'tab');
+                tab.setAttribute('aria-selected', tab.classList.contains('active') ? 'true' : 'false');
+                tab.setAttribute('aria-current', tab.classList.contains('active') ? 'page' : 'false');
+                tab.setAttribute('aria-controls', tab.id.replace('tabBtn-', 'tab-'));
+                tab.addEventListener('keydown', (event) => {
+                    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+                    const tabs = Array.from(document.querySelectorAll('.tab'));
+                    const current = tabs.indexOf(tab);
+                    const next = event.key === 'ArrowRight'
+                        ? tabs[(current + 1) % tabs.length]
+                        : tabs[(current - 1 + tabs.length) % tabs.length];
+                    next.focus();
+                    next.click();
+                });
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.setAttribute('role', 'tabpanel');
+                content.setAttribute('aria-hidden', content.classList.contains('active') ? 'false' : 'true');
+            });
+            document.getElementById('userMenu')?.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    toggleUserDropdown();
+                }
+            });
+            if (checkAuth()) {
+                const savedTab = localStorage.getItem('junify.activeTab');
+                const savedTabButton = savedTab && document.getElementById('tabBtn-' + savedTab);
+                if (savedTabButton) showTab(savedTab, savedTabButton);
+                if (localStorage.getItem('theme') === 'light') {
+                    isLightTheme = true;
+                    document.body.classList.add('light-theme');
+                }
+                log('Dashboard initialized', 'info');
+                checkHealth();
+                loadMetrics();
+                loadStats();
+                loadCollections();
+                setInterval(() => { checkHealth(); loadMetrics(); loadStats(); }, 5000);
+            }
             
             // Close dropdown when clicking outside
             document.addEventListener('click', function(event) {
@@ -2800,14 +2910,8 @@
         console.log('[Auth] Authentication system initialized');
 
 
-        // Initialize
-        if (localStorage.getItem('theme') === 'light') { isLightTheme = true; document.body.classList.add('light-theme'); }
-        log('Dashboard initialized', 'info');
-        checkHealth();
-        loadMetrics();
-        loadStats();
-        loadCollections();
-        setInterval(() => { checkHealth(); loadMetrics(); loadStats(); }, 5000);
+        // Dashboard data is loaded after authentication and the authenticated fetch
+        // wrapper have both been initialized.
     </script>
 
     <!-- PHASE 3: Hybrid Query & Schema Browser Functions -->
@@ -2827,7 +2931,6 @@
         async function executeHybridQuery() {
             const mode = document.getElementById('hybridMode').value;
             const query = document.getElementById('hybridQuery').value.trim();
-            const startTime = performance.now();
             const messageEl = document.getElementById('hybridMessage');
             const resultsEl = document.getElementById('hybridResults');
             const startTime = performance.now();
@@ -3093,6 +3196,3 @@
     <script src="js/enhancements.js"></script>
 </body>
 </html>
-
-
-
