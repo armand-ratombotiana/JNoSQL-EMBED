@@ -185,6 +185,7 @@ function showLoading(message = 'Loading...') {
     }
     document.getElementById('loadingText').textContent = message;
     overlay.classList.add('active');
+    overlay.setAttribute('aria-busy', 'true');
     document.body.style.overflow = 'hidden';
 }
 
@@ -195,6 +196,7 @@ function hideLoading() {
     const overlay = document.getElementById('loadingOverlay');
     if (!overlay) return;
     overlay.classList.remove('active');
+    overlay.setAttribute('aria-busy', 'false');
     document.body.style.overflow = '';
 }
 
@@ -205,6 +207,9 @@ function createLoadingOverlay() {
     const overlay = document.createElement('div');
     overlay.id = 'loadingOverlay';
     overlay.className = 'loading-overlay';
+    overlay.setAttribute('role', 'status');
+    overlay.setAttribute('aria-live', 'polite');
+    overlay.setAttribute('aria-busy', 'true');
     overlay.innerHTML = `
         <div class="loading-spinner-large"></div>
         <div class="loading-text" id="loadingText">Loading...</div>
@@ -262,6 +267,12 @@ function initKeyboardShortcuts() {
             hideConfirmDialog();
             hideLoading();
             closeQueryHistory();
+            const dropdowns = document.querySelectorAll('.dropdown-content, #userDropdown');
+            dropdowns.forEach(dropdown => dropdown.style.display = 'none');
+            const tabs = document.querySelector('.tabs');
+            const navToggle = document.querySelector('.mobile-nav-toggle');
+            if (tabs) tabs.classList.remove('mobile-open');
+            if (navToggle) navToggle.setAttribute('aria-expanded', 'false');
         }
 
         // Ctrl+H: Toggle query history
@@ -329,11 +340,13 @@ function toggleAutoRefresh() {
     if (autoRefreshEnabled) {
         toggle.classList.add('active');
         switchEl.classList.add('active');
+        toggle.setAttribute('aria-pressed', 'true');
         startAutoRefresh();
         showToast('Auto-refresh', 'Metrics will refresh every 5 seconds', 'info');
     } else {
         toggle.classList.remove('active');
         switchEl.classList.remove('active');
+        toggle.setAttribute('aria-pressed', 'false');
         stopAutoRefresh();
         showToast('Auto-refresh', 'Disabled', 'info');
     }
@@ -738,6 +751,11 @@ function throttle(func, limit) {
 function toggleMobileNav() {
     const tabs = document.querySelector('.tabs');
     if (tabs) {
+        tabs.classList.toggle('mobile-open');
+        const toggle = document.querySelector('.mobile-nav-toggle');
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', tabs.classList.contains('mobile-open') ? 'true' : 'false');
+        }
         tabs.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
