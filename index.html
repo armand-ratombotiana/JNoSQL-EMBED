@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JunifyDB — The Embedded Multi-Model NoSQL Database for the JVM</title>
+<meta name="description" content="JunifyDB is a lightweight embedded multi-model NoSQL database for the JVM: documents, key-value and column-family stores with ACID transactions, full-text and vector search.">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%236366f1'/%3E%3Cpath d='M10 11v10l10-10v10' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+</head>
+<body>
+<header class="site-header">
+  <nav class="nav">
+    <a class="brand" href="#top" aria-label="JunifyDB home">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#6366f1"/><path d="M10 11v10l10-10v10" stroke="white" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>JunifyDB</span>
+    </a>
+    <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#quickstart">Quick Start</a>
+      <a href="#engines">Engines</a>
+      <a href="#api">REST API</a>
+      <a href="#integrations">Integrations</a>
+      <a class="btn btn-small" href="https://github.com/armand-ratombotiana/JunifyDB" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">Embedded &middot; Multi-model &middot; JVM-native</p>
+      <h1>The embedded multi-model <span class="accent">NoSQL database</span> for the JVM</h1>
+      <p class="lede">JunifyDB packs document, key-value and column-family stores into one tiny embeddable engine — with ACID transactions, full-text and vector search, and a REST API. Think <strong>H2 for the NoSQL world</strong>.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#quickstart">Get Started</a>
+        <a class="btn btn-ghost" href="https://github.com/armand-ratombotiana/JunifyDB" target="_blank" rel="noopener">View on GitHub</a>
+      </div>
+      <div class="hero-badges">
+        <span class="badge">Java 17+</span>
+        <span class="badge">Apache-2.0</span>
+        <span class="badge">4 storage engines</span>
+        <span class="badge">ACID / MVCC</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="section">
+    <h2>One engine, every workload</h2>
+    <p class="section-sub">Three data models, production-grade extras, zero external processes.</p>
+    <div class="grid cards-3">
+      <article class="card">
+        <h3>Document Store</h3>
+        <p>JSON-like documents with rich queries, secondary indexes, aggregation pipelines and TTL.</p>
+      </article>
+      <article class="card">
+        <h3>Key-Value Store</h3>
+        <p>Fast buckets for caching and sessions, with per-key TTL and hash/list/set structures.</p>
+      </article>
+      <article class="card">
+        <h3>Column-Family</h3>
+        <p>Wide-column rows for sparse data, column-level TTL, pagination and statistics.</p>
+      </article>
+      <article class="card">
+        <h3>ACID Transactions</h3>
+        <p>MVCC snapshot isolation with staged writes — commit atomically, roll back safely.</p>
+      </article>
+      <article class="card">
+        <h3>Search</h3>
+        <p>TF-IDF full-text search with highlighting, plus HNSW vector search for similarity.</p>
+      </article>
+      <article class="card">
+        <h3>Operate</h3>
+        <p>CDC streaming, async replication, LRU query cache, backups, metrics and health checks.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="quickstart" class="section section-alt">
+    <h2>Quick start</h2>
+    <p class="section-sub">Add one dependency, embed the database, ship.</p>
+    <div class="tabs" role="tablist" aria-label="Quick start examples">
+      <button class="tab active" data-tab="maven" role="tab" aria-selected="true">Maven</button>
+      <button class="tab" data-tab="gradle" role="tab" aria-selected="false">Gradle</button>
+      <button class="tab" data-tab="java" role="tab" aria-selected="false">Java</button>
+      <button class="tab" data-tab="rest" role="tab" aria-selected="false">REST</button>
+    </div>
+    <div class="tab-panels">
+      <div class="tab-panel active" id="panel-maven" role="tabpanel">
+        <div class="codeblock"><button class="copy" data-copy="maven">Copy</button><pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;org.junify.db&lt;/groupId&gt;
+    &lt;artifactId&gt;junify-db-core&lt;/artifactId&gt;
+    &lt;version&gt;1.0.0&lt;/version&gt;
+&lt;/dependency&gt;</code></pre></div>
+      </div>
+      <div class="tab-panel" id="panel-gradle" role="tabpanel">
+        <div class="codeblock"><button class="copy" data-copy="gradle">Copy</button><pre><code>implementation("org.junify.db:junify-db-core:1.0.0")</code></pre></div>
+      </div>
+      <div class="tab-panel" id="panel-java" role="tabpanel">
+        <div class="codeblock"><button class="copy" data-copy="java">Copy</button><pre><code>var db = JunifyDB.embed()
+    .storageEngine("FILE")   // or IN_MEMORY, B_TREE, LSM_TREE
+    .persistTo("data")
+    .build();
+
+var users = db.documentCollection("users");
+var user = new Document();
+user.id("user-1");
+user.add("name", "Alice");
+user.add("age", 30);
+users.insert(user);
+
+var adults = users.find(Query.eq("age", 30));</code></pre></div>
+      </div>
+      <div class="tab-panel" id="panel-rest" role="tabpanel">
+        <div class="codeblock"><button class="copy" data-copy="rest">Copy</button><pre><code># Start the server
+java -jar junify-db-core.jar --port 8080 --engine FILE --data-dir ./data
+
+# Health check
+curl http://localhost:8080/api/health
+
+# Create a document
+curl -X POST http://localhost:8080/api/collections/users \
+    -H "Content-Type: application/json" \
+    -d '{"name": "Alice", "email": "alice@example.com"}'</code></pre></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="engines" class="section">
+    <h2>Storage engines</h2>
+    <p class="section-sub">Pick the trade-off per deployment — the API stays the same.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Engine</th><th>Best for</th><th>Persistence</th></tr></thead>
+        <tbody>
+          <tr><td><code>IN_MEMORY</code></td><td>Tests, caches, ephemeral data</td><td>No</td></tr>
+          <tr><td><code>FILE</code></td><td>General purpose, JSON + WAL</td><td>Yes</td></tr>
+          <tr><td><code>B_TREE</code></td><td>Sorted indexes, range queries</td><td>Yes</td></tr>
+          <tr><td><code>LSM_TREE</code></td><td>Write-heavy workloads, bloom filter</td><td>Yes</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3 class="mini-heading">Security &amp; operations built in</h3>
+    <ul class="checklist">
+      <li>API-key authentication per endpoint</li>
+      <li>Rate limiting (1000 req/min per IP)</li>
+      <li>CORS + GZIP response compression</li>
+      <li>Real-time metrics stream and health endpoint</li>
+    </ul>
+  </section>
+
+  <section id="api" class="section section-alt">
+    <h2>REST API</h2>
+    <p class="section-sub">Every model is reachable over HTTP.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Endpoint</th><th>Methods</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/health</code></td><td>GET</td><td>Health check with system metrics</td></tr>
+          <tr><td><code>/api/collections/{name}</code></td><td>GET / POST</td><td>Document CRUD</td></tr>
+          <tr><td><code>/api/collections/{name}/{id}</code></td><td>GET / PUT / DELETE</td><td>Single document</td></tr>
+          <tr><td><code>/api/kv/{bucket}/{key}</code></td><td>GET / PUT / DELETE</td><td>Key-value operations</td></tr>
+          <tr><td><code>/api/columns/{name}/{key}</code></td><td>GET / PUT / DELETE</td><td>Column-family operations</td></tr>
+          <tr><td><code>/api/bulk/{collection}</code></td><td>POST</td><td>Batch operations</td></tr>
+          <tr><td><code>/api/cdc</code></td><td>GET / POST</td><td>Change-data-capture management</td></tr>
+          <tr><td><code>/api/schema</code></td><td>GET</td><td>List tables</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="integrations" class="section">
+    <h2>Framework integrations</h2>
+    <p class="section-sub">Drop JunifyDB into your stack — each ships with a tested demo app.</p>
+    <div class="grid cards-4">
+      <article class="card">
+        <h3>Spring Boot</h3>
+        <p>Auto-configuration starter with <code>JunifyDBTemplate</code>.</p>
+        <code class="artifact">junify-db-spring-boot-starter</code>
+      </article>
+      <article class="card">
+        <h3>Quarkus</h3>
+        <p>CDI extension with build-time processing.</p>
+        <code class="artifact">junify-db-quarkus-extension</code>
+      </article>
+      <article class="card">
+        <h3>Micronaut</h3>
+        <p>Compile-time DI factory integration.</p>
+        <code class="artifact">junifydb-micronaut-integration</code>
+      </article>
+      <article class="card">
+        <h3>Vert.x</h3>
+        <p>Reactive verticle over the embedded core.</p>
+        <code class="artifact">junify-db-core</code>
+      </article>
+    </div>
+    <p class="note">Demo suites run green across all four frameworks plus multi-engine end-to-end validation (IN_MEMORY, FILE, B_TREE, LSM_TREE).</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://github.com/armand-ratombotiana/JunifyDB/tree/main/demo" target="_blank" rel="noopener">Browse the demos</a>
+      <a class="btn btn-ghost" href="https://github.com/armand-ratombotiana/JunifyDB/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contribute</a>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <p><strong>JunifyDB</strong> — open source under the Apache License 2.0.</p>
+  <p><a href="https://github.com/armand-ratombotiana/JunifyDB" target="_blank" rel="noopener">GitHub</a> &middot; <a href="https://github.com/armand-ratombotiana/JunifyDB/issues" target="_blank" rel="noopener">Issues</a></p>
+</footer>
+
+<script src="main.js"></script>
+</body>
+</html>
